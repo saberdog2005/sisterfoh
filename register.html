@@ -3,315 +3,430 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log</title>
+    <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 20px; }
-        .log-container { background: #2d2d2d; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        select, button { padding: 8px; font-size: 14px; margin: 5px 0; }
-        canvas { max-width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #444; }
-        th { background: #3d3d3d; }
-        .logo { display: block; margin: 0 auto 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            font-size: 18px; /* Increased base font size for readability */
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 20px;
+            max-width: 150px;
+        }
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+            font-size: 2em; /* Larger heading for visibility */
+        }
+        .container {
+            max-width: 90%; /* Adjusted for iPad screen width */
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .form-group {
+            margin-bottom: 20px; /* Increased spacing for touch devices */
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+            font-size: 1.1em; /* Larger labels for readability */
+        }
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 12px; /* Larger padding for easier typing */
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1.1em; /* Larger text in inputs */
+        }
+        input.locked {
+            background: #555;
+            color: #888;
+        }
+        button {
+            padding: 15px 30px; /* Larger buttons for touch interaction */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 1.2em; /* Larger button text */
+        }
+        .open-btn {
+            background: #1a73e8;
+            color: white;
+        }
+        .close-btn {
+            background: #d32f2f;
+            color: white;
+        }
+        #errorMessage {
+            color: #ff6b6b;
+            text-align: center;
+            display: none;
+            margin-top: 10px;
+            font-size: 1.1em; /* Larger error message */
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive grid */
+            gap: 15px; /* Increased gap for touch targets */
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 15px; /* Increased padding for touch areas */
+            border-radius: 4px;
+            text-align: center;
+        }
+        .product-controls {
+            margin-top: 10px; /* More space for controls */
+        }
+        .cash { background: #2e7d32; }
+        .cc { background: #d32f2f; }
+        .control-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px; /* Increased gap for touch targets */
+        }
+        .count {
+            font-size: 1.5em; /* Larger count display */
+            width: 40px; /* Larger width for count */
+        }
+        .controls button {
+            width: 40px; /* Larger buttons for touch */
+            height: 40px;
+            font-size: 1.5em; /* Larger button text */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .plus { background: #1a73e8; color: white; }
+        .minus { background: #d32f2f; color: white; }
+        .custom-input {
+            display: flex;
+            gap: 15px; /* Increased gap for touch targets */
+            justify-content: center;
+        }
+        .custom-input input {
+            width: 120px; /* Larger input for custom amounts */
+            padding: 8px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 1.1em; /* Larger text in inputs */
+        }
+        .add-custom {
+            padding: 10px 20px; /* Larger custom add button */
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em; /* Larger button text */
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 20px 40px; /* Larger log sale button */
+            font-size: 1.8em; /* Larger button text */
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        /* Media query for iPad (768px to 1024px) */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .container {
+                max-width: 95%; /* Slightly wider container for iPad */
+            }
+            .button-container {
+                grid-template-columns: repeat(3, 1fr); /* 3 columns for iPad */
+            }
+            button {
+                padding: 12px 24px; /* Slightly smaller buttons for iPad */
+                font-size: 1.1em;
+            }
+            #logSaleBtn {
+                padding: 15px 30px; /* Adjusted log sale button for iPad */
+                font-size: 1.5em;
+            }
+        }
     </style>
 </head>
 <body>
+    <img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo">
+    <h1>Sister Bar Register</h1>
+    <div class="container">
+        <div class="form-group">
+            <label for="eventDate">Event Date:</label>
+            <input type="date" id="eventDate" value="2025-03-05">
+        </div>
+        <div class="form-group">
+            <label for="eventVenue">Event Venue:</label>
+            <input type="text" id="eventVenue" placeholder="Enter venue" value="Sister">
+        </div>
+        <div class="form-group">
+            <label for="cashierName">Cashier Name:</label>
+            <input type="text" id="cashierName" placeholder="Enter cashier name">
+        </div>
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <div id="errorMessage"></div>
+        <button id="logSaleBtn">Log Sale</button>
+        <div class="totals">Total: $<span id="totalAmount">0.00</span></div>
+        <div class="button-container"></div>
+    </div>
 
-<img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo" width="150">
-<h2>Realtime Performance Log</h2>
-<div class="log-container">
-    <h2>Select Session</h2>
-    <select id="sessionSelect">
-        <option value="">Select a session</option>
-    </select>
-    <button id="printPdfBtn">Print PDF Report</button>
-</div>
-<div class="log-container">
-    <h2>Sales Summary</h2>
-    <p>Cash Sales: $<span id="cashSales">0.00</span></p>
-    <p>Card Sales: $<span id="cardSales">0.00</span></p>
-    <p>Total Sales: $<span id="totalSales">0.00</span></p>
-</div>
-<div class="log-container">
-    <h2>Transaction Totals Over Time</h2>
-    <canvas id="transactionGraph"></canvas>
-    <button id="resetZoomBtn">Reset Zoom</button>
-</div>
-<div class="log-container">
-    <h2>Transaction Log</h2>
-    <table id="transactionTable">
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Items</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
+    <script>
+        let db;
+        let sessionStarted = false;
+        let sessionId = null;
+        let currentItems = [];
+        let total = 0;
 
-<script>
-    let db;
-    let transactionChart; // Chart instance to be reused
-    let updateInterval;
+        const cashOptions = [
+            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
+            { amount: 12 }, { amount: 12.5 }, { amount: 15 }, { amount: 20 },
+            { custom: true }
+        ];
 
-    // Initialize IndexedDB
-    const request = indexedDB.open('SalesDB', 2);
-    request.onupgradeneeded = function(event) {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains('sessions')) {
-            db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-        }
-        if (!db.objectStoreNames.contains('transactions')) {
-            const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-            transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
-        }
-    };
-    request.onsuccess = function(event) {
-        db = event.target.result;
-        loadSessions();
-    };
-    request.onerror = function() {
-        alert('Failed to open database.');
-    };
+        const ccOptions = [
+            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
+            { amount: 12 }, { amount: 15 }, { amount: 20 }, { amount: 22 },
+            { custom: true }
+        ];
 
-    // Load sessions into dropdown
-    function loadSessions() {
-        const tx = db.transaction(['sessions'], 'readonly');
-        const store = tx.objectStore('sessions');
-        const request = store.getAll();
+        // Open IndexedDB
+        const request = indexedDB.open('SalesDB', 2);
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('sessions')) {
+                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('transactions')) {
+                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+            }
+        };
         request.onsuccess = function(event) {
-            const sessions = event.target.result;
-            const $select = $('#sessionSelect');
-            $select.empty().append('<option value="">Select a session</option>');
-            sessions.forEach(session => {
-                const label = `${session.date} - ${session.venue} - ${session.cashier}${session.status === 'open' ? ' (Current)' : ''}`;
-                $select.append(`<option value="${session.id}">${label}</option>`);
-            });
+            db = event.target.result;
+            checkSessionStatus();
+        };
+        request.onerror = function(event) {
+            $('#errorMessage').text('Failed to open database.').show();
+            setTimeout(() => $('#errorMessage').hide(), 3000);
+        };
+
+        function checkSessionStatus() {
             const activeSessionId = localStorage.getItem('activeSessionId');
             if (activeSessionId) {
-                $select.val(activeSessionId);
-                startUpdating(activeSessionId);
+                const tx = db.transaction(['sessions'], 'readonly');
+                const store = tx.objectStore('sessions');
+                const request = store.get(Number(activeSessionId));
+                request.onsuccess = function(event) {
+                    const session = event.target.result;
+                    if (session && session.status === 'open') {
+                        sessionStarted = true;
+                        sessionId = session.id;
+                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                        $('#eventDate').val(session.date);
+                        $('#eventVenue').val(session.venue);
+                        $('#cashierName').val(session.cashier);
+                        $('#eventDate, #eventVenue, #cashierName').prop('readonly', true).addClass('locked');
+                        localStorage.setItem('salesStatus', 'open');
+                        localStorage.setItem('cashierName', session.cashier);
+                    } else {
+                        resetSession();
+                    }
+                };
+                request.onerror = function() {
+                    resetSession();
+                };
+            } else {
+                resetSession();
             }
-        };
-    }
-
-    // Update sales data for a session
-    function updateLog(sessionId) {
-        if (!sessionId) {
-            resetDisplay();
-            return;
         }
-        const tx = db.transaction(['transactions'], 'readonly');
-        const store = tx.objectStore('transactions');
-        const index = store.index('sessionId');
-        const request = index.getAll(Number(sessionId));
-        request.onsuccess = function(event) {
-            const transactions = event.target.result;
-            let cashTotal = 0, cardTotal = 0;
-            const cashData = [], cardData = [], totalData = [];
-            transactions.forEach(t => {
-                let transactionCash = 0, transactionCard = 0;
-                t.itemList.forEach(item => {
-                    if (item.item.startsWith('CASH')) {
-                        transactionCash += item.price * item.quantity;
-                    } else if (item.item.startsWith('CC')) {
-                        transactionCard += item.price * item.quantity;
-                    }
-                });
-                cashTotal += transactionCash;
-                cardTotal += transactionCard;
-                cashData.push({ x: new Date(t.timestamp), y: transactionCash });
-                cardData.push({ x: new Date(t.timestamp), y: transactionCard });
-                totalData.push({ x: new Date(t.timestamp), y: transactionCash + transactionCard });
-            });
-            $('#cashSales').text(cashTotal.toFixed(2));
-            $('#cardSales').text(cardTotal.toFixed(2));
-            $('#totalSales').text((cashTotal + cardTotal).toFixed(2));
-            updateTransactionGraph(cashData, cardData, totalData);
 
-            // Update transaction table
-            const $tbody = $('#transactionTable tbody');
-            $tbody.empty();
-            transactions.reverse().forEach(t => {
-                const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
-                $tbody.append(`<tr><td>${t.time}</td><td>${items}</td><td>$${t.total.toFixed(2)}</td></tr>`);
-            });
-        };
-    }
-
-    // Reset display
-    function resetDisplay() {
-        $('#cashSales').text('0.00');
-        $('#cardSales').text('0.00');
-        $('#totalSales').text('0.00');
-        if (transactionChart) {
-            transactionChart.data.datasets.forEach(dataset => dataset.data = []);
-            transactionChart.update();
+        function resetSession() {
+            sessionStarted = false;
+            sessionId = null;
+            localStorage.removeItem('activeSessionId');
+            localStorage.setItem('salesStatus', 'closed');
+            localStorage.removeItem('cashierName');
+            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+            $('#eventDate, #eventVenue, #cashierName').prop('readonly', false).removeClass('locked');
         }
-        $('#transactionTable tbody').empty();
-    }
 
-    // Update transaction graph without destroying the instance
-    function updateTransactionGraph(cashData, cardData, totalData) {
-        const ctx = document.getElementById('transactionGraph').getContext('2d');
-        if (transactionChart) {
-            // Update existing chart data
-            transactionChart.data.datasets[0].data = cashData;
-            transactionChart.data.datasets[1].data = cardData;
-            transactionChart.data.datasets[2].data = totalData;
-            transactionChart.update();
-        } else {
-            // Create new chart instance if it doesn't exist
-            transactionChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [
-                        { label: 'Cash Sales', data: cashData, borderColor: '#2e7d32', fill: false, tension: 0.1 },
-                        { label: 'Card Sales', data: cardData, borderColor: '#d32f2f', fill: false, tension: 0.1 },
-                        { label: 'Total Sales', data: totalData, borderColor: '#ffa500', fill: false, tension: 0.1 }
-                    ]
-                },
-                options: {
-                    scales: {
-                        x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                        y: { beginAtZero: true, title: { display: true, text: 'Amount ($)' } }
-                    },
-                    plugins: {
-                        zoom: {
-                            zoom: {
-                                wheel: { enabled: true },
-                                pinch: { enabled: true },
-                                mode: 'xy'
-                            },
-                            pan: {
-                                enabled: true,
-                                mode: 'xy'
-                            }
-                        }
-                    }
+        $('#toggleSalesBtn').on('click', function() {
+            if (!sessionStarted) {
+                const cashierName = $('#cashierName').val().trim();
+                if (!cashierName) {
+                    $('#errorMessage').text('Please enter a cashier name.').show();
+                    setTimeout(() => $('#errorMessage').hide(), 3000);
+                    return;
+                }
+                const session = {
+                    date: $('#eventDate').val(),
+                    venue: $('#eventVenue').val(),
+                    cashier: cashierName,
+                    status: 'open',
+                    startTime: new Date().toISOString()
+                };
+                const tx = db.transaction(['sessions'], 'readwrite');
+                const store = tx.objectStore('sessions');
+                const request = store.add(session);
+                request.onsuccess = function(event) {
+                    sessionId = event.target.result;
+                    localStorage.setItem('activeSessionId', sessionId);
+                    sessionStarted = true;
+                    $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                    $('#eventDate, #eventVenue, #cashierName').prop('readonly', true).addClass('locked');
+                    localStorage.setItem('salesStatus', 'open');
+                    localStorage.setItem('cashierName', cashierName);
+                };
+            } else {
+                const tx = db.transaction(['sessions'], 'readwrite');
+                const store = tx.objectStore('sessions');
+                const request = store.get(sessionId);
+                request.onsuccess = function(event) {
+                    const session = event.target.result;
+                    session.status = 'closed';
+                    session.endTime = new Date().toISOString();
+                    store.put(session);
+                    resetSession();
+                };
+            }
+        });
+
+        function generateButtons() {
+            const buttonContainer = $('.button-container').empty();
+            cashOptions.forEach(option => {
+                if (option.amount) {
+                    const amount = option.amount, itemName = `CASH $${amount}`;
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="${itemName}" data-price="${amount}">
+                            <div class="product-controls cash">
+                                <h4>${itemName}</h4>
+                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            </div>
+                        </div>
+                    `);
+                } else if (option.custom) {
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="CASH (CUSTOM)">
+                            <div class="product-controls cash">
+                                <h4>CASH (CUSTOM)</h4>
+                                <div class="custom-input"><input type="number" step="0.01" placeholder="Enter amount"><button class="add-custom">Add</button></div>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+            ccOptions.forEach(option => {
+                if (option.amount) {
+                    const amount = option.amount, itemName = `CC $${amount}`;
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="${itemName}" data-price="${amount}">
+                            <div class="product-controls cc">
+                                <h4>${itemName}</h4>
+                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            </div>
+                        </div>
+                    `);
+                } else if (option.custom) {
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="CC EXTRA">
+                            <div class="product-controls cc">
+                                <h4>CC EXTRA</h4>
+                                <div class="custom-input"><input type="number" step="0.01" placeholder="Enter amount"><button class="add-custom">Add</button></div>
+                            </div>
+                        </div>
+                    `);
                 }
             });
         }
-    }
 
-    // Reset zoom
-    $('#resetZoomBtn').on('click', function() {
-        if (transactionChart) {
-            transactionChart.resetZoom();
-        }
-    });
+        $(document).ready(generateButtons);
 
-    // Start periodic updates for the selected session
-    function startUpdating(sessionId) {
-        clearInterval(updateInterval); // Clear any existing interval
-        updateLog(sessionId); // Initial update
-        updateInterval = setInterval(() => updateLog(sessionId), 5000); // Update every 5 seconds
-    }
+        $(document).on('click', '.plus', function() {
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
+            let count = parseInt($count.text()) + 1;
+            $count.text(count);
+            const itemName = $item.data('item'), itemPrice = parseFloat($item.data('price'));
+            const existingItem = currentItems.find(i => i.item === itemName);
+            if (existingItem) existingItem.quantity++; else currentItems.push({ item: itemName, price: itemPrice, quantity: 1 });
+            updateTotal();
+        });
 
-    // Stop periodic updates
-    function stopUpdating() {
-        clearInterval(updateInterval);
-        updateInterval = null;
-    }
-
-    // Handle session selection
-    $('#sessionSelect').on('change', function() {
-        const sessionId = $(this).val();
-        if (sessionId) {
-            startUpdating(sessionId);
-        } else {
-            stopUpdating();
-            resetDisplay();
-        }
-    });
-
-    // Ensure to stop updating when the page unloads or navigates away
-    window.addEventListener('beforeunload', stopUpdating);
-
-    // PDF generation logic
-    $('#printPdfBtn').on('click', function() {
-        const sessionId = $('#sessionSelect').val();
-        if (!sessionId) {
-            alert('Please select a session first.');
-            return;
-        }
-
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        // Fetch session and transactions
-        const tx = db.transaction(['sessions', 'transactions'], 'readonly');
-        const sessionStore = tx.objectStore('sessions');
-        const transactionStore = tx.objectStore('transactions');
-        const sessionRequest = sessionStore.get(Number(sessionId));
-        const transactionRequest = transactionStore.index('sessionId').getAll(Number(sessionId));
-
-        tx.oncomplete = function() {
-            const session = sessionRequest.result;
-            const transactions = transactionRequest.result;
-
-            // Add session details
-            doc.setFontSize(16);
-            doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
-            doc.setFontSize(12);
-            doc.text(`Date: ${session.date}`, 10, 20);
-            doc.text(`Venue: ${session.venue}`, 10, 30);
-            doc.text(`Cashier: ${session.cashier}`, 10, 40);
-            doc.text(`Start Time: ${new Date(session.startTime).toLocaleString()}`, 10, 50);
-            if (session.endTime) {
-                doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 60);
-            }
-
-            // Calculate totals
-            let cashTotal = 0, cardTotal = 0;
-            transactions.forEach(t => {
-                t.itemList.forEach(item => {
-                    if (item.item.startsWith('CASH')) {
-                        cashTotal += item.price * item.quantity;
-                    } else if (item.item.startsWith('CC')) {
-                        cardTotal += item.price * item.quantity;
-                    }
-                });
-            });
-            doc.text('Sales Summary', 10, 80);
-            doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 90);
-            doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 100);
-            doc.text(`Total Sales: $${(cashTotal + cardTotal).toFixed(2)}`, 10, 110);
-
-            // Add transaction log
-            doc.addPage();
-            doc.setFontSize(14);
-            doc.text('Transaction Log', 10, 10);
-            let y = 20;
-            transactions.forEach((t, index) => {
-                const time = t.time;
-                const items = t.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
-                const total = t.total.toFixed(2);
-                doc.text(`${index + 1}. ${time}: ${items} - $${total}`, 10, y);
-                y += 10;
-                if (y > 270) {
-                    doc.addPage();
-                    y = 10;
+        $(document).on('click', '.minus', function() {
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
+            let count = parseInt($count.text());
+            if (count > 0) {
+                count--; $count.text(count);
+                const itemName = $item.data('item'), existingItem = currentItems.find(i => i.item === itemName);
+                if (existingItem) {
+                    existingItem.quantity--;
+                    if (existingItem.quantity <= 0) currentItems = currentItems.filter(i => i.item !== itemName);
                 }
-            });
+                updateTotal();
+            }
+        });
 
-            // Convert PDF to blob and open in new tab
-            const blob = doc.output('blob');
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
-        };
+        $(document).on('click', '.add-custom', function() {
+            const $item = $(this).closest('.product-item'), baseName = $item.data('item'), amount = parseFloat($item.find('input').val());
+            if (isNaN(amount) || amount <= 0) return alert('Please enter a valid amount.');
+            const itemName = `${baseName} $${amount.toFixed(2)}`;
+            currentItems.push({ item: itemName, price: amount, quantity: 1 });
+            updateTotal();
+            $item.find('input').val('');
+        });
 
-        tx.onerror = function() {
-            alert('Failed to retrieve data for PDF generation.');
-        };
-    });
-</script>
+        function updateTotal() {
+            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            $('#totalAmount').text(total.toFixed(2));
+        }
+
+        $('#logSaleBtn').on('click', function() {
+            if (!sessionStarted) return $('#errorMessage').text('Please open sales to start the session.').show().delay(3000).hide(0);
+            if (currentItems.length === 0) return $('#errorMessage').text('No items selected to log.').show().delay(3000).hide(0);
+            const transaction = {
+                sessionId: sessionId,
+                timestamp: new Date().toISOString(),
+                time: new Date().toLocaleTimeString(),
+                itemList: currentItems.map(item => ({ ...item })),
+                total: total
+            };
+            const tx = db.transaction(['transactions'], 'readwrite');
+            const store = tx.objectStore('transactions');
+            const request = store.add(transaction);
+            request.onsuccess = () => {
+                tx.oncomplete = () => {
+                    resetSale();
+                };
+            };
+            request.onerror = () => $('#errorMessage').text('Failed to log sale.').show().delay(3000).hide(0);
+        });
+
+        function resetSale() {
+            currentItems = [];
+            total = 0;
+            $('.count').text('0');
+            $('#totalAmount').text('0.00');
+        }
+    </script>
 </body>
 </html>
