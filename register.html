@@ -6,50 +6,214 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
-        .header { text-align: center; padding: 10px; background-color: #f0f0f0; }
-        .header label { margin-right: 5px; }
-        .header input { margin-right: 15px; }
-        .header input.locked { background-color: #e0e0e0; }
-        .container { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 85%; margin: 0 auto; padding: 10px; }
-        .button-container { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; justify-content: center; }
-        .product-item { display: flex; flex-direction: column; align-items: center; }
-        button { padding: 15px 20px; font-size: 16px; cursor: pointer; }
-        .cash { background-color: #90ee90; }
-        .cc { background-color: #ff6347; }
-        .ticket { background-color: #add8e6; }
-        .comp { background-color: #ffa500; }
-        .control-row { display: flex; align-items: center; gap: 5px; margin-top: 5px; }
-        .count { min-width: 20px; text-align: center; }
-        .minus { padding: 5px 10px; }
-        .custom-input { display: flex; gap: 5px; }
-        .custom-input input { padding: 5px; }
-        .add-custom { padding: 5px 10px; }
-        .totals-container { margin: 20px 0; font-size: 18px; }
-        .note-section { width: 100%; max-width: 400px; margin: 10px 0; }
-        #noteInput { width: 100%; height: 60px; }
-        #logSaleBtn { padding: 15px 30px; font-size: 18px; background-color: #4CAF50; color: white; }
-        #logSaleBtn.flash { background-color: #45a049; }
-        .footer { text-align: center; padding: 10px; }
-        .open-btn { background-color: #2196F3; color: white; }
-        .close-btn { background-color: #f44336; color: white; }
-        #successMessage { color: green; margin-top: 10px; display: none; }
-        #errorMessage { color: red; margin-top: 10px; display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 10px;
+            font-size: 18px;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: nowrap; /* Prevent wrapping */
+        }
+        .header label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .header input {
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+            width: 22%; /* Equal width for 4 inputs */
+            margin: 0 5px;
+        }
+        .header input.locked {
+            background: #555;
+            color: #888;
+        }
+        .container {
+            max-width: 85%; /* Leave space on right for scrolling */
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            min-height: 600px; /* Fit iPad height */
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for primary buttons */
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .increment-btn {
+            width: 100%;
+            height: 100px; /* Large buttons for quick access */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: white;
+        }
+        .increment-btn.cash { background: #2e7d32; }
+        .increment-btn.cc { background: #d32f2f; }
+        .increment-btn.ticket { background: #1a73e8; }
+        .increment-btn.comp { background: #ffa500; }
+        .control-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .count {
+            font-size: 1.5em;
+            width: 40px;
+            font-weight: bold; /* Make counts bold */
+        }
+        .minus {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .custom-input input {
+            width: 100px;
+            padding: 8px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .add-custom {
+            padding: 8px 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .totals-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .cash-total {
+            font-size: 2em;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .door-count {
+            font-size: 1.5em;
+            color: #e0e0e0;
+            font-weight: bold; /* Make door count bold */
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logSaleBtn.flash {
+            animation: flash 0.5s;
+        }
+        @keyframes flash {
+            0% { background: #388e3c; }
+            50% { background: #66bb6a; }
+            100% { background: #388e3c; }
+        }
+        .note-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #noteInput {
+            width: 80%;
+            padding: 10px;
+            background: #444;
+            border: 1px solid #666;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .footer {
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 20px;
+            position: relative;
+        }
+        #errorMessage, #successMessage {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.1em;
+            display: none;
+        }
+        #errorMessage { color: #ff6b6b; }
+        #successMessage { color: #2e7d32; }
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            .container {
+                max-width: 85%;
+            }
+            .button-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        /* Make changing numbers bold */
+        .count, #cashTotal, #doorCount {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <label for="eventDate">Date:</label>
-        <input type="date" id="eventDate" value="2025-03-05">
+        <input type="date" id="eventDate">
         <label for="eventVenue">Venue:</label>
-        <input type="text" id="eventVenue" placeholder="Venue" value="Sister">
+        <input type="text" id="eventVenue" value="Sister Bar">
         <label for="eventName">Event Name:</label>
         <input type="text" id="eventName" placeholder="Event Name">
         <label for="cashierName">Cashier Name:</label>
-        <input type="text" id="cashierName" placeholder="Cashier Name">
+        <input type="text" id="cashierName" placeholder="Cashier">
     </div>
     <div class="container">
         <div class="button-container">
+            <!-- Cash Buttons (Highest to Lowest) -->
             <div class="product-item" data-item="CASH $20" data-price="20">
                 <button class="increment-btn cash">CASH $20</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
@@ -66,18 +230,22 @@
                 <button class="increment-btn cash">CASH $10</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
+            <!-- Single CC Transaction Button -->
             <div class="product-item" data-item="CC TRANS" data-price="0">
                 <button class="increment-btn cc">CC TRANS</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
+            <!-- Ticket Count Button -->
             <div class="product-item" data-item="TICKET" data-price="0">
                 <button class="increment-btn ticket">TICKET</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
+            <!-- Comp Button -->
             <div class="product-item" data-item="COMP" data-price="0">
                 <button class="increment-btn comp">COMP</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
+            <!-- Custom Cash -->
             <div class="product-item" data-item="CASH (CUSTOM)">
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
@@ -116,6 +284,7 @@
             }
 
             init() {
+                // Open IndexedDB
                 const request = indexedDB.open('SalesDB', 2);
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
@@ -135,6 +304,7 @@
                     this.showError('Failed to open database.');
                 };
 
+                // Set up event listeners
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
                 $(document).on('click', '.increment-btn', (event) => {
                     const $item = $(event.target).closest('.product-item');
@@ -160,6 +330,10 @@
                     $item.find('input').val('');
                 });
                 $('#logSaleBtn').on('click', () => this.logSale());
+
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                $('#eventDate').val(today);
             }
 
             checkSessionStatus() {
@@ -231,7 +405,7 @@
                     };
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
-                    if (pin === '1234') {
+                    if (pin === '1234') { // Placeholder PIN; secure method needed later
                         const tx = this.db.transaction(['sessions'], 'readwrite');
                         const store = tx.objectStore('sessions');
                         const request = store.get(this.sessionId);
@@ -324,13 +498,12 @@
             }
 
             resetSale() {
-                // Reset all items, including tickets, for the next sale
-                this.currentItems = [];
-                this.total = 0;
-                $('.count').text('0');
-                $('#cashTotal').text('0.00');
-                $('#noteInput').val('');
-                // Note: doorCount is cumulative and not reset per sale
+                this.currentItems = []; // Clear all items, including tickets
+                this.total = 0; // Reset the transaction total
+                $('.count').text('0'); // Reset all item counts to zero, including tickets
+                $('#cashTotal').text('0.00'); // Update the displayed total
+                $('#noteInput').val(''); // Clear any notes
+                // Note: doorCount is cumulative and not reset here
             }
 
             showError(message) {
