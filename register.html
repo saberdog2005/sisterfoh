@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sister Bar Register</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 20px;
+            max-width: 150px;
+        }
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+        }
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input.locked {
+            background: #555;
+            color: #888;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .open-btn {
+            background: #1a73e8;
+            color: white;
+        }
+        .close-btn {
+            background: #d32f2f;
+            color: white;
+        }
+        #errorMessage {
+            color: #ff6b6b;
+            text-align: center;
+            display: none;
+            margin-top: 10px;
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .product-controls {
+            margin-top: 5px;
+        }
+        .cash { background: #2e7d32; }
+        .cc { background: #d32f2f; }
+        .control-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .count {
+            font-size: 1.2em;
+            width: 30px;
+        }
+        .controls button {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .plus { background: #1a73e8; color: white; }
+        .minus { background: #d32f2f; color: white; }
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .custom-input input {
+            width: 100px;
+            padding: 5px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        .add-custom {
+            padding: 5px 10px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #555;
+        }
+        th {
+            background: #1a73e8;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo">
+    <h1>Sister Bar Register</h1>
+    <div class="container">
+        <div class="form-group">
+            <label for="eventDate">Event Date:</label>
+            <input type="date" id="eventDate" value="2025-03-05">
+        </div>
+        <div class="form-group">
+            <label for="eventVenue">Event Venue:</label>
+            <input type="text" id="eventVenue" placeholder="Enter venue" value="Sister">
+        </div>
+        <div class="form-group">
+            <label for="cashierName">Cashier Name:</label>
+            <input type="text" id="cashierName" placeholder="Enter cashier name">
+        </div>
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <div id="errorMessage"></div>
+        <button id="logSaleBtn">Log Sale</button>
+        <div class="totals">Total: $<span id="totalAmount">0.00</span></div>
+        <div class="button-container"></div>
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        let db;
+        let sessionStarted = false;
+        let sessionId = null;
+        let currentItems = [];
+        let total = 0;
+
+        const cashOptions = [
+            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
+            { amount: 12 }, { amount: 12.5 }, { amount: 15 }, { amount: 20 },
+            { custom: true }
+        ];
+
+        const ccOptions = [
+            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
+            { amount: 12 }, { amount: 15 }, { amount: 20 }, { amount: 22 },
+            { custom: true }
+        ];
+
+        // Open IndexedDB
+        const request = indexedDB.open('SalesDB', 2);
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('sessions')) {
+                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('transactions')) {
+                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+            }
+        };
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            checkSessionStatus();
+        };
+        request.onerror = function(event) {
+            $('#errorMessage').text('Failed to open database.').show();
+            setTimeout(() => $('#errorMessage').hide(), 3000);
+        };
+
+        function checkSessionStatus() {
+            const activeSessionId = localStorage.getItem('activeSessionId');
+            if (activeSessionId) {
+                const tx = db.transaction(['sessions'], 'readonly');
+                const store = tx.objectStore('sessions');
+                const request = store.get(Number(activeSessionId));
+                request.onsuccess = function(event) {
+                    const session = event.target.result;
+                    if (session && session.status === 'open') {
+                        sessionStarted = true;
+                        sessionId = session.id;
+                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                        $('#eventDate').val(session.date);
+                        $('#eventVenue').val(session.venue);
+                        $('#cashierName').val(session.cashier);
+                        $('#eventDate, #eventVenue, #cashierName').prop('readonly', true).addClass('locked');
+                        localStorage.setItem('salesStatus', 'open');
+                        localStorage.setItem('cashierName', session.cashier);
+                    } else {
+                        resetSession();
+                    }
+                };
+                request.onerror = function() {
+                    resetSession();
+                };
+            } else {
+                resetSession();
+            }
+        }
+
+        function resetSession() {
+            sessionStarted = false;
+            sessionId = null;
+            localStorage.removeItem('activeSessionId');
+            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+            $('#eventDate, #eventVenue, #cashierName').prop('readonly', false).removeClass('locked');
+            localStorage.setItem('salesStatus', 'closed');
+            localStorage.removeItem('cashierName');
+        }
+
+        $('#toggleSalesBtn').on('click', function() {
+            if (!sessionStarted) {
+                const cashierName = $('#cashierName').val().trim();
+                if (!cashierName) {
+                    $('#errorMessage').text('Please enter a cashier name.').show();
+                    setTimeout(() => $('#errorMessage').hide(), 3000);
+                    return;
+                }
+                const session = {
+                    date: $('#eventDate').val(),
+                    venue: $('#eventVenue').val(),
+                    cashier: cashierName,
+                    status: 'open',
+                    startTime: new Date().toISOString()
+                };
+                const tx = db.transaction(['sessions'], 'readwrite');
+                const store = tx.objectStore('sessions');
+                const request = store.add(session);
+                request.onsuccess = function(event) {
+                    sessionId = event.target.result;
+                    localStorage.setItem('activeSessionId', sessionId);
+                    sessionStarted = true;
+                    $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                    $('#eventDate, #eventVenue, #cashierName').prop('readonly', true).addClass('locked');
+                    localStorage.setItem('salesStatus', 'open');
+                    localStorage.setItem('cashierName', cashierName);
+                };
+            } else {
+                const tx = db.transaction(['sessions'], 'readwrite');
+                const store = tx.objectStore('sessions');
+                const request = store.get(sessionId);
+                request.onsuccess = function(event) {
+                    const session = event.target.result;
+                    session.status = 'closed';
+                    session.endTime = new Date().toISOString();
+                    store.put(session);
+                    resetSession();
+                };
+            }
+        });
+
+        function generateButtons() {
+            const buttonContainer = $('.button-container').empty();
+            cashOptions.forEach(option => {
+                if (option.amount) {
+                    const amount = option.amount, itemName = `CASH $${amount}`;
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="${itemName}" data-price="${amount}">
+                            <div class="product-controls cash">
+                                <h4>${itemName}</h4>
+                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            </div>
+                        </div>
+                    `);
+                } else if (option.custom) {
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="CASH (CUSTOM)">
+                            <div class="product-controls cash">
+                                <h4>CASH (CUSTOM)</h4>
+                                <div class="custom-input"><input type="number" step="0.01" placeholder="Enter amount"><button class="add-custom">Add</button></div>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+            ccOptions.forEach(option => {
+                if (option.amount) {
+                    const amount = option.amount, itemName = `CC $${amount}`;
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="${itemName}" data-price="${amount}">
+                            <div class="product-controls cc">
+                                <h4>${itemName}</h4>
+                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            </div>
+                        </div>
+                    `);
+                } else if (option.custom) {
+                    buttonContainer.append(`
+                        <div class="product-item" data-item="CC EXTRA">
+                            <div class="product-controls cc">
+                                <h4>CC EXTRA</h4>
+                                <div class="custom-input"><input type="number" step="0.01" placeholder="Enter amount"><button class="add-custom">Add</button></div>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        $(document).ready(generateButtons);
+
+        $(document).on('click', '.plus', function() {
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
+            let count = parseInt($count.text()) + 1;
+            $count.text(count);
+            const itemName = $item.data('item'), itemPrice = parseFloat($item.data('price'));
+            const existingItem = currentItems.find(i => i.item === itemName);
+            if (existingItem) existingItem.quantity++; else currentItems.push({ item: itemName, price: itemPrice, quantity: 1 });
+            updateTotal();
+        });
+
+        $(document).on('click', '.minus', function() {
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
+            let count = parseInt($count.text());
+            if (count > 0) {
+                count--; $count.text(count);
+                const itemName = $item.data('item'), existingItem = currentItems.find(i => i.item === itemName);
+                if (existingItem) {
+                    existingItem.quantity--;
+                    if (existingItem.quantity <= 0) currentItems = currentItems.filter(i => i.item !== itemName);
+                }
+                updateTotal();
+            }
+        });
+
+        $(document).on('click', '.add-custom', function() {
+            const $item = $(this).closest('.product-item'), baseName = $item.data('item'), amount = parseFloat($item.find('input').val());
+            if (isNaN(amount) || amount <= 0) return alert('Please enter a valid amount.');
+            const itemName = `${baseName} $${amount.toFixed(2)}`;
+            currentItems.push({ item: itemName, price: amount, quantity: 1 });
+            updateTotal();
+            $item.find('input').val('');
+        });
+
+        function updateTotal() {
+            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            $('#totalAmount').text(total.toFixed(2));
+        }
+
+        $('#logSaleBtn').on('click', function() {
+            if (!sessionStarted) return $('#errorMessage').text('Please open sales to start the session.').show().delay(3000).hide(0);
+            if (currentItems.length === 0) return $('#errorMessage').text('No items selected to log.').show().delay(3000).hide(0);
+            const transaction = {
+                sessionId: sessionId,
+                timestamp: new Date().toISOString(),
+                time: new Date().toLocaleTimeString(),
+                itemList: currentItems.map(item => ({ ...item })),
+                total: total
+            };
+            const tx = db.transaction(['transactions'], 'readwrite');
+            const store = tx.objectStore('transactions');
+            const request = store.add(transaction);
+            request.onsuccess = () => {
+                tx.oncomplete = () => {
+                    $('#logTable tbody').prepend(`<tr><td>${transaction.time}</td><td>${transaction.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ')}</td><td>$${transaction.total.toFixed(2)}</td></tr>`);
+                    resetSale();
+                };
+            };
+            request.onerror = () => $('#errorMessage').text('Failed to log sale.').show().delay(3000).hide(0);
+        });
+
+        function resetSale() {
+            currentItems = [];
+            total = 0;
+            $('.count').text('0');
+            $('#totalAmount').text('0.00');
+        }
+    </script>
+</body>
+</html>
