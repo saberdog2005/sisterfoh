@@ -23,7 +23,7 @@
             padding: 10px;
             border-radius: 8px;
             margin-bottom: 10px;
-            flex-wrap: nowrap; /* Prevent wrapping */
+            flex-wrap: wrap;
         }
         .header label {
             margin-right: 5px;
@@ -194,10 +194,6 @@
                 grid-template-columns: repeat(4, 1fr);
             }
         }
-        /* Make changing numbers bold */
-        .count, #cashTotal, #doorCount {
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -336,6 +332,21 @@
                 $('#eventDate').val(today);
             }
 
+            loadLastSessionDefaults() {
+                const tx = this.db.transaction(['sessions'], 'readonly');
+                const store = tx.objectStore('sessions');
+                const request = store.openCursor(null, 'prev');
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const lastSession = cursor.value;
+                        $('#eventVenue').val(lastSession.venue);
+                        $('#eventName').val(lastSession.eventName);
+                        $('#cashierName').val(lastSession.cashier);
+                    }
+                };
+            }
+
             checkSessionStatus() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
                 if (activeSessionId) {
@@ -368,6 +379,9 @@
                 localStorage.removeItem('cashierName');
                 $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
                 $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
+                const today = new Date().toISOString().split('T')[0];
+                $('#eventDate').val(today);
+                this.loadLastSessionDefaults();
                 $('#cashTotal').text('0.00');
                 $('#doorCount').text('0');
                 this.doorCount = 0;
