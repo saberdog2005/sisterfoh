@@ -25,6 +25,10 @@
             margin-bottom: 10px;
             flex-wrap: wrap;
         }
+        .header label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
         .header input {
             padding: 8px;
             background: #3c3c3c;
@@ -172,13 +176,14 @@
             margin-top: 20px;
             position: relative;
         }
-        #errorMessage {
-            color: #ff6b6b;
+        #errorMessage, #successMessage {
             text-align: center;
-            display: none;
             margin-top: 10px;
             font-size: 1.1em;
+            display: none;
         }
+        #errorMessage { color: #ff6b6b; }
+        #successMessage { color: #2e7d32; }
         @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
             .container {
                 max-width: 85%;
@@ -191,9 +196,13 @@
 </head>
 <body>
     <div class="header">
+        <label for="eventDate">Date:</label>
         <input type="date" id="eventDate" value="2025-03-05">
+        <label for="eventVenue">Venue:</label>
         <input type="text" id="eventVenue" placeholder="Venue" value="Sister">
+        <label for="eventName">Event Name:</label>
         <input type="text" id="eventName" placeholder="Event Name">
+        <label for="cashierName">Cashier Name:</label>
         <input type="text" id="cashierName" placeholder="Cashier Name">
     </div>
     <div class="container">
@@ -235,7 +244,7 @@
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
                     <div class="custom-input">
-                        <input type="number" step="0.01" placeholder="Amount">
+                        <input type="number" step="0.01" min="0.01" placeholder="Amount">
                         <button class="add-custom">Add</button>
                     </div>
                 </div>
@@ -246,209 +255,262 @@
             <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
         </div>
         <div class="note-section">
-            <input type="text" id="noteInput" placeholder="Add a note...">
+            <label for="noteInput">Add a note...</label>
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
         </div>
         <button id="logSaleBtn">Log Sale</button>
     </div>
     <div class="footer">
         <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <div id="successMessage"></div>
         <div id="errorMessage"></div>
     </div>
 
     <script>
-        let db;
-        let sessionStarted = false;
-        let sessionId = null;
-        let currentItems = [];
-        let total = 0;
-        let doorCount = 0;
-
-        // Open IndexedDB
-        const request = indexedDB.open('SalesDB', 2);
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains('sessions')) {
-                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+        class SalesApp {
+            constructor() {
+                this.db = null;
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.currentItems = [];
+                this.total = 0;
+                this.doorCount = 0;
             }
-            if (!db.objectStoreNames.contains('transactions')) {
-                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
-            }
-        };
-        request.onsuccess = function(event) {
-            db = event.target.result;
-            checkSessionStatus();
-        };
-        request.onerror = function(event) {
-            $('#errorMessage').text('Failed to open database.').show();
-            setTimeout(() => $('#errorMessage').hide(), 3000);
-        };
 
-        function checkSessionStatus() {
-            const activeSessionId = localStorage.getItem('activeSessionId');
-            if (activeSessionId) {
-                const tx = db.transaction(['sessions'], 'readonly');
-                const store = tx.objectStore('sessions');
-                const request = store.get(Number(activeSessionId));
-                request.onsuccess = function(event) {
-                    const session = event.target.result;
-                    if (session && session.status === 'open') {
-                        sessionStarted = true;
-                        sessionId = session.id;
-                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
-                        $('#eventDate, #eventVenue, #eventName, #cashierName').val([session.date, session.venue, session.eventName, session.cashier]).prop('readonly', true).addClass('locked');
-                        localStorage.setItem('salesStatus', 'open');
-                        localStorage.setItem('cashierName', session.cashier);
-                    } else {
-                        resetSession();
+            init() {
+                // Open IndexedDB
+                const request = indexedDB.open('SalesDB', 2);
+                request.onupgradeneeded = (event) => {
+                    this.db = event.target.result;
+                    if (!this.db.objectStoreNames.contains('sessions')) {
+                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!this.db.objectStoreNames.contains('transactions')) {
+                        const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
                     }
                 };
-            } else {
-                resetSession();
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.checkSessionStatus();
+                };
+                request.onerror = () => {
+                    this.showError('Failed to open database.');
+                };
+
+                // Set up event listeners
+                $('#toggleSalesBtn').on('click', () => this.toggleSales());
+                $(document).on('click', '.increment-btn', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    const itemPrice = parseFloat($item.data('price'));
+                    this.incrementItem(itemName, itemPrice);
+                });
+                $(document).on('click', '.minus', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    this.decrementItem(itemName);
+                });
+                $(document).on('click', '.add-custom', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const amount = parseFloat($item.find('input').val());
+                    if (isNaN(amount) || amount <= 0) {
+                        this.showError('Please enter a valid amount greater than zero.');
+                        return;
+                    }
+                    const itemName = `${$item.data('item')} $${amount.toFixed(2)}`;
+                    this.currentItems.push({ item: itemName, price: amount, quantity: 1 });
+                    this.updateTotals();
+                    $item.find('input').val('');
+                });
+                $('#logSaleBtn').on('click', () => this.logSale());
             }
-        }
 
-        function resetSession() {
-            sessionStarted = false;
-            sessionId = null;
-            localStorage.removeItem('activeSessionId');
-            localStorage.setItem('salesStatus', 'closed');
-            localStorage.removeItem('cashierName');
-            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
-            $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
-            $('#cashTotal').text('0.00');
-            $('#doorCount').text('0');
-            doorCount = 0;
-            currentItems = [];
-        }
-
-        $('#toggleSalesBtn').on('click', function() {
-            if (!sessionStarted) {
-                const cashierName = $('#cashierName').val().trim();
-                if (!cashierName) {
-                    $('#errorMessage').text('Please enter a cashier name.').show();
-                    setTimeout(() => $('#errorMessage').hide(), 3000);
-                    return;
-                }
-                const session = {
-                    date: $('#eventDate').val(),
-                    venue: $('#eventVenue').val(),
-                    eventName: $('#eventName').val(),
-                    cashier: cashierName,
-                    status: 'open',
-                    startTime: new Date().toISOString()
-                };
-                const tx = db.transaction(['sessions'], 'readwrite');
-                const store = tx.objectStore('sessions');
-                const request = store.add(session);
-                request.onsuccess = function(event) {
-                    sessionId = event.target.result;
-                    localStorage.setItem('activeSessionId', sessionId);
-                    sessionStarted = true;
-                    $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
-                    $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
-                    localStorage.setItem('salesStatus', 'open');
-                    localStorage.setItem('cashierName', cashierName);
-                };
-            } else {
-                const pin = prompt('Enter PIN to close sales (default: 1234)');
-                if (pin === '1234') { // Placeholder PIN; secure method needed later
-                    const tx = db.transaction(['sessions'], 'readwrite');
+            checkSessionStatus() {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) {
+                    const tx = this.db.transaction(['sessions'], 'readonly');
                     const store = tx.objectStore('sessions');
-                    const request = store.get(sessionId);
-                    request.onsuccess = function(event) {
+                    const request = store.get(Number(activeSessionId));
+                    request.onsuccess = (event) => {
                         const session = event.target.result;
-                        session.status = 'closed';
-                        session.endTime = new Date().toISOString();
-                        store.put(session);
-                        resetSession();
+                        if (session && session.status === 'open') {
+                            this.sessionStarted = true;
+                            this.sessionId = session.id;
+                            $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            $('#eventDate, #eventVenue, #eventName, #cashierName').val([session.date, session.venue, session.eventName, session.cashier]).prop('readonly', true).addClass('locked');
+                            localStorage.setItem('salesStatus', 'open');
+                            localStorage.setItem('cashierName', session.cashier);
+                        } else {
+                            this.resetSession();
+                        }
                     };
                 } else {
-                    $('#errorMessage').text('Incorrect PIN.').show();
-                    setTimeout(() => $('#errorMessage').hide(), 3000);
+                    this.resetSession();
                 }
             }
-        });
 
-        $(document).on('click', '.increment-btn', function() {
-            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
-            let count = parseInt($count.text()) + 1;
-            $count.text(count);
-            const itemName = $item.data('item'), itemPrice = parseFloat($item.data('price'));
-            const existingItem = currentItems.find(i => i.item === itemName);
-            if (existingItem) existingItem.quantity++; else currentItems.push({ item: itemName, price: itemPrice, quantity: 1 });
-            if (itemName === 'TICKET') doorCount++;
-            updateTotals();
-        });
+            resetSession() {
+                this.sessionStarted = false;
+                this.sessionId = null;
+                localStorage.removeItem('activeSessionId');
+                localStorage.setItem('salesStatus', 'closed');
+                localStorage.removeItem('cashierName');
+                $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
+                $('#cashTotal').text('0.00');
+                $('#doorCount').text('0');
+                this.doorCount = 0;
+                this.currentItems = [];
+            }
 
-        $(document).on('click', '.minus', function() {
-            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
-            let count = parseInt($count.text());
-            if (count > 0) {
-                count--; $count.text(count);
-                const itemName = $item.data('item'), existingItem = currentItems.find(i => i.item === itemName);
+            toggleSales() {
+                if (!this.sessionStarted) {
+                    const date = $('#eventDate').val().trim();
+                    const venue = $('#eventVenue').val().trim();
+                    const cashierName = $('#cashierName').val().trim();
+                    if (!date || !venue || !cashierName) {
+                        this.showError('Please fill in date, venue, and cashier name.');
+                        return;
+                    }
+                    const session = {
+                        date: date,
+                        venue: venue,
+                        eventName: $('#eventName').val().trim(),
+                        cashier: cashierName,
+                        status: 'open',
+                        startTime: new Date().toISOString()
+                    };
+                    const tx = this.db.transaction(['sessions'], 'readwrite');
+                    const store = tx.objectStore('sessions');
+                    const request = store.add(session);
+                    request.onsuccess = (event) => {
+                        this.sessionId = event.target.result;
+                        localStorage.setItem('activeSessionId', this.sessionId);
+                        this.sessionStarted = true;
+                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                        $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
+                        localStorage.setItem('salesStatus', 'open');
+                        localStorage.setItem('cashierName', cashierName);
+                    };
+                } else {
+                    const pin = prompt('Enter PIN to close sales (default: 1234)');
+                    if (pin === '1234') { // Placeholder PIN; secure method needed later
+                        const tx = this.db.transaction(['sessions'], 'readwrite');
+                        const store = tx.objectStore('sessions');
+                        const request = store.get(this.sessionId);
+                        request.onsuccess = (event) => {
+                            const session = event.target.result;
+                            session.status = 'closed';
+                            session.endTime = new Date().toISOString();
+                            store.put(session);
+                            this.resetSession();
+                        };
+                    } else {
+                        this.showError('Incorrect PIN.');
+                    }
+                }
+            }
+
+            incrementItem(itemName, price) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text()) + 1;
+                $count.text(count);
+                const existingItem = this.currentItems.find(i => i.item === itemName);
                 if (existingItem) {
-                    existingItem.quantity--;
-                    if (existingItem.quantity <= 0) currentItems = currentItems.filter(i => i.item !== itemName);
-                    if (itemName === 'TICKET') doorCount--;
+                    existingItem.quantity++;
+                } else {
+                    this.currentItems.push({ item: itemName, price: price, quantity: 1 });
                 }
-                updateTotals();
+                if (itemName === 'TICKET') {
+                    this.doorCount++;
+                }
+                this.updateTotals();
             }
-        });
 
-        $(document).on('click', '.add-custom', function() {
-            const $item = $(this).closest('.product-item'), baseName = $item.data('item'), amount = parseFloat($item.find('input').val());
-            if (isNaN(amount) || amount <= 0) return alert('Please enter a valid amount.');
-            const itemName = `${baseName} $${amount.toFixed(2)}`;
-            currentItems.push({ item: itemName, price: amount, quantity: 1 });
-            updateTotals();
-            $item.find('input').val('');
-        });
+            decrementItem(itemName) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text());
+                if (count > 0) {
+                    count--;
+                    $count.text(count);
+                    const existingItem = this.currentItems.find(i => i.item === itemName);
+                    if (existingItem) {
+                        existingItem.quantity--;
+                        if (existingItem.quantity <= 0) {
+                            this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                        }
+                        if (itemName === 'TICKET') {
+                            this.doorCount--;
+                        }
+                    }
+                    this.updateTotals();
+                }
+            }
 
-        function updateTotals() {
-            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            $('#cashTotal').text(total.toFixed(2));
-            $('#doorCount').text(doorCount);
-        }
+            updateTotals() {
+                this.total = this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                $('#cashTotal').text(this.total.toFixed(2));
+                $('#doorCount').text(this.doorCount);
+            }
 
-        $('#logSaleBtn').on('click', function() {
-            if (!sessionStarted) return $('#errorMessage').text('Please open sales to start the session.').show().delay(3000).hide(0);
-            if (currentItems.length === 0 && !$('#noteInput').val()) return $('#errorMessage').text('No items or note to log.').show().delay(3000).hide(0);
-            const transaction = {
-                sessionId: sessionId,
-                timestamp: new Date().toISOString(),
-                time: new Date().toLocaleTimeString(),
-                itemList: currentItems.map(item => ({ ...item })),
-                total: total,
-                note: $('#noteInput').val()
-            };
-            const tx = db.transaction(['transactions'], 'readwrite');
-            const store = tx.objectStore('transactions');
-            const request = store.add(transaction);
-            request.onsuccess = () => {
-                tx.oncomplete = () => {
-                    resetSale();
-                    $('#logSaleBtn').addClass('flash');
-                    setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+            logSale() {
+                if (!this.sessionStarted) {
+                    this.showError('Please open sales to start the session.');
+                    return;
+                }
+                if (this.currentItems.length === 0 && !$('#noteInput').val()) {
+                    this.showError('No items or note to log.');
+                    return;
+                }
+                const transaction = {
+                    sessionId: this.sessionId,
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    itemList: this.currentItems.map(item => ({ ...item })),
+                    total: this.total,
+                    note: $('#noteInput').val()
                 };
-            };
-            request.onerror = () => $('#errorMessage').text('Failed to log sale.').show().delay(3000).hide(0);
-        });
+                const tx = this.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const request = store.add(transaction);
+                request.onsuccess = () => {
+                    tx.oncomplete = () => {
+                        this.resetSale();
+                        $('#logSaleBtn').addClass('flash');
+                        setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+                        this.showSuccess('Sale logged successfully.');
+                    };
+                };
+                request.onerror = () => {
+                    this.showError('Failed to log sale.');
+                };
+            }
 
-        function resetSale() {
-            currentItems = currentItems.filter(item => item.item === 'TICKET'); // Preserve ticket count
-            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            $('.count').each(function() {
-                const itemName = $(this).closest('.product-item').data('item');
-                if (itemName !== 'TICKET') $(this).text('0');
-            });
-            $('#cashTotal').text(total.toFixed(2));
-            $('#noteInput').val('');
+            resetSale() {
+                this.currentItems = this.currentItems.filter(item => item.item === 'TICKET');
+                this.total = this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                $('.count').each(function() {
+                    const itemName = $(this).closest('.product-item').data('item');
+                    if (itemName !== 'TICKET') $(this).text('0');
+                });
+                $('#cashTotal').text(this.total.toFixed(2));
+                $('#noteInput').val('');
+            }
+
+            showError(message) {
+                $('#errorMessage').text(message).show();
+                setTimeout(() => $('#errorMessage').hide(), 3000);
+            }
+
+            showSuccess(message) {
+                $('#successMessage').text(message).show();
+                setTimeout(() => $('#successMessage').hide(), 2000);
+            }
         }
 
-        $('#noteInput').on('click', function() {
-            $(this).focus(); // Trigger keyboard on iPad
-        });
+        const app = new SalesApp();
+        app.init();
     </script>
 </body>
 </html>
