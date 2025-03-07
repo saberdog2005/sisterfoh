@@ -16,9 +16,28 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
         .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2d2d2d; color: #e0e0e0; padding: 20px; border-radius: 5px; text-align: center; }
         #modalClose { background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #555;
+        }
+        th {
+            background: #1a73e8;
+            color: white;
+        }
     </style>
 </head>
 <body>
+<a href="index.html">Back to Home</a>
+<img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo" width="250"></img>
     <div class="log-container">
         <h2>Select Session</h2>
         <select id="sessionSelect">
@@ -35,6 +54,19 @@
     <div class="log-container">
         <h2>Transaction Totals Over Time</h2>
         <canvas id="transactionGraph"></canvas>
+    </div>
+    <div class="log-container">
+        <h2>Transaction Log</h2>
+        <table id="transactionTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <!-- Modal for session start and end -->
@@ -72,7 +104,7 @@
             alert('Failed to open database.');
         };
 
-        // Load sessions into dropdown and auto-select active session
+        // Load sessions into dropdown
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
@@ -81,30 +113,19 @@
                 const sessions = event.target.result;
                 const $select = $('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
-                const activeSessionId = localStorage.getItem('activeSessionId');
                 sessions.forEach(session => {
-                    const isCurrent = session.id == activeSessionId && session.status === 'open';
-                    const label = `${session.date} - ${session.venue} - ${session.cashier}${isCurrent ? ' (Current)' : ''}`;
+                    const label = `${session.date} - ${session.venue} - ${session.cashier}${session.status === 'open' ? ' (Current)' : ''}`;
                     $select.append(`<option value="${session.id}">${label}</option>`);
                 });
+                const activeSessionId = localStorage.getItem('activeSessionId');
                 if (activeSessionId) {
-                    const activeOption = $select.find(`option[value="${activeSessionId}"]`);
-                    if (activeOption.length > 0) {
-                        $select.val(activeSessionId);
-                        currentSessionId = activeSessionId;
-                        updateLog(activeSessionId);
-                        if (localStorage.getItem('salesStatus') === 'open') {
-                            startStatsUpdate(activeSessionId);
-                        }
-                    } else {
-                        stopStatsUpdate();
-                        resetDisplay();
+                    $select.val(activeSessionId);
+                    currentSessionId = activeSessionId;
+                    updateLog(activeSessionId);
+                    if (localStorage.getItem('salesStatus') === 'open') {
+                        startStatsUpdate(activeSessionId);
                     }
                 }
-                console.log('Sessions loaded:', sessions);
-            };
-            request.onerror = function() {
-                console.error('Failed to load sessions');
             };
         }
 
@@ -141,10 +162,14 @@
                 $('#cardSales').text(cardTotal.toFixed(2));
                 $('#totalSales').text((cashTotal + cardTotal).toFixed(2));
                 updateTransactionGraph(cashData, cardData, totalData);
-                console.log(`Updated log for session ${sessionId}:`, { cashTotal, cardTotal });
-            };
-            request.onerror = function() {
-                console.error(`Failed to update log for session ${sessionId}`);
+
+                // Update transaction table
+                const $tbody = $('#transactionTable tbody');
+                $tbody.empty();
+                transactions.reverse().forEach(t => {
+                    const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
+                    $tbody.append(`<tr><td>${t.time}</td><td>${items}</td><td>$${t.total.toFixed(2)}</td></tr>`);
+                });
             };
         }
 
@@ -157,6 +182,7 @@
                 transactionChart.data.datasets.forEach(dataset => dataset.data = []);
                 transactionChart.update();
             }
+            $('#transactionTable tbody').empty();
         }
 
         // Update transaction graph
@@ -189,11 +215,10 @@
 
         // Start real-time updates
         function startStatsUpdate(sessionId) {
-            if (!isStatsUpdateRunning && sessionId) {
+            if (!isStatsUpdateRunning) {
                 isStatsUpdateRunning = true;
                 updateLog(sessionId);
                 statsIntervalId = setInterval(() => updateLog(sessionId), 2000);
-                console.log(`Started real-time updates for session ${sessionId}`);
             }
         }
 
@@ -203,11 +228,10 @@
                 isStatsUpdateRunning = false;
                 clearInterval(statsIntervalId);
                 statsIntervalId = null;
-                console.log('Stopped real-time updates');
             }
         }
 
-        // Handle manual session selection
+        // Handle session selection
         $('#sessionSelect').on('change', function() {
             const sessionId = $(this).val();
             currentSessionId = sessionId;
@@ -217,7 +241,7 @@
                 const request = store.get(Number(sessionId));
                 request.onsuccess = function(event) {
                     const session = event.target.result;
-                    if (session.status === 'open' && session.id == localStorage.getItem('activeSessionId')) {
+                    if (session.status === 'open') {
                         startStatsUpdate(sessionId);
                     } else {
                         stopStatsUpdate();
@@ -232,23 +256,16 @@
 
         // Listen for register status changes
         window.addEventListener('storage', function(event) {
-            if (event.key === 'activeSessionId') {
-                const activeSessionId = event.newValue;
-                if (activeSessionId) {
-                    loadSessions();
-                    const cashierName = localStorage.getItem('cashierName') || 'Unknown';
+            if (event.key === 'salesStatus') {
+                loadSessions();
+                if (event.newValue === 'open') {
+                    const cashierName = localStorage.getItem('cashierName');
                     showModal(`New session started by ${cashierName}`);
-                } else {
+                } else if (event.newValue === 'closed' && currentSessionId) {
                     stopStatsUpdate();
-                    loadSessions();
+                    updateLog(currentSessionId); // Show final data
                     showModal('Session has been closed');
                 }
-            } else if (event.key === 'salesStatus' && event.newValue === 'closed') {
-                stopStatsUpdate();
-                if (currentSessionId) {
-                    updateLog(currentSessionId);
-                }
-                showModal('Session has been closed');
             }
         });
 
@@ -314,14 +331,16 @@
                     const imgData = canvas.toDataURL('image/png');
                     doc.addImage(imgData, 'PNG', 10, 120, 190, 100);
 
-                    doc.text('Transactions', 10, 230);
-                    let y = 240;
+                    doc.addPage();
+                    doc.text('Transaction Log', 10, 10);
+                    let y = 20;
                     transactions.forEach((t, index) => {
-                        const time = new Date(t.timestamp).toLocaleTimeString();
-                        const items = t.itemList.map(item => `${item.item} ($${item.price.toFixed(2)} x ${item.quantity})`).join(', ');
-                        doc.text(`${index + 1}. ${time}: ${items}`, 10, y);
+                        const time = t.time;
+                        const items = t.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
+                        const total = t.total.toFixed(2);
+                        doc.text(`${index + 1}. ${time}: ${items} - $${total}`, 10, y);
                         y += 10;
-                        if (y > 280) {
+                        if (y > 270) {
                             doc.addPage();
                             y = 10;
                         }

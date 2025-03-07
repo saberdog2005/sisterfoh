@@ -141,23 +141,6 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: #333;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #555;
-        }
-        th {
-            background: #1a73e8;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -181,16 +164,6 @@
         <button id="logSaleBtn">Log Sale</button>
         <div class="totals">Total: $<span id="totalAmount">0.00</span></div>
         <div class="button-container"></div>
-        <table id="logTable">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
     </div>
 
     <script>
@@ -267,10 +240,10 @@
             sessionStarted = false;
             sessionId = null;
             localStorage.removeItem('activeSessionId');
-            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
-            $('#eventDate, #eventVenue, #cashierName').prop('readonly', false).removeClass('locked');
             localStorage.setItem('salesStatus', 'closed');
             localStorage.removeItem('cashierName');
+            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+            $('#eventDate, #eventVenue, #cashierName').prop('readonly', false).removeClass('locked');
         }
 
         $('#toggleSalesBtn').on('click', function() {
@@ -417,7 +390,6 @@
             const request = store.add(transaction);
             request.onsuccess = () => {
                 tx.oncomplete = () => {
-                    $('#logTable tbody').prepend(`<tr><td>${transaction.time}</td><td>${transaction.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ')}</td><td>$${transaction.total.toFixed(2)}</td></tr>`);
                     resetSale();
                 };
             };
