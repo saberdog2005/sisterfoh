@@ -332,21 +332,6 @@
                 $('#eventDate').val(today);
             }
 
-            loadLastSessionDefaults() {
-                const tx = this.db.transaction(['sessions'], 'readonly');
-                const store = tx.objectStore('sessions');
-                const request = store.openCursor(null, 'prev');
-                request.onsuccess = (event) => {
-                    const cursor = event.target.result;
-                    if (cursor) {
-                        const lastSession = cursor.value;
-                        $('#eventVenue').val(lastSession.venue);
-                        $('#eventName').val(lastSession.eventName);
-                        $('#cashierName').val(lastSession.cashier);
-                    }
-                };
-            }
-
             checkSessionStatus() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
                 if (activeSessionId) {
@@ -359,7 +344,12 @@
                             this.sessionStarted = true;
                             this.sessionId = session.id;
                             $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
-                            $('#eventDate, #eventVenue, #eventName, #cashierName').val([session.date, session.venue, session.eventName, session.cashier]).prop('readonly', true).addClass('locked');
+                            // Set each input field individually
+                            $('#eventDate').val(session.date);
+                            $('#eventVenue').val(session.venue);
+                            $('#eventName').val(session.eventName);
+                            $('#cashierName').val(session.cashier);
+                            $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
                             localStorage.setItem('salesStatus', 'open');
                             localStorage.setItem('cashierName', session.cashier);
                         } else {
@@ -386,6 +376,21 @@
                 $('#doorCount').text('0');
                 this.doorCount = 0;
                 this.currentItems = [];
+            }
+
+            loadLastSessionDefaults() {
+                const tx = this.db.transaction(['sessions'], 'readonly');
+                const store = tx.objectStore('sessions');
+                const request = store.openCursor(null, 'prev');
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const lastSession = cursor.value;
+                        $('#eventVenue').val(lastSession.venue);
+                        $('#eventName').val(lastSession.eventName);
+                        $('#cashierName').val(lastSession.cashier);
+                    }
+                };
             }
 
             toggleSales() {
