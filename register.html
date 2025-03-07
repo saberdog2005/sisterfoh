@@ -12,7 +12,7 @@
             color: #e0e0e0;
             margin: 0;
             padding: 20px;
-            font-size: 18px; /* Increased base font size for readability */
+            font-size: 18px;
         }
         .logo {
             display: block;
@@ -22,10 +22,10 @@
         h1 {
             text-align: center;
             color: #1a73e8;
-            font-size: 2em; /* Larger heading for visibility */
+            font-size: 2em;
         }
         .container {
-            max-width: 90%; /* Adjusted for iPad screen width */
+            max-width: 90%;
             margin: 0 auto;
             background: #2d2d2d;
             padding: 20px;
@@ -33,35 +33,35 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .form-group {
-            margin-bottom: 20px; /* Increased spacing for touch devices */
+            margin-bottom: 20px;
         }
         label {
             display: block;
             margin-bottom: 5px;
             color: #b0b0b0;
-            font-size: 1.1em; /* Larger labels for readability */
+            font-size: 1.1em;
         }
         input[type="text"], input[type="date"] {
             width: 100%;
-            padding: 12px; /* Larger padding for easier typing */
+            padding: 12px;
             background: #3c3c3c;
             border: 1px solid #555;
             color: #e0e0e0;
             border-radius: 4px;
             box-sizing: border-box;
-            font-size: 1.1em; /* Larger text in inputs */
+            font-size: 1.1em;
         }
         input.locked {
             background: #555;
             color: #888;
         }
         button {
-            padding: 15px 30px; /* Larger buttons for touch interaction */
+            padding: 15px 30px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin: 5px;
-            font-size: 1.2em; /* Larger button text */
+            font-size: 1.2em;
         }
         .open-btn {
             background: #1a73e8;
@@ -76,93 +76,103 @@
             text-align: center;
             display: none;
             margin-top: 10px;
-            font-size: 1.1em; /* Larger error message */
+            font-size: 1.1em;
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive grid */
-            gap: 15px; /* Increased gap for touch targets */
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
         .product-item {
             background: #3c3c3c;
-            padding: 15px; /* Increased padding for touch areas */
+            padding: 15px;
             border-radius: 4px;
             text-align: center;
         }
-        .product-controls {
-            margin-top: 10px; /* More space for controls */
+        .increment-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2em;
+            color: white;
         }
-        .cash { background: #2e7d32; }
-        .cc { background: #d32f2f; }
+        .increment-btn.cash {
+            background: #2e7d32;
+        }
+        .increment-btn.cc {
+            background: #d32f2f;
+        }
         .control-row {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px; /* Increased gap for touch targets */
+            gap: 15px;
+            margin-top: 10px;
         }
         .count {
-            font-size: 1.5em; /* Larger count display */
-            width: 40px; /* Larger width for count */
+            font-size: 1.5em;
+            width: 40px;
         }
-        .controls button {
-            width: 40px; /* Larger buttons for touch */
+        .minus {
+            width: 40px;
             height: 40px;
-            font-size: 1.5em; /* Larger button text */
+            font-size: 1.5em;
+            background: #d32f2f;
+            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
         }
-        .plus { background: #1a73e8; color: white; }
-        .minus { background: #d32f2f; color: white; }
         .custom-input {
             display: flex;
-            gap: 15px; /* Increased gap for touch targets */
+            gap: 15px;
             justify-content: center;
         }
         .custom-input input {
-            width: 120px; /* Larger input for custom amounts */
+            width: 120px;
             padding: 8px;
             background: #444;
             color: #e0e0e0;
             border: 1px solid #666;
             border-radius: 4px;
-            font-size: 1.1em; /* Larger text in inputs */
+            font-size: 1.1em;
         }
         .add-custom {
-            padding: 10px 20px; /* Larger custom add button */
+            padding: 10px 20px;
             background: #1a73e8;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 1.1em; /* Larger button text */
+            font-size: 1.1em;
         }
         #logSaleBtn {
             display: block;
             margin: 20px auto;
-            padding: 20px 40px; /* Larger log sale button */
-            font-size: 1.8em; /* Larger button text */
+            padding: 20px 40px;
+            font-size: 1.8em;
             background: #388e3c;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
         }
-        /* Media query for iPad (768px to 1024px) */
         @media (min-width: 768px) and (max-width: 1024px) {
             .container {
-                max-width: 95%; /* Slightly wider container for iPad */
+                max-width: 95%;
             }
             .button-container {
-                grid-template-columns: repeat(3, 1fr); /* 3 columns for iPad */
+                grid-template-columns: repeat(3, 1fr);
             }
             button {
-                padding: 12px 24px; /* Slightly smaller buttons for iPad */
+                padding: 12px 24px;
                 font-size: 1.1em;
             }
             #logSaleBtn {
-                padding: 15px 30px; /* Adjusted log sale button for iPad */
+                padding: 15px 30px;
                 font-size: 1.5em;
             }
         }
@@ -199,14 +209,14 @@
         let total = 0;
 
         const cashOptions = [
-            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
-            { amount: 12 }, { amount: 12.5 }, { amount: 15 }, { amount: 20 },
+            { amount: 20 }, { amount: 15 }, { amount: 12.5 }, { amount: 12 },
+            { amount: 10 }, { amount: 8 }, { amount: 7 }, { amount: 5 },
             { custom: true }
         ];
 
         const ccOptions = [
-            { amount: 5 }, { amount: 7 }, { amount: 8 }, { amount: 10 },
-            { amount: 12 }, { amount: 15 }, { amount: 20 }, { amount: 22 },
+            { amount: 22 }, { amount: 20 }, { amount: 15 }, { amount: 12 },
+            { amount: 10 }, { amount: 8 }, { amount: 7 }, { amount: 5 },
             { custom: true }
         ];
 
@@ -319,9 +329,10 @@
                     const amount = option.amount, itemName = `CASH $${amount}`;
                     buttonContainer.append(`
                         <div class="product-item" data-item="${itemName}" data-price="${amount}">
-                            <div class="product-controls cash">
-                                <h4>${itemName}</h4>
-                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            <button class="increment-btn cash">${itemName}</button>
+                            <div class="control-row">
+                                <span class="count">0</span>
+                                <button class="minus">-</button>
                             </div>
                         </div>
                     `);
@@ -341,9 +352,10 @@
                     const amount = option.amount, itemName = `CC $${amount}`;
                     buttonContainer.append(`
                         <div class="product-item" data-item="${itemName}" data-price="${amount}">
-                            <div class="product-controls cc">
-                                <h4>${itemName}</h4>
-                                <div class="control-row"><span class="count">0</span><div class="controls"><button class="minus">-</button><button class="plus">+</button></div></div>
+                            <button class="increment-btn cc">${itemName}</button>
+                            <div class="control-row">
+                                <span class="count">0</span>
+                                <button class="minus">-</button>
                             </div>
                         </div>
                     `);
@@ -362,7 +374,7 @@
 
         $(document).ready(generateButtons);
 
-        $(document).on('click', '.plus', function() {
+        $(document).on('click', '.increment-btn', function() {
             const $item = $(this).closest('.product-item'), $count = $item.find('.count');
             let count = parseInt($count.text()) + 1;
             $count.text(count);
