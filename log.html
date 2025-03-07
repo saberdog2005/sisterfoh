@@ -19,9 +19,9 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow: hidden; /* Prevent body scrolling */
+            overflow: hidden;
         }
-        .logo, h2 {
+        h2 {
             margin-bottom: 10px;
             text-align: center;
         }
@@ -32,18 +32,18 @@
             gap: 20px;
             flex-grow: 1;
             width: 100%;
-            max-height: calc(100vh - 120px); /* Adjust for logo and title */
+            max-height: calc(100vh - 60px);
         }
         .log-container {
             background: #2d2d2d;
             padding: 15px;
             border-radius: 5px;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
-        #transaction-log {
-            overflow-y: auto; /* Scroll only within transaction log */
+        .table-wrapper {
+            overflow-y: auto;
+            flex-grow: 1;
         }
         select, button {
             padding: 8px;
@@ -73,15 +73,14 @@
         th {
             background: #3d3d3d;
         }
-        #transactionTable td:nth-child(1) { width: 15%; } /* Time */
-        #transactionTable td:nth-child(2) { width: 50%; word-wrap: break-word; } /* Items */
-        #transactionTable td:nth-child(3) { width: 15%; } /* Total */
-        #transactionTable td:nth-child(4) { width: 20%; word-wrap: break-word; } /* Note */
-        /* Color-coded item types */
-        .item-cash { color: #2e7d32; } /* Green for cash */
-        .item-cc { color: #d32f2f; } /* Red for credit card */
-        .item-ticket { color: #1a73e8; } /* Blue for tickets */
-        .item-comp { color: #ffa500; } /* Orange for comps */
+        #transactionTable td:nth-child(1) { width: 15%; }
+        #transactionTable td:nth-child(2) { width: 50%; word-wrap: break-word; }
+        #transactionTable td:nth-child(3) { width: 15%; }
+        #transactionTable td:nth-child(4) { width: 20%; word-wrap: break-word; }
+        .item-cash { color: #2e7d32; }
+        .item-cc { color: #d32f2f; }
+        .item-ticket { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
         .summary-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -90,6 +89,12 @@
         }
         .category-count {
             margin: 5px 0;
+        }
+        #grandTotal {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -124,17 +129,20 @@
         </div>
         <div class="log-container" id="transaction-log">
             <h2>Transaction Log</h2>
-            <table id="transactionTable">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Items</th>
-                        <th>Total</th>
-                        <th>Note</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table id="transactionTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
 
@@ -142,7 +150,6 @@
         let db;
         let transactionChart;
         let updateInterval;
-        let currentScrollPosition = 0;
 
         // Initialize IndexedDB
         const request = indexedDB.open('SalesDB', 2);
@@ -234,16 +241,17 @@
                     });
                 });
 
-                const totalCashCustomers = cashCumulative;
-                const totalCardCustomers = cardCumulative;
+                const totalSales = cashTotal + cardTotal;
+                const grandTotal = transactions.reduce((sum, t) => sum + t.total, 0);
 
                 // Update sales summary
                 $('#cashSales').text(cashTotal.toFixed(2));
                 $('#cardSales').text(cardTotal.toFixed(2));
-                $('#totalSales').text((cashTotal + cardTotal).toFixed(2));
-                $('#totalCashCustomers').text(totalCashCustomers);
-                $('#totalCardCustomers').text(totalCardCustomers);
+                $('#totalSales').text(totalSales.toFixed(2));
+                $('#totalCashCustomers').text(cashCumulative);
+                $('#totalCardCustomers').text(cardCumulative);
                 $('#doorCount').text(doorCount);
+                $('#grandTotal').text(`Total Sales: $${grandTotal.toFixed(2)}`);
 
                 // Update category counts
                 const $categoryCounts = $('#categoryCounts').empty();
@@ -280,6 +288,7 @@
             $('#totalCardCustomers').text('0');
             $('#doorCount').text('0');
             $('#categoryCounts').empty();
+            $('#grandTotal').text('Total Sales: $0.00');
             if (transactionChart) {
                 transactionChart.data.datasets.forEach(dataset => dataset.data = []);
                 transactionChart.update('none');
