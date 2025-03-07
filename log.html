@@ -20,6 +20,7 @@
             flex-direction: column;
             min-height: 100vh;
             overflow: hidden;
+            font-size: 16px; /* Improved readability */
         }
         h2 {
             margin-bottom: 10px;
@@ -87,8 +88,15 @@
             gap: 10px;
             flex-grow: 1;
         }
+        .summary-grid p {
+            overflow-wrap: break-word; /* Prevent text overflow */
+        }
         .category-count {
             margin: 5px 0;
+        }
+        #categoryCounts {
+            max-height: 200px; /* Limit height, enable scrolling */
+            overflow-y: auto;
         }
         #grandTotal {
             text-align: right;
@@ -150,7 +158,6 @@
         let transactionChart;
         let updateInterval;
 
-        // Initialize IndexedDB
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -170,7 +177,6 @@
             alert('Failed to open database.');
         };
 
-        // Load sessions into dropdown
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
@@ -191,7 +197,6 @@
             };
         }
 
-        // Debounce function for graph updates
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -200,7 +205,14 @@
             };
         }
 
-        // Update sales data for a session
+        function getItemClass(itemName) {
+            if (itemName.startsWith('CASH')) return 'item-cash';
+            if (itemName.startsWith('CC')) return 'item-cc';
+            if (itemName === 'TICKET') return 'item-ticket';
+            if (itemName === 'COMP') return 'item-comp';
+            return '';
+        }
+
         function updateLog(sessionId) {
             if (!sessionId) {
                 resetDisplay();
@@ -243,7 +255,6 @@
                 const totalSales = cashTotal + cardTotal;
                 const grandTotal = transactions.reduce((sum, t) => sum + t.total, 0);
 
-                // Update sales summary
                 $('#cashSales').text(cashTotal.toFixed(2));
                 $('#cardSales').text(cardTotal.toFixed(2));
                 $('#totalSales').text(totalSales.toFixed(2));
@@ -252,24 +263,17 @@
                 $('#doorCount').text(doorCount);
                 $('#grandTotal').text(`Total Sales: $${grandTotal.toFixed(2)}`);
 
-                // Update category counts
                 const $categoryCounts = $('#categoryCounts').empty();
                 Object.entries(categoryCounts).forEach(([item, count]) => {
-                    $categoryCounts.append(`<p class="category-count">${item}: ${count}</p>`);
+                    $categoryCounts.append(`<p class="category-count ${getItemClass(item)}">${item}: ${count}</p>`);
                 });
 
-                // Update graph with customer counts
                 updateGraphDebounced(cashCustomers, cardCustomers);
 
-                // Update transaction table with color-coded items
                 const $tbody = $('#transactionTable tbody').empty();
                 transactions.reverse().forEach(t => {
                     const itemsHtml = t.itemList.map(i => {
-                        let className = '';
-                        if (i.item.startsWith('CASH')) className = 'item-cash';
-                        else if (i.item.startsWith('CC')) className = 'item-cc';
-                        else if (i.item === 'TICKET') className = 'item-ticket';
-                        else if (i.item === 'COMP') className = 'item-comp';
+                        const className = getItemClass(i.item);
                         return `<span class="${className}">${i.item} (x${i.quantity})</span>`;
                     }).join(', ');
                     const note = t.note || '';
@@ -278,7 +282,6 @@
             };
         }
 
-        // Reset display when no session is selected
         function resetDisplay() {
             $('#cashSales').text('0.00');
             $('#cardSales').text('0.00');
@@ -295,7 +298,6 @@
             $('#transactionTable tbody').empty();
         }
 
-        // Update graph with debouncing
         const updateGraphDebounced = debounce((cashCustomers, cardCustomers) => {
             const ctx = document.getElementById('transactionGraph').getContext('2d');
             if (transactionChart) {
@@ -339,29 +341,23 @@
             }
         }, 500);
 
-        // Reset zoom on button click
         $('#resetZoomBtn').on('click', function() {
             if (transactionChart) {
                 transactionChart.resetZoom();
             }
         });
 
-        // Start periodic updates
         function startUpdating(sessionId) {
             clearInterval(updateInterval);
             updateLog(sessionId);
-            updateInterval = setInterval(() => {
-                updateLog(sessionId);
-            }, 5000);
+            updateInterval = setInterval(() => updateLog(sessionId), 5000);
         }
 
-        // Stop updates
         function stopUpdating() {
             clearInterval(updateInterval);
             updateInterval = null;
         }
 
-        // Handle session selection
         $('#sessionSelect').on('change', function() {
             const sessionId = $(this).val();
             if (sessionId) {
@@ -372,10 +368,8 @@
             }
         });
 
-        // Cleanup on page unload
         window.addEventListener('beforeunload', stopUpdating);
 
-        // Generate PDF report
         $('#printPdfBtn').on('click', function() {
             const sessionId = $('#sessionSelect').val();
             if (!sessionId) {
@@ -417,7 +411,6 @@
                     });
                 });
 
-                // Session details
                 doc.setFontSize(16);
                 doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
                 doc.setFontSize(12);
@@ -429,7 +422,6 @@
                     doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 60);
                 }
 
-                // Sales summary
                 doc.text('Sales Summary', 10, 80);
                 doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 90);
                 doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 100);
@@ -438,7 +430,6 @@
                 doc.text(`Total Card Customers: ${totalCardCustomers}`, 10, 130);
                 doc.text(`Thru Door: ${doorCount}`, 10, 140);
 
-                // Category counts
                 let y = 150;
                 doc.text('Category Counts', 10, y);
                 y += 10;
@@ -451,14 +442,12 @@
                     }
                 }
 
-                // Graph
                 const chartImage = transactionChart.toBase64Image();
                 doc.addPage();
                 doc.setFontSize(14);
                 doc.text('Customer Count Over Time', 10, 10);
                 doc.addImage(chartImage, 'PNG', 10, 20, 190, 100);
 
-                // Transaction log
                 doc.addPage();
                 doc.setFontSize(14);
                 doc.text('Transaction Log', 10, 10);
@@ -476,7 +465,6 @@
                     }
                 });
 
-                // Open PDF in new tab
                 const blob = doc.output('blob');
                 const url = URL.createObjectURL(blob);
                 window.open(url, '_blank');
