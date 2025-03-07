@@ -7,349 +7,341 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 20px; }
         .log-container { background: #2d2d2d; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         select, button { padding: 8px; font-size: 14px; margin: 5px 0; }
-        canvas { max-width: 100%; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
-        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2d2d2d; color: #e0e0e0; padding: 20px; border-radius: 5px; text-align: center; }
-        #modalClose { background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: #333;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #555;
-        }
-        th {
-            background: #1a73e8;
-            color: white;
-        }
+        .graph-container { position: relative; height: 400px; width: 100%; }
+        canvas { width: 100% !important; height: 100% !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #444; }
+        th { background: #3d3d3d; }
+        .logo { display: block; margin: 0 auto 20px; }
     </style>
 </head>
 <body>
-<a href="index.html">Back to Home</a>
-<img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo" width="250"></img>
-    <div class="log-container">
-        <h2>Select Session</h2>
-        <select id="sessionSelect">
-            <option value="">Select a session</option>
-        </select>
-        <button id="printPdfBtn">Print PDF Report</button>
-    </div>
-    <div class="log-container">
-        <h2>Sales Summary</h2>
-        <p>Cash Sales: $<span id="cashSales">0.00</span></p>
-        <p>Card Sales: $<span id="cardSales">0.00</span></p>
-        <p>Total Sales: $<span id="totalSales">0.00</span></p>
-    </div>
-    <div class="log-container">
-        <h2>Transaction Totals Over Time</h2>
+
+<img src="sisterlogo.jpeg" alt="Sister Bar Logo" class="logo" width="150">
+<h2>Realtime Performance Log</h2>
+<div class="log-container">
+    <h2>Select Session</h2>
+    <select id="sessionSelect">
+        <option value="">Select a session</option>
+    </select>
+    <button id="printPdfBtn">Print PDF Report</button>
+</div>
+<div class="log-container">
+    <h2>Sales Summary</h2>
+    <p>Cash Sales: $<span id="cashSales">0.00</span></p>
+    <p>Card Sales: $<span id="cardSales">0.00</span></p>
+    <p>Total Sales: $<span id="totalSales">0.00</span></p>
+</div>
+<div class="log-container">
+    <h2>Transaction Totals Over Time</h2>
+    <div class="graph-container">
         <canvas id="transactionGraph"></canvas>
     </div>
-    <div class="log-container">
-        <h2>Transaction Log</h2>
-        <table id="transactionTable">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <button id="resetZoomBtn">Reset Zoom</button>
+</div>
+<div class="log-container">
+    <h2>Transaction Log</h2>
+    <table id="transactionTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Items</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
 
-    <!-- Modal for session start and end -->
-    <div id="sessionModal" class="modal">
-        <div class="modal-content">
-            <p id="modalMessage"></p>
-            <button id="modalClose">Close</button>
-        </div>
-    </div>
+<script>
+    let db;
+    let transactionChart;
+    let updateInterval;
+    let currentScrollPosition = 0;
+    let pendingGraphUpdate = null;
 
-    <script>
-        let db;
-        let transactionChart;
-        let isStatsUpdateRunning = false;
-        let statsIntervalId = null;
-        let currentSessionId = null;
+    // Initialize IndexedDB
+    const request = indexedDB.open('SalesDB', 2);
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains('sessions')) {
+            db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains('transactions')) {
+            const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+            transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+        }
+    };
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        loadSessions();
+    };
+    request.onerror = function() {
+        alert('Failed to open database.');
+    };
 
-        // Initialize IndexedDB
-        const request = indexedDB.open('SalesDB', 2);
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains('sessions')) {
-                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-            }
-            if (!db.objectStoreNames.contains('transactions')) {
-                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
-            }
-        };
+    // Load sessions into dropdown
+    function loadSessions() {
+        const tx = db.transaction(['sessions'], 'readonly');
+        const store = tx.objectStore('sessions');
+        const request = store.getAll();
         request.onsuccess = function(event) {
-            db = event.target.result;
-            loadSessions();
+            const sessions = event.target.result;
+            const $select = $('#sessionSelect');
+            $select.empty().append('<option value="">Select a session</option>');
+            sessions.forEach(session => {
+                const label = `${session.date} - ${session.venue} - ${session.cashier}${session.status === 'open' ? ' (Current)' : ''}`;
+                $select.append(`<option value="${session.id}">${label}</option>`);
+            });
+            const activeSessionId = localStorage.getItem('activeSessionId');
+            if (activeSessionId) {
+                $select.val(activeSessionId);
+                startUpdating(activeSessionId);
+            }
         };
-        request.onerror = function() {
-            alert('Failed to open database.');
-        };
+    }
 
-        // Load sessions into dropdown
-        function loadSessions() {
-            const tx = db.transaction(['sessions'], 'readonly');
-            const store = tx.objectStore('sessions');
-            const request = store.getAll();
-            request.onsuccess = function(event) {
-                const sessions = event.target.result;
-                const $select = $('#sessionSelect');
-                $select.empty().append('<option value="">Select a session</option>');
-                sessions.forEach(session => {
-                    const label = `${session.date} - ${session.venue} - ${session.cashier}${session.status === 'open' ? ' (Current)' : ''}`;
-                    $select.append(`<option value="${session.id}">${label}</option>`);
-                });
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (activeSessionId) {
-                    $select.val(activeSessionId);
-                    currentSessionId = activeSessionId;
-                    updateLog(activeSessionId);
-                    if (localStorage.getItem('salesStatus') === 'open') {
-                        startStatsUpdate(activeSessionId);
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    // Update sales data for a session
+    function updateLog(sessionId) {
+        if (!sessionId) {
+            resetDisplay();
+            return;
+        }
+        const tx = db.transaction(['transactions'], 'readonly');
+        const store = tx.objectStore('transactions');
+        const index = store.index('sessionId');
+        const request = index.getAll(Number(sessionId));
+        request.onsuccess = function(event) {
+            const transactions = event.target.result;
+            let cashTotal = 0, cardTotal = 0;
+            const cashData = [], cardData = [], totalData = [];
+            transactions.forEach(t => {
+                let transactionCash = 0, transactionCard = 0;
+                t.itemList.forEach(item => {
+                    if (item.item.startsWith('CASH')) {
+                        transactionCash += item.price * item.quantity;
+                    } else if (item.item.startsWith('CC')) {
+                        transactionCard += item.price * item.quantity;
                     }
-                }
-            };
-        }
-
-        // Update sales data for a session
-        function updateLog(sessionId) {
-            if (!sessionId) {
-                resetDisplay();
-                return;
-            }
-            const tx = db.transaction(['transactions'], 'readonly');
-            const store = tx.objectStore('transactions');
-            const index = store.index('sessionId');
-            const request = index.getAll(Number(sessionId));
-            request.onsuccess = function(event) {
-                const transactions = event.target.result;
-                let cashTotal = 0, cardTotal = 0;
-                const cashData = [], cardData = [], totalData = [];
-                transactions.forEach(t => {
-                    let transactionCash = 0, transactionCard = 0;
-                    t.itemList.forEach(item => {
-                        if (item.item.startsWith('CASH')) {
-                            transactionCash += item.price * item.quantity;
-                        } else if (item.item.startsWith('CC')) {
-                            transactionCard += item.price * item.quantity;
-                        }
-                    });
-                    cashTotal += transactionCash;
-                    cardTotal += transactionCard;
-                    cashData.push({ x: new Date(t.timestamp), y: transactionCash });
-                    cardData.push({ x: new Date(t.timestamp), y: transactionCard });
-                    totalData.push({ x: new Date(t.timestamp), y: transactionCash + transactionCard });
                 });
-                $('#cashSales').text(cashTotal.toFixed(2));
-                $('#cardSales').text(cardTotal.toFixed(2));
-                $('#totalSales').text((cashTotal + cardTotal).toFixed(2));
-                updateTransactionGraph(cashData, cardData, totalData);
+                cashTotal += transactionCash;
+                cardTotal += transactionCard;
+                cashData.push({ x: new Date(t.timestamp), y: transactionCash });
+                cardData.push({ x: new Date(t.timestamp), y: transactionCard });
+                totalData.push({ x: new Date(t.timestamp), y: transactionCash + transactionCard });
+            });
+            $('#cashSales').text(cashTotal.toFixed(2));
+            $('#cardSales').text(cardTotal.toFixed(2));
+            $('#totalSales').text((cashTotal + cardTotal).toFixed(2));
+            queueGraphUpdate(cashData, cardData, totalData);
 
-                // Update transaction table
-                const $tbody = $('#transactionTable tbody');
-                $tbody.empty();
-                transactions.reverse().forEach(t => {
-                    const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
-                    $tbody.append(`<tr><td>${t.time}</td><td>${items}</td><td>$${t.total.toFixed(2)}</td></tr>`);
-                });
-            };
+            // Update transaction table
+            const $tbody = $('#transactionTable tbody');
+            $tbody.empty();
+            transactions.reverse().forEach(t => {
+                const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
+                $tbody.append(`<tr><td>${t.time}</td><td>${items}</td><td>$${t.total.toFixed(2)}</td></tr>`);
+            });
+
+            window.scrollTo(0, currentScrollPosition);
+        };
+    }
+
+    // Reset display
+    function resetDisplay() {
+        $('#cashSales').text('0.00');
+        $('#cardSales').text('0.00');
+        $('#totalSales').text('0.00');
+        if (transactionChart) {
+            transactionChart.data.datasets.forEach(dataset => dataset.data = []);
+            transactionChart.update('none');
         }
+        $('#transactionTable tbody').empty();
+    }
 
-        // Reset display
-        function resetDisplay() {
-            $('#cashSales').text('0.00');
-            $('#cardSales').text('0.00');
-            $('#totalSales').text('0.00');
-            if (transactionChart) {
-                transactionChart.data.datasets.forEach(dataset => dataset.data = []);
-                transactionChart.update();
-            }
-            $('#transactionTable tbody').empty();
-        }
-
-        // Update transaction graph
-        function updateTransactionGraph(cashData, cardData, totalData) {
-            const ctx = document.getElementById('transactionGraph').getContext('2d');
-            if (transactionChart) {
-                transactionChart.data.datasets[0].data = cashData;
-                transactionChart.data.datasets[1].data = cardData;
-                transactionChart.data.datasets[2].data = totalData;
-                transactionChart.update();
-            } else {
-                transactionChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [
-                            { label: 'Cash Sales', data: cashData, borderColor: '#2e7d32', fill: false, tension: 0.1 },
-                            { label: 'Card Sales', data: cardData, borderColor: '#d32f2f', fill: false, tension: 0.1 },
-                            { label: 'Total Sales', data: totalData, borderColor: '#ffa500', fill: false, tension: 0.1 }
-                        ]
+    // Queue graph update with debouncing
+    const updateGraphDebounced = debounce((cashData, cardData, totalData) => {
+        const ctx = document.getElementById('transactionGraph').getContext('2d');
+        if (transactionChart) {
+            transactionChart.data.datasets[0].data = cashData;
+            transactionChart.data.datasets[1].data = cardData;
+            transactionChart.data.datasets[2].data = totalData;
+            transactionChart.update('none');
+        } else {
+            transactionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: 'Cash Sales', data: cashData, borderColor: '#2e7d32', fill: false, tension: 0.1 },
+                        { label: 'Card Sales', data: cardData, borderColor: '#d32f2f', fill: false, tension: 0.1 },
+                        { label: 'Total Sales', data: totalData, borderColor: '#ffa500', fill: false, tension: 0.1 }
+                    ]
+                },
+                options: {
+                    animation: false,
+                    scales: {
+                        x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Amount ($)' } }
                     },
-                    options: {
-                        scales: {
-                            x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Amount ($)' } }
+                    plugins: {
+                        zoom: {
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'xy'
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'xy'
+                            }
                         }
+                    }
+                }
+            });
+        }
+    }, 500);
+
+    function queueGraphUpdate(cashData, cardData, totalData) {
+        updateGraphDebounced(cashData, cardData, totalData);
+    }
+
+    // Reset zoom
+    $('#resetZoomBtn').on('click', function() {
+        if (transactionChart) {
+            transactionChart.resetZoom();
+        }
+    });
+
+    // Start periodic updates
+    function startUpdating(sessionId) {
+        clearInterval(updateInterval);
+        updateLog(sessionId);
+        updateInterval = setInterval(() => {
+            currentScrollPosition = window.scrollY;
+            updateLog(sessionId);
+        }, 5000);
+    }
+
+    // Stop updates
+    function stopUpdating() {
+        clearInterval(updateInterval);
+        updateInterval = null;
+    }
+
+    // Handle session selection
+    $('#sessionSelect').on('change', function() {
+        const sessionId = $(this).val();
+        if (sessionId) {
+            startUpdating(sessionId);
+        } else {
+            stopUpdating();
+            resetDisplay();
+        }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', stopUpdating);
+
+    // PDF generation with graph included
+    $('#printPdfBtn').on('click', function() {
+        const sessionId = $('#sessionSelect').val();
+        if (!sessionId) {
+            alert('Please select a session first.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const tx = db.transaction(['sessions', 'transactions'], 'readonly');
+        const sessionStore = tx.objectStore('sessions');
+        const transactionStore = tx.objectStore('transactions');
+        const sessionRequest = sessionStore.get(Number(sessionId));
+        const transactionRequest = transactionStore.index('sessionId').getAll(Number(sessionId));
+
+        tx.oncomplete = function() {
+            const session = sessionRequest.result;
+            const transactions = transactionRequest.result;
+
+            // Add session details
+            doc.setFontSize(16);
+            doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
+            doc.setFontSize(12);
+            doc.text(`Date: ${session.date}`, 10, 20);
+            doc.text(`Venue: ${session.venue}`, 10, 30);
+            doc.text(`Cashier: ${session.cashier}`, 10, 40);
+            doc.text(`Start Time: ${new Date(session.startTime).toLocaleString()}`, 10, 50);
+            if (session.endTime) {
+                doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 60);
+            }
+
+            // Calculate totals
+            let cashTotal = 0, cardTotal = 0;
+            transactions.forEach(t => {
+                t.itemList.forEach(item => {
+                    if (item.item.startsWith('CASH')) {
+                        cashTotal += item.price * item.quantity;
+                    } else if (item.item.startsWith('CC')) {
+                        cardTotal += item.price * item.quantity;
                     }
                 });
-            }
-        }
+            });
+            doc.text('Sales Summary', 10, 80);
+            doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 90);
+            doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 100);
+            doc.text(`Total Sales: $${(cashTotal + cardTotal).toFixed(2)}`, 10, 110);
 
-        // Start real-time updates
-        function startStatsUpdate(sessionId) {
-            if (!isStatsUpdateRunning) {
-                isStatsUpdateRunning = true;
-                updateLog(sessionId);
-                statsIntervalId = setInterval(() => updateLog(sessionId), 2000);
-            }
-        }
+            // Capture the chart as an image
+            const chartImage = transactionChart.toBase64Image();
 
-        // Stop real-time updates
-        function stopStatsUpdate() {
-            if (isStatsUpdateRunning) {
-                isStatsUpdateRunning = false;
-                clearInterval(statsIntervalId);
-                statsIntervalId = null;
-            }
-        }
+            // Add the chart image to the PDF
+            doc.addPage();
+            doc.setFontSize(14);
+            doc.text('Transaction Totals Over Time', 10, 10);
+            doc.addImage(chartImage, 'PNG', 10, 20, 190, 100); // Adjust size as needed
 
-        // Handle session selection
-        $('#sessionSelect').on('change', function() {
-            const sessionId = $(this).val();
-            currentSessionId = sessionId;
-            if (sessionId) {
-                const tx = db.transaction(['sessions'], 'readonly');
-                const store = tx.objectStore('sessions');
-                const request = store.get(Number(sessionId));
-                request.onsuccess = function(event) {
-                    const session = event.target.result;
-                    if (session.status === 'open') {
-                        startStatsUpdate(sessionId);
-                    } else {
-                        stopStatsUpdate();
-                        updateLog(sessionId);
-                    }
-                };
-            } else {
-                stopStatsUpdate();
-                resetDisplay();
-            }
-        });
-
-        // Listen for register status changes
-        window.addEventListener('storage', function(event) {
-            if (event.key === 'salesStatus') {
-                loadSessions();
-                if (event.newValue === 'open') {
-                    const cashierName = localStorage.getItem('cashierName');
-                    showModal(`New session started by ${cashierName}`);
-                } else if (event.newValue === 'closed' && currentSessionId) {
-                    stopStatsUpdate();
-                    updateLog(currentSessionId); // Show final data
-                    showModal('Session has been closed');
-                }
-            }
-        });
-
-        // Show modal
-        function showModal(message) {
-            $('#modalMessage').text(message);
-            $('#sessionModal').show();
-        }
-
-        // Close modal
-        $('#modalClose').on('click', function() {
-            $('#sessionModal').hide();
-        });
-
-        // Generate PDF report
-        $('#printPdfBtn').on('click', function() {
-            const sessionId = $('#sessionSelect').val();
-            if (!sessionId) {
-                alert('Please select a session first.');
-                return;
-            }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            const tx = db.transaction(['sessions'], 'readonly');
-            const store = tx.objectStore('sessions');
-            const request = store.get(Number(sessionId));
-            request.onsuccess = function(event) {
-                const session = event.target.result;
-                doc.setFontSize(16);
-                doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
-                doc.setFontSize(12);
-                doc.text(`Date: ${session.date}`, 10, 20);
-                doc.text(`Venue: ${session.venue}`, 10, 30);
-                doc.text(`Cashier: ${session.cashier}`, 10, 40);
-                doc.text(`Start Time: ${new Date(session.startTime).toLocaleString()}`, 10, 50);
-                if (session.endTime) {
-                    doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 60);
-                }
-
-                const txTrans = db.transaction(['transactions'], 'readonly');
-                const storeTrans = txTrans.objectStore('transactions');
-                const index = storeTrans.index('sessionId');
-                const requestTrans = index.getAll(Number(sessionId));
-                requestTrans.onsuccess = function(event) {
-                    const transactions = event.target.result;
-                    let cashTotal = 0, cardTotal = 0;
-                    transactions.forEach(t => {
-                        t.itemList.forEach(item => {
-                            if (item.item.startsWith('CASH')) {
-                                cashTotal += item.price * item.quantity;
-                            } else if (item.item.startsWith('CC')) {
-                                cardTotal += item.price * item.quantity;
-                            }
-                        });
-                    });
-                    doc.text('Sales Summary', 10, 80);
-                    doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 90);
-                    doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 100);
-                    doc.text(`Total Sales: $${(cashTotal + cardTotal).toFixed(2)}`, 10, 110);
-
-                    const canvas = document.getElementById('transactionGraph');
-                    const imgData = canvas.toDataURL('image/png');
-                    doc.addImage(imgData, 'PNG', 10, 120, 190, 100);
-
+            // Add transaction log
+            doc.addPage();
+            doc.setFontSize(14);
+            doc.text('Transaction Log', 10, 10);
+            let y = 20;
+            transactions.forEach((t, index) => {
+                const time = t.time;
+                const items = t.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
+                const total = t.total.toFixed(2);
+                doc.text(`${index + 1}. ${time}: ${items} - $${total}`, 10, y);
+                y += 10;
+                if (y > 270) {
                     doc.addPage();
-                    doc.text('Transaction Log', 10, 10);
-                    let y = 20;
-                    transactions.forEach((t, index) => {
-                        const time = t.time;
-                        const items = t.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
-                        const total = t.total.toFixed(2);
-                        doc.text(`${index + 1}. ${time}: ${items} - $${total}`, 10, y);
-                        y += 10;
-                        if (y > 270) {
-                            doc.addPage();
-                            y = 10;
-                        }
-                    });
+                    y = 10;
+                }
+            });
 
-                    doc.save(`Sales_Report_Session_${sessionId}.pdf`);
-                };
-            };
-        });
-    </script>
+            // Convert PDF to blob and open in new tab
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        };
+
+        tx.onerror = function() {
+            alert('Failed to retrieve data for PDF generation.');
+        };
+    });
+</script>
 </body>
 </html>
