@@ -10,16 +10,69 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 20px; }
-        .log-container { background: #2d2d2d; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        select, button { padding: 8px; font-size: 14px; margin: 5px 0; }
-        .graph-container { position: relative; height: 400px; width: 100%; }
-        canvas { width: 100% !important; height: 100% !important; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #444; }
-        th { background: #3d3d3d; }
-        .logo { display: block; margin: 0 auto 20px; }
-        .category-count { margin: 5px 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 20px;
+        }
+        .log-container {
+            background: #2d2d2d;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            max-width: 100%;
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+        }
+        select, button {
+            padding: 8px;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .graph-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background: #3d3d3d;
+        }
+        /* Transaction table specific styling */
+        #transactionTable {
+            table-layout: fixed;
+            width: 100%;
+        }
+        th:nth-child(1), td:nth-child(1) { width: 15%; } /* Time */
+        th:nth-child(2), td:nth-child(2) { width: 50%; word-wrap: break-word; } /* Items */
+        th:nth-child(3), td:nth-child(3) { width: 15%; } /* Total */
+        th:nth-child(4), td:nth-child(4) { width: 20%; } /* Note */
+        /* Color-coded item types */
+        .item-cash { background: #2e7d32; color: white; padding: 2px 4px; border-radius: 3px; }
+        .item-cc { background: #d32f2f; color: white; padding: 2px 4px; border-radius: 3px; }
+        .item-ticket { background: #1a73e8; color: white; padding: 2px 4px; border-radius: 3px; }
+        .item-comp { background: #ffa500; color: white; padding: 2px 4px; border-radius: 3px; }
+        .item-custom { background: #555; color: white; padding: 2px 4px; border-radius: 3px; }
+        .logo {
+            display: block;
+            margin: 0 auto 20px;
+        }
+        .category-count {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -181,12 +234,24 @@
             // Update graph with customer counts
             updateGraphDebounced(cashCustomers, cardCustomers);
 
-            // Update transaction table
+            // Update transaction table with color-coded items
             const $tbody = $('#transactionTable tbody').empty();
             transactions.reverse().forEach(t => {
-                const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
+                const itemsHtml = t.itemList.map(i => {
+                    let className = 'item-custom';
+                    if (i.item.startsWith('CASH')) className = 'item-cash';
+                    else if (i.item.startsWith('CC')) className = 'item-cc';
+                    else if (i.item === 'TICKET') className = 'item-ticket';
+                    else if (i.item === 'COMP') className = 'item-comp';
+                    return `<span class="${className}">${i.item} (x${i.quantity})</span>`;
+                }).join(', ');
                 const note = t.note || '';
-                $tbody.append(`<tr><td>${t.time}</td><td>${items}</td><td>$${t.total.toFixed(2)}</td><td>${note}</td></tr>`);
+                const $row = $('<tr></tr>');
+                $row.append($('<td></td>').text(t.time));
+                $row.append($('<td></td>').html(itemsHtml));
+                $row.append($('<td></td>').text(`$${t.total.toFixed(2)}`));
+                $row.append($('<td></td>').text(note));
+                $tbody.append($row);
             });
 
             window.scrollTo(0, currentScrollPosition);
