@@ -3,190 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             background: #1e1e1e;
             color: #e0e0e0;
-            padding: 20px;
+            margin: 0;
+            padding: 10px;
+            font-size: 18px;
+            overflow-x: hidden; /* Prevent horizontal scroll */
         }
-        .container {
+        .header {
             display: flex;
-            gap: 20px;
-        }
-        .products {
-            flex: 2;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
-        }
-        .product-item {
+            justify-content: space-between;
+            align-items: center;
             background: #2d2d2d;
             padding: 10px;
-            text-align: center;
-            border-radius: 5px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
         }
-        .product-item button {
-            margin: 5px;
-            padding: 5px;
+        .header input {
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+            width: 22%; /* Equal width for 4 inputs */
+            margin: 0 5px;
+        }
+        .header input.locked {
+            background: #555;
+            color: #888;
+        }
+        .container {
+            max-width: 85%; /* Leave space on right for scrolling */
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            min-height: 600px; /* Fit iPad height */
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for primary buttons */
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .increment-btn {
+            width: 100%;
+            height: 100px; /* Large buttons for quick access */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: white;
+        }
+        .increment-btn.cash { background: #2e7d32; }
+        .increment-btn.cc { background: #d32f2f; }
+        .increment-btn.ticket { background: #1a73e8; }
+        .increment-btn.comp { background: #ffa500; }
+        .control-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .count {
+            font-size: 1.5em;
+            width: 40px;
+        }
+        .minus {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .custom-input input {
+            width: 100px;
+            padding: 8px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .add-custom {
+            padding: 8px 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
         }
         .totals-container {
-            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .cash-total {
+            font-size: 2em;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .door-count {
+            font-size: 1.5em;
+            color: #e0e0e0;
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logSaleBtn.flash {
+            animation: flash 0.5s;
+        }
+        @keyframes flash {
+            0% { background: #388e3c; }
+            50% { background: #66bb6a; }
+            100% { background: #388e3c; }
+        }
+        .note-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #noteInput {
+            width: 80%;
+            padding: 10px;
+            background: #444;
+            border: 1px solid #666;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .footer {
             background: #2d2d2d;
-            padding: 15px;
-            border-radius: 5px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 20px;
+            position: relative;
         }
         #errorMessage {
-            color: #d32f2f;
+            color: #ff6b6b;
+            text-align: center;
             display: none;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            .container {
+                max-width: 85%;
+            }
+            .button-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <input type="date" id="eventDate" value="2025-03-05">
+        <input type="text" id="eventVenue" placeholder="Venue" value="Sister">
+        <input type="text" id="eventName" placeholder="Event Name">
+        <input type="text" id="cashierName" placeholder="Cashier Name">
+    </div>
     <div class="container">
-        <div class="products" id="products"></div>
-        <div class="totals-container">
-            <h2>Totals</h2>
-            <p>Total: $<span id="totalAmount">0.00</span></p>
-            <p>Thru Door: <span id="doorCount">0</span></p>
-            <button id="logSaleBtn">Log Sale</button>
-            <div id="errorMessage"></div>
+        <div class="button-container">
+            <!-- Cash Buttons (Highest to Lowest) -->
+            <div class="product-item" data-item="CASH $20" data-price="20">
+                <button class="increment-btn cash">CASH $20</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $15" data-price="15">
+                <button class="increment-btn cash">CASH $15</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $12" data-price="12">
+                <button class="increment-btn cash">CASH $12</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $10" data-price="10">
+                <button class="increment-btn cash">CASH $10</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Single CC Transaction Button -->
+            <div class="product-item" data-item="CC TRANS" data-price="0">
+                <button class="increment-btn cc">CC TRANS</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Ticket Count Button -->
+            <div class="product-item" data-item="TICKET" data-price="0">
+                <button class="increment-btn ticket">TICKET</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Comp Button -->
+            <div class="product-item" data-item="COMP" data-price="0">
+                <button class="increment-btn comp">COMP</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Custom Cash -->
+            <div class="product-item" data-item="CASH (CUSTOM)">
+                <div class="product-controls cash">
+                    <h4>CASH (CUSTOM)</h4>
+                    <div class="custom-input">
+                        <input type="number" step="0.01" placeholder="Amount">
+                        <button class="add-custom">Add</button>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="totals-container">
+            <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
+            <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
+        </div>
+        <div class="note-section">
+            <input type="text" id="noteInput" placeholder="Add a note...">
+        </div>
+        <button id="logSaleBtn">Log Sale</button>
+    </div>
+    <div class="footer">
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <div id="errorMessage"></div>
     </div>
 
     <script>
         let db;
+        let sessionStarted = false;
+        let sessionId = null;
         let currentItems = [];
+        let total = 0;
         let doorCount = 0;
 
         // Open IndexedDB
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = function(event) {
             db = event.target.result;
+            if (!db.objectStoreNames.contains('sessions')) {
+                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+            }
             if (!db.objectStoreNames.contains('transactions')) {
-                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
             }
         };
         request.onsuccess = function(event) {
             db = event.target.result;
-            initializeProducts();
+            checkSessionStatus();
+        };
+        request.onerror = function(event) {
+            $('#errorMessage').text('Failed to open database.').show();
+            setTimeout(() => $('#errorMessage').hide(), 3000);
         };
 
-        // Product list
-        const products = [
-            { name: 'CASH $20', price: 20.00 },
-            { name: 'TICKET', price: 0.00 }
-        ];
-
-        // Initialize product buttons
-        function initializeProducts() {
-            const $products = $('#products');
-            products.forEach(product => {
-                $products.append(`
-                    <div class="product-item" data-item="${product.name}" data-price="${product.price}">
-                        <span>${product.name} ($${product.price.toFixed(2)})</span>
-                        <div><span class="count">0</span></div>
-                        <button class="increment-btn">+</button>
-                        <button class="decrement-btn">-</button>
-                    </div>
-                `);
-            });
+        function checkSessionStatus() {
+            const activeSessionId = localStorage.getItem('activeSessionId');
+            if (activeSessionId) {
+                const tx = db.transaction(['sessions'], 'readonly');
+                const store = tx.objectStore('sessions');
+                const request = store.get(Number(activeSessionId));
+                request.onsuccess = function(event) {
+                    const session = event.target.result;
+                    if (session && session.status === 'open') {
+                        sessionStarted = true;
+                        sessionId = session.id;
+                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                        $('#eventDate, #eventVenue, #eventName, #cashierName').val([session.date, session.venue, session.eventName, session.cashier]).prop('readonly', true).addClass('locked');
+                        localStorage.setItem('salesStatus', 'open');
+                        localStorage.setItem('cashierName', session.cashier);
+                    } else {
+                        resetSession();
+                    }
+                };
+            } else {
+                resetSession();
+            }
         }
 
-        // Increment button handler
+        function resetSession() {
+            sessionStarted = false;
+            sessionId = null;
+            localStorage.removeItem('activeSessionId');
+            localStorage.setItem('salesStatus', 'closed');
+            localStorage.removeItem('cashierName');
+            $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+            $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
+            $('#cashTotal').text('0.00');
+            $('#doorCount').text('0');
+            doorCount = 0;
+            currentItems = [];
+        }
+
+        $('#toggleSalesBtn').on('click', function() {
+            if (!sessionStarted) {
+                const cashierName = $('#cashierName').val().trim();
+                if (!cashierName) {
+                    $('#errorMessage').text('Please enter a cashier name.').show();
+                    setTimeout(() => $('#errorMessage').hide(), 3000);
+                    return;
+                }
+                const session = {
+                    date: $('#eventDate').val(),
+                    venue: $('#eventVenue').val(),
+                    eventName: $('#eventName').val(),
+                    cashier: cashierName,
+                    status: 'open',
+                    startTime: new Date().toISOString()
+                };
+                const tx = db.transaction(['sessions'], 'readwrite');
+                const store = tx.objectStore('sessions');
+                const request = store.add(session);
+                request.onsuccess = function(event) {
+                    sessionId = event.target.result;
+                    localStorage.setItem('activeSessionId', sessionId);
+                    sessionStarted = true;
+                    $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                    $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
+                    localStorage.setItem('salesStatus', 'open');
+                    localStorage.setItem('cashierName', cashierName);
+                };
+            } else {
+                const pin = prompt('Enter PIN to close sales (default: 1234)');
+                if (pin === '1234') { // Placeholder PIN; secure method needed later
+                    const tx = db.transaction(['sessions'], 'readwrite');
+                    const store = tx.objectStore('sessions');
+                    const request = store.get(sessionId);
+                    request.onsuccess = function(event) {
+                        const session = event.target.result;
+                        session.status = 'closed';
+                        session.endTime = new Date().toISOString();
+                        store.put(session);
+                        resetSession();
+                    };
+                } else {
+                    $('#errorMessage').text('Incorrect PIN.').show();
+                    setTimeout(() => $('#errorMessage').hide(), 3000);
+                }
+            }
+        });
+
         $(document).on('click', '.increment-btn', function() {
-            const $item = $(this).closest('.product-item');
-            const itemName = $item.data('item');
-            const itemPrice = parseFloat($item.data('price'));
-            const $count = $item.find('.count');
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
             let count = parseInt($count.text()) + 1;
             $count.text(count);
-
-            if (itemName === 'TICKET') {
-                doorCount++;
-                $('#doorCount').text(doorCount);
-                logTicketTransaction(itemName, itemPrice, 1);
-            } else {
-                const existingItem = currentItems.find(i => i.item === itemName);
-                if (existingItem) {
-                    existingItem.quantity++;
-                } else {
-                    currentItems.push({ item: itemName, price: itemPrice, quantity: 1 });
-                }
-                updateTotals();
-            }
+            const itemName = $item.data('item'), itemPrice = parseFloat($item.data('price'));
+            const existingItem = currentItems.find(i => i.item === itemName);
+            if (existingItem) existingItem.quantity++; else currentItems.push({ item: itemName, price: itemPrice, quantity: 1 });
+            if (itemName === 'TICKET') doorCount++;
+            updateTotals();
         });
 
-        // Decrement button handler
-        $(document).on('click', '.decrement-btn', function() {
-            const $item = $(this).closest('.product-item');
-            const itemName = $item.data('item');
-            const $count = $item.find('.count');
-            let count = parseInt($count.text()) - 1;
-            if (count < 0) return;
-            $count.text(count);
-
-            if (itemName === 'TICKET') {
-                if (doorCount > 0) doorCount--;
-                $('#doorCount').text(doorCount);
-            } else {
-                const existingItem = currentItems.find(i => i.item === itemName);
+        $(document).on('click', '.minus', function() {
+            const $item = $(this).closest('.product-item'), $count = $item.find('.count');
+            let count = parseInt($count.text());
+            if (count > 0) {
+                count--; $count.text(count);
+                const itemName = $item.data('item'), existingItem = currentItems.find(i => i.item === itemName);
                 if (existingItem) {
                     existingItem.quantity--;
-                    if (existingItem.quantity === 0) {
-                        currentItems = currentItems.filter(i => i.item !== itemName);
-                    }
+                    if (existingItem.quantity <= 0) currentItems = currentItems.filter(i => i.item !== itemName);
+                    if (itemName === 'TICKET') doorCount--;
                 }
                 updateTotals();
             }
         });
 
-        // Update total for non-ticket items
+        $(document).on('click', '.add-custom', function() {
+            const $item = $(this).closest('.product-item'), baseName = $item.data('item'), amount = parseFloat($item.find('input').val());
+            if (isNaN(amount) || amount <= 0) return alert('Please enter a valid amount.');
+            const itemName = `${baseName} $${amount.toFixed(2)}`;
+            currentItems.push({ item: itemName, price: amount, quantity: 1 });
+            updateTotals();
+            $item.find('input').val('');
+        });
+
         function updateTotals() {
-            const total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            $('#totalAmount').text(total.toFixed(2));
+            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            $('#cashTotal').text(total.toFixed(2));
+            $('#doorCount').text(doorCount);
         }
 
-        // Auto-log ticket transaction
-        function logTicketTransaction(itemName, itemPrice, quantity) {
-            const transaction = {
-                timestamp: new Date().toISOString(),
-                itemList: [{ item: itemName, price: itemPrice, quantity: quantity }],
-                total: itemPrice * quantity
-            };
-
-            const tx = db.transaction(['transactions'], 'readwrite');
-            const store = tx.objectStore('transactions');
-            store.add(transaction);
-        }
-
-        // Log sale button for non-ticket items
         $('#logSaleBtn').on('click', function() {
-            if (currentItems.length === 0) {
-                $('#errorMessage').text('No items to log.').show().delay(3000).hide(0);
-                return;
-            }
-
+            if (!sessionStarted) return $('#errorMessage').text('Please open sales to start the session.').show().delay(3000).hide(0);
+            if (currentItems.length === 0 && !$('#noteInput').val()) return $('#errorMessage').text('No items or note to log.').show().delay(3000).hide(0);
             const transaction = {
+                sessionId: sessionId,
                 timestamp: new Date().toISOString(),
-                itemList: [...currentItems],
-                total: currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                time: new Date().toLocaleTimeString(),
+                itemList: currentItems.map(item => ({ ...item })),
+                total: total,
+                note: $('#noteInput').val()
             };
-
             const tx = db.transaction(['transactions'], 'readwrite');
             const store = tx.objectStore('transactions');
-            store.add(transaction);
-            tx.oncomplete = function() {
-                currentItems = [];
-                $('#products .count').each(function() {
-                    if ($(this).closest('.product-item').data('item') !== 'TICKET') {
-                        $(this).text('0');
-                    }
-                });
-                updateTotals();
+            const request = store.add(transaction);
+            request.onsuccess = () => {
+                tx.oncomplete = () => {
+                    resetSale();
+                    $('#logSaleBtn').addClass('flash');
+                    setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+                };
             };
+            request.onerror = () => $('#errorMessage').text('Failed to log sale.').show().delay(3000).hide(0);
+        });
+
+        function resetSale() {
+            currentItems = currentItems.filter(item => item.item === 'TICKET'); // Preserve ticket count
+            total = currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            $('.count').each(function() {
+                const itemName = $(this).closest('.product-item').data('item');
+                if (itemName !== 'TICKET') $(this).text('0');
+            });
+            $('#cashTotal').text(total.toFixed(2));
+            $('#noteInput').val('');
+        }
+
+        $('#noteInput').on('click', function() {
+            $(this).focus(); // Trigger keyboard on iPad
         });
     </script>
 </body>
