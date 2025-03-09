@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -119,7 +119,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Login</h2>
@@ -130,15 +129,11 @@
             <div class="forgot-password">Forgot Password?</div>
         </div>
     </div>
-
-    <!-- Main Content -->
     <div class="grid-container" style="display:none;">
-        <!-- Sales Graph -->
         <div class="log-container graph-container">
             <h2>Sales and Counts Over Time</h2>
             <canvas id="salesGraph"></canvas>
         </div>
-        <!-- Live Sales Summary -->
         <div class="log-container">
             <h2>Live Sales Summary</h2>
             <select id="sessionSelect"><option value="">Select a session</option></select>
@@ -152,25 +147,19 @@
                 <p>Thru Door: <span id="doorCount">0</span></p>
             </div>
         </div>
-        <!-- Transaction Log -->
         <div class="log-container">
             <h2>Transaction Log</h2>
             <div id="transactionLog"></div>
         </div>
     </div>
-
     <script>
-        // Configuration
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         let salesChart;
-        const username = 'admin'; // Example username
-        const passwordHash = CryptoJS.SHA256('password123').toString(); // Example hashed password
-
-        // Document Ready
+        const username = 'admin';
+        const passwordHash = CryptoJS.SHA256('password123').toString();
         $(document).ready(() => {
-            // Login Button Handler
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
                 const pass = $('#password').val().trim();
@@ -187,37 +176,25 @@
                     alert('Incorrect username or password');
                 }
             });
-
-            // Cancel Button Handler
             $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-
-            // Forgot Password Handler (Placeholder)
             $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
-
-            // Initialize Google API Client
             gapi.load('client', () => {
                 gapi.client.init({
                     apiKey: API_KEY,
                     discoveryDocs: DISCOVERY_DOCS
                 }).catch(error => console.error('Error initializing GAPI:', error));
             });
-
-            // Session Select Handler
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) updateLog(sessionId);
                 else resetDisplay();
             });
-
-            // Refresh Button Handler
             $('#refreshBtn').on('click', () => {
                 const sessionId = $('#sessionSelect').val();
                 if (sessionId) updateLog(sessionId);
                 else loadSessions();
             });
         });
-
-        // Load Sessions from Google Sheet
         async function loadSessions() {
             try {
                 const response = await gapi.client.sheets.spreadsheets.values.get({
@@ -238,8 +215,6 @@
                 console.error('Error loading sessions:', error);
             }
         }
-
-        // Fetch Transactions from Google Sheet
         async function fetchTransactions() {
             try {
                 const response = await gapi.client.sheets.spreadsheets.values.get({
@@ -261,8 +236,6 @@
                 return [];
             }
         }
-
-        // Update Display for Selected Session
         async function updateLog(sessionId) {
             const transactions = await fetchTransactions();
             const sessionTransactions = transactions.filter(tr => tr.sessionId === sessionId);
@@ -272,7 +245,6 @@
             }
             let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
             const graphData = { labels: [], sales: [] };
-
             sessionTransactions.forEach(tr => {
                 if (tr.items.includes('CASH')) cashSales += tr.total;
                 if (tr.items.includes('CC')) cardSales += tr.total;
@@ -280,11 +252,9 @@
                 if (tr.items.includes('TICKET')) ticketCount += tr.doorCount;
                 totalSales += tr.total;
                 totalDoorCount += tr.doorCount;
-
                 graphData.labels.push(tr.time);
                 graphData.sales.push(totalSales);
             });
-
             $('#cashSales').text(cashSales.toFixed(2));
             $('#cardSales').text(cardSales.toFixed(2));
             $('#compCount').text(compCount);
@@ -294,16 +264,12 @@
             updateGraph(graphData);
             updateTransactionLog(sessionTransactions);
         }
-
-        // Update Transaction Log Display
         function updateTransactionLog(transactions) {
             const $log = $('#transactionLog').empty();
             transactions.forEach(tr => {
                 $log.append(`<p>${tr.time} - ${tr.items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
             });
         }
-
-        // Reset Display to Default
         function resetDisplay() {
             $('#cashSales, #cardSales').text('0.00');
             $('#compCount, #ticketCount, #doorCount').text('0');
@@ -311,8 +277,6 @@
             if (salesChart) salesChart.destroy();
             $('#transactionLog').empty();
         }
-
-        // Update Sales Graph
         function updateGraph(data) {
             const ctx = document.getElementById('salesGraph').getContext('2d');
             if (salesChart) salesChart.destroy();
