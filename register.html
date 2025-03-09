@@ -57,7 +57,7 @@
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* Updated to 5 columns */
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin-top: 20px;
         }
@@ -67,23 +67,21 @@
             border-radius: 4px;
             text-align: center;
         }
-        .increment-btn {
-            width: 100%;
-            height: 100px;
+        .increment-btn, .decrement-btn {
+            width: 40px;
+            height: 40px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1.5em;
             color: white;
-            font-weight: bold;
+            margin: 5px;
         }
-        .increment-btn.cash { background: #2e7d32; }
-        .increment-btn.cc { background: #d32f2f; }
-        .increment-btn.ticket { background: #1a73e8; }
-        .increment-btn.comp { background: #ffa500; }
+        .increment-btn { background: #388e3c; }
+        .decrement-btn { background: #d32f2f; }
         .control-row {
             display: flex;
-            justify-content: flex-end;
+            justify-content: center;
             align-items: center;
             gap: 10px;
             margin-top: 5px;
@@ -94,7 +92,7 @@
             height: 40px;
             line-height: 40px;
             font-weight: bold;
-            background: #d32f2f;
+            background: #000;
             color: white;
             border-radius: 50%;
             text-align: center;
@@ -175,39 +173,48 @@
     <div class="container">
         <div class="button-container">
             <div class="product-item" data-item="CASH $20" data-price="20">
-                <button class="increment-btn cash">CASH $20</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH $15" data-price="15">
-                <button class="increment-btn cash">CASH $15</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH $12" data-price="12">
-                <button class="increment-btn cash">CASH $12</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH $10" data-price="10">
-                <button class="increment-btn cash">CASH $10</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH $7" data-price="7">
-                <button class="increment-btn cash">CASH $7</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH $5" data-price="5">
-                <button class="increment-btn cash">CASH $5</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CC TRANS" data-price="0">
-                <button class="increment-btn cc">CC TRANS</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="TICKET" data-price="0">
-                <button class="increment-btn ticket">TICKET</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="COMP" data-price="0">
-                <button class="increment-btn comp">COMP</button>
+                <button class="increment-btn">+</button>
+                <button class="decrement-btn">-</button>
                 <div class="control-row"><span class="count">0</span></div>
             </div>
             <div class="product-item" data-item="CASH (CUSTOM)">
@@ -239,7 +246,7 @@
                 this.currentItems = [];
                 this.total = 0;
                 this.doorCount = 0;
-                this.apiUrl = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; // Replace with your Web App URL
+                this.apiUrl = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your Web App URL
             }
             init() {
                 const request = indexedDB.open('SalesDB', 2);
@@ -261,6 +268,10 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     const $item = $(e.target).closest('.product-item');
                     this.incrementItem($item.data('item'), parseFloat($item.data('price')));
+                });
+                $(document).on('click', '.decrement-btn', (e) => {
+                    const $item = $(e.target).closest('.product-item');
+                    this.decrementItem($item.data('item'));
                 });
                 $(document).on('click', '.add-custom', (e) => {
                     const $item = $(e.target).closest('.product-item');
@@ -333,6 +344,24 @@
                 this.updateSessionDoorCount();
                 this.updateTotals();
             }
+            decrementItem(itemName) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text());
+                if (count > 0) {
+                    count--;
+                    $count.text(count);
+                    const existingItem = this.currentItems.find(i => i.item === itemName);
+                    if (existingItem) {
+                        existingItem.quantity--;
+                        if (existingItem.quantity <= 0) {
+                            this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                        }
+                        this.doorCount -= 1;
+                        this.updateSessionDoorCount();
+                    }
+                    this.updateTotals();
+                }
+            }
             updateTotals() {
                 this.total = this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 $('#cashTotal').text(this.total.toFixed(2));
@@ -381,8 +410,13 @@
                     body: JSON.stringify(transaction)
                 })
                 .then(response => response.json())
-                .then(data => console.log('API Response:', data))
-                .catch(error => console.error('API Error:', error));
+                .then(data => {
+                    console.log('API Response:', data);
+                    if (data.status !== 'success') {
+                        console.error('API Error:', data);
+                    }
+                })
+                .catch(error => console.error('Fetch Error:', error));
             }
             resetSession() {
                 this.sessionStarted = false;
