@@ -17,16 +17,6 @@
             background-color: #121212;
             color: #e0e0e0;
         }
-        .main-content {
-            display: flex;
-            gap: 20px;
-        }
-        .left-panel {
-            flex: 0 0 40%;
-        }
-        .right-panel {
-            flex: 1;
-        }
         .modal {
             display: none;
             position: fixed;
@@ -101,7 +91,7 @@
         .comp-total { color: #ffa500; }
         .ticket-total { color: #1a73e8; }
         .total-sales { color: #ffffff; }
-        .door-count-total { color: #00bcd4; }
+        .door-count-total { color: #800080; }
         #drawerStatus {
             margin-top: 10px;
             font-weight: bold;
@@ -120,27 +110,23 @@
         </div>
     </div>
     <div class="main-content">
-        <div class="left-panel">
-            <div class="log-container graph-container" style="display: none;">
-                <h2>Sales Over Time</h2>
-                <canvas id="salesGraph"></canvas>
-            </div>
+        <div class="log-container graph-container" style="display: none;">
+            <h2>Sales Over Time</h2>
+            <canvas id="salesGraph"></canvas>
         </div>
-        <div class="right-panel">
-            <div class="log-container" style="display: none;">
-                <h2>Live Sales Summary</h2>
-                <select id="sessionSelect"><option value="">Select a session</option></select>
-                <div id="drawerStatus" style="display: none;"></div>
-                <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
-                <button id="refreshBtn">Refresh</button>
-                <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 3s)</label>
-                <div class="summary-grid" id="summaryGrid"></div>
-            </div>
-            <div class="log-container" style="display: none;">
-                <h2>Transaction Log</h2>
-                <div id="transactionLog"></div>
-                <button id="logoutBtn">Logout</button>
-            </div>
+        <div class="log-container" style="display: none;">
+            <h2>Live Sales Summary</h2>
+            <select id="sessionSelect"><option value="">Select a session</option></select>
+            <div id="drawerStatus" style="display: none;"></div>
+            <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
+            <button id="refreshBtn">Refresh</button>
+            <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 3s)</label>
+            <div class="summary-grid" id="summaryGrid"></div>
+        </div>
+        <div class="log-container" style="display: none;">
+            <h2>Transaction Log</h2>
+            <div id="transactionLog"></div>
+            <button id="logoutBtn">Logout</button>
         </div>
     </div>
     <script>
@@ -150,7 +136,6 @@
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         let salesChart, autoRefreshInterval;
-        let currentSessionId, sessionDate, sessionVenue, sessionEvent, sessionCashier, salesOpenTimestamp, closedTimestamp, transactions;
 
         function handleClientLoad() {
             gapi.load('client', initClient);
@@ -197,17 +182,16 @@
                 const sessionRows = rows.filter(tr => tr[1] === sessionId);
                 const salesOpenRow = sessionRows.find(tr => tr[0] === 'SALES OPEN');
                 const closedRow = sessionRows.find(tr => tr[0] === 'CLOSED');
-                transactions = sessionRows.filter(tr => tr[0] === 'TRANSACTION');
+                const transactions = sessionRows.filter(tr => tr[0] === 'TRANSACTION');
 
                 if (!transactions.length && !salesOpenRow && !closedRow) {
                     resetDisplay();
                     return;
                 }
 
-                currentSessionId = sessionId;
-                [sessionDate, sessionVenue, sessionEvent, sessionCashier] = sessionId.split('_');
-                salesOpenTimestamp = salesOpenRow ? salesOpenRow[2] : 'N/A';
-                closedTimestamp = closedRow ? closedRow[2] : 'N/A';
+                const [sessionDate, sessionVenue, sessionEvent, sessionCashier] = sessionId.split('_');
+                const salesOpenTimestamp = salesOpenRow ? salesOpenRow[2] : 'N/A';
+                const closedTimestamp = closedRow ? closedRow[2] : 'N/A';
 
                 if (!closedRow) {
                     $('#drawerStatus').text(`Drawer open by ${sessionCashier}`).show();
@@ -304,26 +288,15 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            doc.text(`Session: ${currentSessionId}`, 10, 10);
+            const [sessionDate, sessionVenue, sessionEvent, sessionCashier] = $('#sessionSelect').val().split('_');
+            doc.text(`Session: ${$('#sessionSelect').val()}`, 10, 10);
             doc.text(`Date: ${sessionDate}`, 10, 20);
             doc.text(`Venue: ${sessionVenue}`, 10, 30);
             doc.text(`Event: ${sessionEvent}`, 10, 40);
             doc.text(`Cashier: ${sessionCashier}`, 10, 50);
-            doc.text(`Session Start: ${salesOpenTimestamp}`, 10, 60);
-            doc.text(`Session End: ${closedTimestamp}`, 10, 70);
 
             const graphImage = document.getElementById('salesGraph').toDataURL('image/png');
-            doc.addImage(graphImage, 'PNG', 10, 80, 180, 100);
-
-            const transactionData = transactions.map(tr => {
-                const items = JSON.parse(tr[4] || '[]').map(item => `${item.type} $${item.amount || 0}`).join(', ');
-                return [tr[3], items, tr[5], tr[6], tr[7]];
-            });
-            doc.autoTable({
-                head: [['Time', 'Items', 'Total', 'Note', 'Door Count']],
-                body: transactionData,
-                startY: 190
-            });
+            doc.addImage(graphImage, 'PNG', 10, 60, 180, 100);
 
             doc.output('dataurlnewwindow');
         }
