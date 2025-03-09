@@ -13,6 +13,7 @@
             margin: 0;
             padding: 10px;
             font-size: 18px;
+            overflow-x: hidden;
         }
         .header {
             display: flex;
@@ -56,7 +57,7 @@
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr); /* Updated to 5 columns */
             gap: 15px;
             margin-top: 20px;
         }
@@ -230,7 +231,6 @@
         <button id="logSaleBtn">Log Sale</button>
     </div>
     <script>
-        // Same JavaScript as Version 1
         class SalesApp {
             constructor() {
                 this.db = null;
@@ -239,6 +239,7 @@
                 this.currentItems = [];
                 this.total = 0;
                 this.doorCount = 0;
+                this.apiUrl = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; // Replace with your Web App URL
             }
             init() {
                 const request = indexedDB.open('SalesDB', 2);
@@ -353,6 +354,7 @@
                 };
                 const tx = this.db.transaction(['transactions'], 'readwrite');
                 tx.objectStore('transactions').add(transaction).onsuccess = () => {
+                    this.sendToApi(transaction);
                     this.resetSale();
                 };
             }
@@ -371,6 +373,16 @@
                     session.doorCount = this.doorCount;
                     store.put(session);
                 };
+            }
+            sendToApi(transaction) {
+                fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transaction)
+                })
+                .then(response => response.json())
+                .then(data => console.log('API Response:', data))
+                .catch(error => console.error('API Error:', error));
             }
             resetSession() {
                 this.sessionStarted = false;
