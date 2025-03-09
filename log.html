@@ -3,33 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log</title> 
+    <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #1a1a1a; color: #e0e0e0; margin: 0; padding: 0; }
-        .modal { display: block; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #333; margin: 15% auto; padding: 20px; border-radius: 5px; width: 300px; text-align: center; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 8px; margin: 10px 0; background-color: #555; color: #e0e0e0; border: 1px solid #777; border-radius: 4px; }
-        button { padding: 10px 20px; margin: 5px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #45a049; }
-        #cancelBtn { background-color: #f44336; }
-        #cancelBtn:hover { background-color: #da190b; }
-        .forgot-password { margin-top: 10px; color: #2196F3; cursor: pointer; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 20px; }
-        .log-container { background-color: #2a2a2a; padding: 20px; border-radius: 5px; }
-        .graph-container { grid-column: span 2; }
-        #salesGraph { max-height: 400px; }
-        .summary-grid p { margin: 10px 0; }
-        .item-cash, .item-card, .item-comp, .item-tickets { font-weight: bold; padding: 2px 5px; border-radius: 3px; }
-        .item-cash { background-color: #4CAF50; }
-        .item-card { background-color: #2196F3; }
-        .item-comp { background-color: #f44336; }
-        .item-tickets { background-color: #FF9800; }
-        #refreshBtn { background-color: #2196F3; margin-left: 10px; }
-        #transactionLog p { margin: 5px 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            font-size: 16px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+        }
+        .modal-content input {
+            margin: 10px 0;
+            padding: 8px;
+            width: 80%;
+            background: #333;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        #loginBtn {
+            background: #388e3c;
+        }
+        #loginBtn:hover {
+            background: #66bb6a;
+        }
+        #cancelBtn {
+            background: #555;
+        }
+        #cancelBtn:hover {
+            background: #777;
+        }
+        .forgot-password {
+            color: #ffa500;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            max-width: 1024px;
+            margin: 0 auto;
+        }
+        .log-container {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .graph-container {
+            grid-row: span 2;
+            height: 100%;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .item-cash { color: #2e7d32; }
+        .item-card { color: #d32f2f; }
+        .item-tickets { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
+        select, button {
+            padding: 5px;
+            font-size: 16px;
+            background: #333;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        #refreshBtn {
+            background: #388e3c;
+        }
+        #refreshBtn:hover {
+            background: #66bb6a;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        #transactionLog {
+            overflow-y: auto;
+            max-height: 200px;
+        }
+        #transactionLog p {
+            margin: 5px 0;
+        }
+        #salesGraph {
+            background: #3c3c3c;
+        }
     </style>
 </head>
 <body>
@@ -67,9 +161,8 @@
         </div>
     </div>
     <script>
-        // Updated with provided API key and spreadsheet ID
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Provided API Key
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Provided Spreadsheet ID
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         let salesChart;
         const username = 'admin';
@@ -121,15 +214,14 @@
                 const rows = response.result.values || [];
                 const sessions = {};
                 rows.forEach(row => {
-                    if (row[1]) {
-                        sessions[row[1]] = true;
-                    }
+                    if (row[1]) sessions[row[1]] = true;
                 });
                 const $select = $('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
                 Object.keys(sessions).forEach(id => $select.append(`<option value="${id}">${id}</option>`));
             } catch (error) {
                 console.error('Error loading sessions:', error);
+                loadFromIndexedDB();
             }
         }
 
@@ -170,7 +262,45 @@
                 updateTransactionLog(sessionTransactions);
             } catch (error) {
                 console.error('Error updating log:', error);
+                loadFromIndexedDB(sessionId);
             }
+        }
+
+        function loadFromIndexedDB(sessionId = null) {
+            const request = indexedDB.open("SisterBarDB", 1);
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction(["transactions"], "readonly");
+                const store = transaction.objectStore("transactions");
+                const getAll = store.getAll();
+                getAll.onsuccess = () => {
+                    const data = getAll.result.filter(d => !sessionId || d.sessionId === sessionId);
+                    if (data.length === 0) return;
+                    let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
+                    const graphData = { labels: [], sales: [] };
+                    const transactions = data.filter(d => d.type === 'TRANSACTION');
+                    transactions.forEach(tr => {
+                        tr.itemList.forEach(item => {
+                            if (item.type === 'CASH') cashSales += item.price * item.quantity;
+                            if (item.type === 'CARD') cardSales += item.price * item.quantity;
+                            if (item.type === 'COMP') compCount += item.quantity;
+                            if (item.type === 'Tickets') ticketCount += item.quantity;
+                        });
+                        totalSales += parseFloat(tr.total);
+                        totalDoorCount += parseInt(tr.doorCount || 0);
+                        graphData.labels.push(tr.time);
+                        graphData.sales.push(totalSales);
+                    });
+                    $('#cashSales').text(cashSales.toFixed(2));
+                    $('#cardSales').text(cardSales.toFixed(2));
+                    $('#compCount').text(compCount);
+                    $('#ticketCount').text(ticketCount);
+                    $('#totalSales').text(totalSales.toFixed(2));
+                    $('#doorCount').text(totalDoorCount);
+                    updateGraph(graphData);
+                    updateTransactionLog(transactions.map(tr => [tr.type, tr.sessionId, tr.timestamp, tr.time, JSON.stringify(tr.itemList), tr.total, tr.note, tr.doorCount]));
+                };
+            };
         }
 
         function updateTransactionLog(transactions) {
