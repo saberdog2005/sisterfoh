@@ -1,362 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sister Bar Register</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .header label {
-            display: flex;
-            flex-direction: column;
-        }
-        .header input {
-            padding: 8px;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
-        .transaction-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 18px;
-            color: white;
-        }
-        .cash-btn { background: #2e7d32; }
-        .cc-btn { background: #d32f2f; }
-        .ticket-btn { background: #1a73e8; }
-        .comp-btn { background: #ffa500; }
-        .hidden { display: none; }
-        .disabled { opacity: 0.5; pointer-events: none; }
-        .sales-open { background-color: green; }
-        .sales-closed { background-color: red; }
-        .custom-cash input {
-            width: 100px;
-            padding: 8px;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
-        .summary {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-        #doorCount { color: purple; }
-        .note-section textarea {
-            width: 100%;
-            height: 60px;
-            padding: 8px;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
-        .pin-modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .pin-modal input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
-        @media (max-width: 768px) {
-            .transaction-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            button {
-                padding: 20px;
-                font-size: 20px;
-            }
-        }
-    </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Sister Bar Register</title>
+ <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+ <script src="https://apis.google.com/js/api.js"></script>
+ <style>
+ body {
+ font-family: Arial, sans-serif;
+ margin: 0;
+ padding: 20px;
+ background-color: #121212;
+ color: #e0e0e0;
+ }
+ .container {
+ max-width: 800px;
+ margin: 0 auto;
+ }
+ .header {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 10px;
+ margin-bottom: 20px;
+ }
+ .header label {
+ display: flex;
+ flex-direction: column;
+ }
+ .header input {
+ padding: 8px;
+ background: #34495e;
+ color: #e0e0e0;
+ border: 1px solid #bdc3c7;
+ border-radius: 4px;
+ }
+ .transaction-grid {
+ display: grid;
+ grid-template-columns: repeat(5, 1fr);
+ gap: 10px;
+ margin-bottom: 20px;
+ }
+ button {
+ padding: 10px;
+ border: none;
+ border-radius: 4px;
+ cursor: pointer;
+ font-size: 16px;
+ color: white;
+ }
+ .cash-btn { background: #2e7d32; }
+ .cc-btn { background: #d32f2f; }
+ .ticket-btn { background: #1a73e8; }
+ .comp-btn { background: #ffa500; }
+ .hidden { display: none; }
+ .disabled { opacity: 0.5; pointer-events: none; }
+ .sales-open { background-color: green; }
+ .sales-closed { background-color: red; }
+ .custom-cash input {
+ width: 100px;
+ padding: 8px;
+ background: #34495e;
+ color: #e0e0e0;
+ border: 1px solid #bdc3c7;
+ border-radius: 4px;
+ }
+ .summary {
+ display: flex;
+ justify-content: space-between;
+ margin-bottom: 20px;
+ font-size: 18px;
+ }
+ #doorCount { color: purple; }
+ .note-section textarea {
+ width: 100%;
+ height: 60px;
+ padding: 8px;
+ background: #34495e;
+ color: #e0e0e0;
+ border: 1px solid #bdc3c7;
+ border-radius: 4px;
+ }
+ .pin-modal {
+ position: fixed;
+ top: 50%;
+ left: 50%;
+ transform: translate(-50%, -50%);
+ background: #2c3e50;
+ padding: 20px;
+ border-radius: 8px;
+ box-shadow: 0 0 10px rgba(0,0,0,0.5);
+ z-index: 1000;
+ }
+ .pin-modal input {
+ width: 100%;
+ padding: 8px;
+ margin-bottom: 10px;
+ background: #34495e;
+ color: #e0e0e0;
+ border: 1px solid #bdc3c7;
+ border-radius: 4px;
+ }
+ </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <label>Date: <input type="date" id="sessionDate"></label>
-            <label>Venue: <input type="text" id="sessionVenue" value="Sister"></label>
-            <label>Event: <input type="text" id="sessionEvent" value="Open Mic"></label>
-            <label>Cashier: <input type="text" id="sessionCashier" placeholder="Cashier"></label>
-            <button id="toggleSalesBtn">Open Sales</button>
-            <button id="editLayoutBtn">Edit Layout</button>
-        </div>
-        <div class="transaction-grid" id="transactionGrid">
-            <button class="cash-btn" data-type="cash" data-amount="20">$20</button>
-            <button class="cash-btn" data-type="cash" data-amount="15">$15</button>
-            <button class="cash-btn" data-type="cash" data-amount="12">$12</button>
-            <button class="cash-btn" data-type="cash" data-amount="10">$10</button>
-            <button class="cash-btn" data-type="cash" data-amount="7">$7</button>
-            <button class="cash-btn" data-type="cash" data-amount="5">$5</button>
-            <button class="cc-btn" data-type="card" data-amount="0">CC TRANS</button>
-            <button class="ticket-btn" data-type="ticket" data-amount="0">TICKET</button>
-            <button class="comp-btn" data-type="comp" data-amount="0">COMP</button>
-        </div>
-        <div class="custom-cash">
-            <input type="number" id="customCashInput" placeholder="Custom Amount">
-            <button id="addCustomCashBtn">Add</button>
-        </div>
-        <div class="summary">
-            <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-            <div>Thru Door: <span id="doorCount">0</span></div>
-        </div>
-        <div class="note-section">
-            <textarea id="noteInput" placeholder="Add a note..."></textarea>
-            <button id="logSaleBtn">Log Sale</button>
-        </div>
-        <div id="pinModal" class="pin-modal hidden">
-            <h3>Enter PIN to Close Sales</h3>
-            <input type="password" id="pinInput" placeholder="PIN">
-            <button id="confirmCloseBtn">Confirm</button>
-        </div>
-    </div>
+ <div class="container">
+ <div class="header">
+ <label>Date: <input type="date" id="sessionDate"></label>
+ <label>Venue: <input type="text" id="sessionVenue" value="Sister"></label>
+ <label>Event: <input type="text" id="sessionEvent" value="Open Mic"></label>
+ <label>Cashier: <input type="text" id="sessionCashier" placeholder="Cashier"></label>
+ <button id="toggleSalesBtn">Open Sales</button>
+ <button id="editLayoutBtn">Edit Layout</button>
+ </div>
+ <div class="transaction-grid" id="transactionGrid">
+ <button class="cash-btn" data-type="cash" data-amount="20">$20</button>
+ <button class="cash-btn" data-type="cash" data-amount="15">$15</button>
+ <button class="cash-btn" data-type="cash" data-amount="12">$12</button>
+ <button class="cash-btn" data-type="cash" data-amount="10">$10</button>
+ <button class="cash-btn" data-type="cash" data-amount="7">$7</button>
+ <button class="cash-btn" data-type="cash" data-amount="5">$5</button>
+ <button class="cc-btn" data-type="card" data-amount="0">CC TRANS</button>
+ <button class="ticket-btn" data-type="ticket" data-amount="0">TICKET</button>
+ <button class="comp-btn" data-type="comp" data-amount="0">COMP</button>
+ </div>
+ <div class="custom-cash">
+ <input type="number" id="customCashInput" placeholder="Custom Amount">
+ <button id="addCustomCashBtn">Add</button>
+ </div>
+ <div class="summary">
+ <div>Cash Total: $<span id="cashTotal">0.00</span></div>
+ <div>Thru Door: <span id="doorCount">0</span></div>
+ </div>
+ <div class="note-section">
+ <textarea id="noteInput" placeholder="Add a note..."></textarea>
+ <button id="logSaleBtn">Log Sale</button>
+ </div>
+ <div id="pinModal" class="pin-modal hidden">
+ <h3>Enter PIN to Close Sales</h3>
+ <input type="password" id="pinInput" placeholder="PIN">
+ <button id="confirmCloseBtn">Confirm</button>
+ </div>
+ </div>
 
-    <script>
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+ <script>
+ const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+ const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+ const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+ const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
-        class SalesApp {
-            constructor() {
-                this.cart = [];
-                this.sessionId = '';
-                this.doorCount = 0;
-                this.cashTotal = 0;
-                this.isEditing = false;
-                this.salesOpen = false;
-                this.activeButtons = JSON.parse(localStorage.getItem('activeButtons')) || {};
-                this.transactionButtons = $('#transactionGrid button');
+ class SalesApp {
+ constructor() {
+ this.cart = [];
+ this.sessionId = '';
+ this.doorCount = 0;
+ this.cashTotal = 0;
+ this.isEditing = false;
+ this.salesOpen = false;
+ this.activeButtons = JSON.parse(localStorage.getItem('activeButtons')) || {};
+ this.transactionButtons = $('#transactionGrid button');
 
-                // Initialize button states
-                this.transactionButtons.each((_, btn) => {
-                    const key = $(btn).data('type') + $(btn).data('amount');
-                    const isActive = this.activeButtons[key] !== false;
-                    $(btn).attr('data-active', isActive);
-                    if (!isActive) {
-                        $(btn).addClass('hidden');
-                    }
-                });
+ // Set today's date by default
+ $('#sessionDate').val(new Date().toISOString().split('T')[0]);
 
-                // Prefill date
-                const today = new Date().toISOString().split('T')[0];
-                $('#sessionDate').val(today);
+ // Initialize button states
+ this.transactionButtons.each((_, btn) => {
+ const key = $(btn).data('type') + $(btn).data('amount');
+ const isActive = this.activeButtons[key] !== false;
+ $(btn).attr('data-active', isActive);
+ if (!isActive) {
+ $(btn).addClass('hidden');
+ }
+ });
 
-                // Initialize sales button state
-                if (this.salesOpen) {
-                    $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
-                } else {
-                    $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
-                }
+ // Initialize sales button state
+ if (this.salesOpen) {
+ $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
+ } else {
+ $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
+ }
 
-                this.updateDisplay();
-                this.bindEvents();
-            }
+ this.updateDisplay();
+ this.bindEvents();
+ }
 
-            bindEvents() {
-                $('#toggleSalesBtn').on('click', () => {
-                    if (this.salesOpen) {
-                        $('#pinModal').removeClass('hidden');
-                    } else {
-                        this.startSession();
-                    }
-                });
-                $('#editLayoutBtn').on('click', () => this.toggleEditMode());
-                this.transactionButtons.on('click', (e) => {
-                    const btn = e.target;
-                    if (this.isEditing) {
-                        const currentActive = $(btn).attr('data-active') === 'true';
-                        const newActive = !currentActive;
-                        $(btn).attr('data-active', newActive);
-                        $(btn).toggleClass('disabled', !newActive);
-                    } else if (this.salesOpen) {
-                        const type = $(btn).data('type');
-                        const amount = parseFloat($(btn).data('amount'));
-                        this.addTransaction(type, amount);
-                    }
-                });
-                $('#addCustomCashBtn').on('click', () => {
-                    if (!this.salesOpen) return;
-                    const amount = parseFloat($('#customCashInput').val());
-                    if (!isNaN(amount) && amount > 0) {
-                        this.addTransaction('cash', amount);
-                        $('#customCashInput').val('');
-                    }
-                });
-                $('#logSaleBtn').on('click', () => {
-                    if (this.salesOpen) this.logSale();
-                });
-                $('#confirmCloseBtn').on('click', () => {
-                    if ($('#pinInput').val() === '1234') {
-                        this.endSession();
-                        $('#pinModal').addClass('hidden');
-                        $('#pinInput').val('');
-                    } else {
-                        alert('Incorrect PIN');
-                        $('#pinModal').addClass('hidden');
-                        $('#pinInput').val('');
-                    }
-                });
-            }
+ bindEvents() {
+ $('#toggleSalesBtn').on('click', () => {
+ if (this.salesOpen) {
+ $('#pinModal').removeClass('hidden');
+ } else {
+ this.startSession();
+ }
+ });
+ $('#editLayoutBtn').on('click', () => this.toggleEditMode());
+ this.transactionButtons.on('click', (e) => {
+ const btn = e.target;
+ if (this.isEditing) {
+ const currentActive = $(btn).attr('data-active') === 'true';
+ const newActive = !currentActive;
+ $(btn).attr('data-active', newActive);
+ $(btn).toggleClass('disabled', !newActive);
+ } else if (this.salesOpen) {
+ const type = $(btn).data('type');
+ const amount = parseFloat($(btn).data('amount'));
+ this.addTransaction(type, amount);
+ }
+ });
+ $('#addCustomCashBtn').on('click', () => {
+ if (!this.salesOpen) return;
+ const amount = parseFloat($('#customCashInput').val());
+ if (!isNaN(amount) && amount > 0) {
+ this.addTransaction('cash', amount);
+ $('#customCashInput').val('');
+ }
+ });
+ $('#logSaleBtn').on('click', () => {
+ if (this.salesOpen) this.logSale();
+ });
+ $('#confirmCloseBtn').on('click', () => {
+ if ($('#pinInput').val() === '1234') {
+ this.endSession();
+ $('#pinModal').addClass('hidden');
+ $('#pinInput').val('');
+ } else {
+ alert('Incorrect PIN');
+ }
+ });
+ }
 
-            toggleEditMode() {
-                this.isEditing = !this.isEditing;
-                if (this.isEditing) {
-                    this.transactionButtons.removeClass('hidden');
-                    this.transactionButtons.each((_, btn) => {
-                        if ($(btn).attr('data-active') === 'false') {
-                            $(btn).addClass('disabled');
-                        }
-                    });
-                    $('#editLayoutBtn').text('Save Layout');
-                } else {
-                    this.transactionButtons.each((_, btn) => {
-                        const key = $(btn).data('type') + $(btn).data('amount');
-                        this.activeButtons[key] = $(btn).attr('data-active') === 'true';
-                        if (!this.activeButtons[key]) {
-                            $(btn).addClass('hidden');
-                        } else {
-                            $(btn).removeClass('hidden');
-                        }
-                        $(btn).removeClass('disabled');
-                    });
-                    localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
-                    $('#editLayoutBtn').text('Edit Layout');
-                }
-            }
+ toggleEditMode() {
+ this.isEditing = !this.isEditing;
+ if (this.isEditing) {
+ this.transactionButtons.removeClass('hidden');
+ this.transactionButtons.each((_, btn) => {
+ if ($(btn).attr('data-active') === 'false') {
+ $(btn).addClass('disabled');
+ }
+ });
+ $('#editLayoutBtn').text('Save Layout');
+ } else {
+ this.transactionButtons.each((_, btn) => {
+ const key = $(btn).data('type') + $(btn).data('amount');
+ this.activeButtons[key] = $(btn).attr('data-active') === 'true';
+ if (!this.activeButtons[key]) {
+ $(btn).addClass('hidden');
+ } else {
+ $(btn).removeClass('hidden');
+ }
+ $(btn).removeClass('disabled');
+ });
+ localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+ $('#editLayoutBtn').text('Edit Layout');
+ }
+ }
 
-            startSession() {
-                const date = $('#sessionDate').val();
-                const venue = $('#sessionVenue').val().trim();
-                const event = $('#sessionEvent').val().trim();
-                const cashier = $('#sessionCashier').val().trim();
-                if (!date || !venue || !event || !cashier) {
-                    alert('Please fill all session fields.');
-                    return;
-                }
-                this.sessionId = `${date}_${venue}_${event}_${cashier}`;
-                this.salesOpen = true;
-                this.doorCount = 0;
-                this.updateDisplay();
-                gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A1',
-                    valueInputOption: 'RAW',
-                    resource: { values: [['SALES OPEN', this.sessionId, new Date().toISOString()]] }
-                }).then(() => {
-                    $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
-                }).catch(err => alert('Error starting session: ' + err.message));
-            }
+ startSession() {
+ const date = $('#sessionDate').val();
+ const venue = $('#sessionVenue').val().trim();
+ const event = $('#sessionEvent').val().trim();
+ const cashier = $('#sessionCashier').val().trim();
+ if (!date || !venue || !event || !cashier) {
+ alert('Please fill all session fields.');
+ return;
+ }
+ this.sessionId = `${date}_${venue}_${event}_${cashier}`;
+ this.salesOpen = true;
+ this.doorCount = 0;
+ this.updateDisplay();
+ gapi.client.sheets.spreadsheets.values.append({
+ spreadsheetId: SPREADSHEET_ID,
+ range: 'Sheet1!A1',
+ valueInputOption: 'RAW',
+ resource: { values: [['SALES OPEN', this.sessionId, new Date().toISOString()]] }
+ }).then(() => {
+ $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
+ }).catch(err => alert('Error starting session: ' + err.message));
+ }
 
-            endSession() {
-                gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A1',
-                    valueInputOption: 'RAW',
-                    resource: { values: [['CLOSED', this.sessionId, new Date().toISOString()]] }
-                }).then(() => {
-                    this.salesOpen = false;
-                    this.sessionId = '';
-                    this.cart = [];
-                    this.cashTotal = 0;
-                    this.doorCount = 0;
-                    this.updateDisplay();
-                    $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
-                }).catch(err => alert('Error closing session: ' + err.message));
-            }
+ endSession() {
+ gapi.client.sheets.spreadsheets.values.append({
+ spreadsheetId: SPREADSHEET_ID,
+ range: 'Sheet1!A1',
+ valueInputOption: 'RAW',
+ resource: { values: [['CLOSED', this.sessionId, new Date().toISOString()]] }
+ }).then(() => {
+ this.salesOpen = false;
+ this.sessionId = '';
+ this.cart = [];
+ this.cashTotal = 0;
+ this.doorCount = 0;
+ this.updateDisplay();
+ $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
+ }).catch(err => alert('Error closing session: ' + err.message));
+ }
 
-            addTransaction(type, amount) {
-                this.cart.push({ type, amount });
-                if (type === 'cash') this.cashTotal += amount;
-                this.doorCount++;
-                this.updateDisplay();
-            }
+ addTransaction(type, amount) {
+ this.cart.push({ type, amount });
+ if (type === 'cash') this.cashTotal += amount;
+ this.doorCount++;
+ this.updateDisplay();
+ }
 
-            logSale() {
-                if (!this.cart.length) {
-                    alert('No transactions to log.');
-                    return;
-                }
-                const timestamp = new Date().toISOString();
-                const note = $('#noteInput').val().trim();
-                const itemsJson = JSON.stringify(this.cart);
-                gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A1',
-                    valueInputOption: 'RAW',
-                    resource: {
-                        values: [['TRANSACTION', this.sessionId, timestamp, timestamp.slice(11, 19), itemsJson, this.cashTotal.toFixed(2), note, this.doorCount]]
-                    }
-                }).then(() => {
-                    this.cart = [];
-                    this.cashTotal = 0;
-                    $('#noteInput').val('');
-                    this.updateDisplay();
-                }).catch(err => alert('Error logging sale: ' + err.message));
-            }
+ logSale() {
+ if (!this.cart.length) {
+ alert('No transactions to log.');
+ return;
+ }
+ const timestamp = new Date().toISOString();
+ const note = $('#noteInput').val().trim();
+ const itemsJson = JSON.stringify(this.cart);
+ gapi.client.sheets.spreadsheets.values.append({
+ spreadsheetId: SPREADSHEET_ID,
+ range: 'Sheet1!A1',
+ valueInputOption: 'RAW',
+ resource: {
+ values: [['TRANSACTION', this.sessionId, timestamp, timestamp.slice(11, 19), itemsJson, this.cashTotal.toFixed(2), note, this.doorCount]]
+ }
+ }).then(() => {
+ this.cart = [];
+ this.cashTotal = 0;
+ $('#noteInput').val('');
+ this.updateDisplay();
+ }).catch(err => alert('Error logging sale: ' + err.message));
+ }
 
-            updateDisplay() {
-                $('#cashTotal').text(this.cashTotal.toFixed(2));
-                $('#doorCount').text(this.doorCount);
-            }
-        }
+ updateDisplay() {
+ $('#cashTotal').text(this.cashTotal.toFixed(2));
+ $('#doorCount').text(this.doorCount);
+ }
+ }
 
-        const app = new SalesApp();
+ const app = new SalesApp();
 
-        function handleClientLoad() {
-            gapi.load('client', () => {
-                gapi.client.init({
-                    apiKey: API_KEY,
-                    clientId: CLIENT_ID,
-                    discoveryDocs: DISCOVERY_DOCS
-                }).then(() => console.log('Google API initialized')).catch(err => alert('API init failed: ' + err.message));
-            });
-        }
+ function handleClientLoad() {
+ gapi.load('client', () => {
+ gapi.client.init({
+ apiKey: API_KEY,
+ clientId: CLIENT_ID,
+ discoveryDocs: DISCOVERY_DOCS
+ }).then(() => console.log('Google API initialized')).catch(err => alert('API init failed: ' + err.message));
+ });
+ }
 
-        $(document).ready(() => {
-            handleClientLoad();
-        });
-    </script>
+ $(document).ready(() => {
+ handleClientLoad();
+ });
+ </script>
 </body>
 </html>
