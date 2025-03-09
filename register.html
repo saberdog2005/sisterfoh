@@ -8,47 +8,26 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-        #sessionInfo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-        .toggle-section { display: flex; align-items: center; gap: 10px; }
-        .toggle-btn { padding: 8px 16px; font-size: 1em; border: none; border-radius: 4px; cursor: pointer; color: white; width: 150px; background: #388e3c; }
-        .toggle-btn:hover { background: #4CAF50; }
-        .container { max-width: 1024px; margin: 0 auto; background: #2d2d2d; padding: 20px; border-radius: 8px; }
-        .button-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
-        .product-item { background: #3c3c3c; padding: 10px; border-radius: 4px; text-align: center; position: relative; }
-        .cash-item { background: #006400; }
-        .card-item { background: #8B0000; }
-        .ticket-item { background: #00008B; }
-        .comp-item { background: #CC8400; }
-        .product-item.disabled { background: #555; opacity: 0.5; pointer-events: none; }
-        .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; background: inherit; }
-        .increment-btn:hover { filter: brightness(1.1); }
-        .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #8B0000; }
-        .decrement-btn:hover { background: #A52A2A; }
-        .control-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px; }
-        .count { font-size: 1.5em; width: 40px; height: 40px; line-height: 40px; font-weight: bold; background: #000; color: white; border-radius: 50%; text-align: center; }
-        .custom-input { display: flex; gap: 10px; justify-content: center; }
-        .custom-input input { width: 100px; padding: 8px; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 1em; }
-        .add-custom { padding: 8px 16px; background: #006400; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
-        .add-custom:hover { background: #008000; }
-        .totals-container { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; background: #3c3c3c; padding: 10px; border-radius: 4px; }
-        .cash-total { font-size: 2em; font-weight: bold; }
-        .door-count { font-size: 1.5em; font-weight: bold; }
-        #logSaleBtn { display: block; margin: 20px auto; padding: 15px 30px; font-size: 1.5em; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        #logSaleBtn:hover { background: #4CAF50; }
-        #logSaleBtn:disabled { background: #555; cursor: not-allowed; }
-        .note-section { margin: 20px 0; text-align: center; }
-        #noteInput { width: 80%; padding: 10px; background: #444; border: 1px solid #666; color: #e0e0e0; border-radius: 4px; font-size: 1em; }
-        #adminControls { margin-bottom: 10px; display: none; }
-        #editLayoutBtn, #confirmLayoutBtn { padding: 8px 16px; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
-        #editLayoutBtn:hover, #confirmLayoutBtn:hover { background: #4CAF50; }
-        #confirmLayoutBtn { display: none; }
-        .edit-controls { display: none; position: absolute; top: 5px; right: 5px; }
-        .edit-btn { padding: 2px 6px; background: #555; color: white; border: none; border-radius: 2px; cursor: pointer; margin-left: 2px; }
-        .edit-btn:hover { background: #777; }
-        .message { color: #ff6b6b; margin-top: 10px; text-align: center; }
-        @media (max-width: 1024px) { .button-container { grid-template-columns: repeat(3, 1fr); } }
+        body { background: #1c2526; color: #e0e0e0; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #2c3e50; padding: 10px; border-radius: 5px; }
+        #sessionInfo label { margin-right: 5px; }
+        #sessionInfo input { margin-right: 15px; background: #34495e; color: #e0e0e0; border: 1px solid #e0e0e0; padding: 5px; }
+        .toggle-section { display: flex; align-items: center; }
+        .toggle-btn { background: #3498db; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 5px; }
+        .toggle-btn.active { background: #e74c3c; }
+        #adminControls { margin: 10px 0; }
+        #adminControls button { background: #3498db; color: white; border: none; padding: 8px 15px; margin-right: 10px; cursor: pointer; }
+        #confirmLayoutBtn { display: none; background: #2ecc71; }
+        .container { display: flex; flex-direction: column; gap: 15px; }
+        .button-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .item-btn { background: #34495e; color: #e0e0e0; border: 1px solid #e0e0e0; padding: 15px; cursor: pointer; text-align: center; border-radius: 5px; }
+        .item-btn.active { background: #3498db; }
+        .totals-container { display: flex; justify-content: space-between; background: #2c3e50; padding: 10px; border-radius: 5px; }
+        .cash-total, .door-count { font-size: 1.2em; }
+        .note-section textarea { width: 100%; height: 50px; background: #34495e; color: #e0e0e0; border: 1px solid #e0e0e0; padding: 5px; }
+        #logSaleBtn { background: #2ecc71; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; }
+        #logSaleBtn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        .message { color: #2ecc71; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -80,249 +59,118 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        // Replace with your deployed Google Apps Script web app URL after deploying as "Anyone, even anonymous"
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
-
-        const allButtons = [
-            { item: 'CASH $20', enabled: true },
-            { item: 'CASH $15', enabled: true },
-            { item: 'CASH $12', enabled: true },
-            { item: 'CASH $10', enabled: true },
-            { item: 'CASH $7', enabled: true },
-            { item: 'CASH $5', enabled: true },
-            { item: 'CASH (CUSTOM)', enabled: true },
-            { item: 'CC TRANS', enabled: true },
-            { item: 'TICKET', enabled: true },
-            { item: 'COMP', enabled: true }
-        ];
-        let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your deployed script URL
 
         const itemConfig = {
-            'CASH $20': { class: 'cash-item', price: 20 },
-            'CASH $15': { class: 'cash-item', price: 15 },
-            'CASH $12': { class: 'cash-item', price: 12 },
-            'CASH $10': { class: 'cash-item', price: 10 },
-            'CASH $7': { class: 'cash-item', price: 7 },
-            'CASH $5': { class: 'cash-item', price: 5 },
-            'CASH (CUSTOM)': { class: 'cash-item', price: 0 },
-            'CC TRANS': { class: 'card-item', price: 0 },
-            'TICKET': { class: 'ticket-item', price: 0 },
-            'COMP': { class: 'comp-item', price: 0 }
+            'CASH $20': { price: 20, class: 'item-cash' },
+            'CASH $15': { price: 15, class: 'item-cash' },
+            'CASH $10': { price: 10, class: 'item-cash' },
+            'CASH $5': { price: 5, class: 'item-cash' },
+            'CASH (CUSTOM)': { price: 0, class: 'item-cash' },
+            'CC TRANS': { price: 0, class: 'item-card' },
+            'TICKET': { price: 10, class: 'item-tickets' },
+            'COMP': { price: 0, class: 'item-comp' }
         };
 
-        function createButtonHTML(item, enabled) {
-            const config = itemConfig[item] || {};
-            const disabledClass = enabled ? '' : 'disabled';
-            const html = item === 'CASH (CUSTOM)' ? `
-                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}">
-                    <div class="custom-input">
-                        <input type="number" step="0.01" min="0" placeholder="Amount">
-                        <button class="add-custom">Add</button>
-                    </div>
-                    <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
-                    <div class="edit-controls">
-                        <button class="edit-btn enable-btn">+</button>
-                        <button class="edit-btn disable-btn">-</button>
-                    </div>
-                </div>
-            ` : `
-                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}" data-price="${config.price}">
-                    <button class="increment-btn">${item}</button>
-                    <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
-                    <div class="edit-controls">
-                        <button class="edit-btn enable-btn">+</button>
-                        <button class="edit-btn disable-btn">-</button>
-                    </div>
-                </div>
-            `;
-            return html;
+        let salesOpen = false;
+        let items = {};
+        let cashTotal = 0;
+        let doorCount = 0;
+
+        $(document).ready(() => {
+            loadButtons();
+            $('#eventDate').val(new Date().toISOString().split('T')[0]);
+            $('#toggleSalesBtn').on('click', toggleSales);
+            $('#logSaleBtn').on('click', logSale);
+            $('#editLayoutBtn').on('click', () => {
+                Sortable.create(document.getElementById('buttonContainer'), { animation: 150 });
+                $('#editLayoutBtn').hide();
+                $('#confirmLayoutBtn').show();
+            });
+            $('#confirmLayoutBtn').on('click', () => {
+                $('#editLayoutBtn').show();
+                $('#confirmLayoutBtn').hide();
+                Sortable.get(document.getElementById('buttonContainer')).destroy();
+            });
+        });
+
+        function loadButtons() {
+            const container = $('#buttonContainer');
+            Object.keys(itemConfig).forEach(item => {
+                const btn = $('<button>').addClass('item-btn').text(item).data('item', item);
+                btn.on('click', () => increment(item));
+                container.append(btn);
+            });
         }
 
-        function renderButtons(editMode = false) {
-            const $container = $('#buttonContainer').empty();
-            const buttonsToShow = editMode ? allButtons : layout.filter(b => b.enabled);
-            buttonsToShow.forEach(config => {
-                $container.append(createButtonHTML(config.item, config.enabled));
-            });
-            if (editMode) {
-                $('.edit-controls').show();
-                new Sortable(document.getElementById('buttonContainer'), {
-                    animation: 150,
-                    ghostClass: 'sortable-ghost'
-                });
-            } else {
-                $('.edit-controls').hide();
+        function toggleSales() {
+            salesOpen = !salesOpen;
+            $('#toggleSalesBtn').text(salesOpen ? 'Close Sales' : 'Open Sales').toggleClass('active');
+            if (salesOpen) {
+                const sessionId = `${$('#eventDate').val()}-${$('#eventVenue').val()}-${$('#eventName').val()}`.replace(/[^a-zA-Z0-9-]/g, '');
+                $.post(WEB_APP_URL, JSON.stringify({
+                    type: 'TITLE',
+                    data: ['TITLE', sessionId, new Date().toISOString(), $('#cashierName').val()]
+                }));
             }
         }
 
-        $('#editLayoutBtn').on('click', function() {
-            renderButtons(true);
-            $(this).hide();
-            $('#confirmLayoutBtn').show();
-        });
+        function increment(item) {
+            if (!salesOpen) return;
+            const config = itemConfig[item];
+            let price = config.price;
+            if (item === 'CASH (CUSTOM)' || item === 'CC TRANS') {
+                price = parseFloat(prompt('Enter amount:') || 0);
+                if (isNaN(price) || price < 0) return;
+            }
+            items[item] = (items[item] || 0) + 1;
+            if (price > 0) cashTotal += price;
+            doorCount++; // Increment door count for any button press
+            updateDisplay();
+        }
 
-        $('#confirmLayoutBtn').on('click', function() {
-            const newLayout = [];
-            $('#buttonContainer .product-item').each(function() {
+        function updateDisplay() {
+            $('#cashTotal').text(cashTotal.toFixed(2));
+            $('#doorCount').text(doorCount);
+            $('#logSaleBtn').prop('disabled', Object.keys(items).length === 0);
+            $('.item-btn').each(function() {
                 const item = $(this).data('item');
-                const enabled = !$(this).hasClass('disabled');
-                newLayout.push({ item, enabled });
+                $(this).toggleClass('active', items[item] > 0).text(`${item}${items[item] ? ` (${items[item]})` : ''}`);
             });
-            layout = newLayout.filter(b => b.enabled);
-            localStorage.setItem('buttonLayout', JSON.stringify(layout));
-            renderButtons(false);
-            $(this).hide();
-            $('#editLayoutBtn').show();
-        });
-
-        $(document).on('click', '.enable-btn', function() {
-            $(this).closest('.product-item').removeClass('disabled');
-        });
-
-        $(document).on('click', '.disable-btn', function() {
-            $(this).closest('.product-item').addClass('disabled');
-        });
-
-        if (localStorage.getItem('adminLoggedIn') === 'true') {
-            $('#adminControls').show();
         }
 
-        class SalesApp {
-            constructor() {
-                this.cashTotal = 0;
-                this.doorCount = 0;
-                this.items = {};
-                this.isSalesActive = false;
-                this.initEvents();
-            }
-
-            initEvents() {
-                $(document).on('click', '.increment-btn', (e) => {
-                    if (!this.isSalesActive) return;
-                    const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
-                    const item = $item.data('item');
-                    const price = parseFloat($item.data('price') || 0);
-                    this.increment(item, price);
-                });
-
-                $(document).on('click', '.decrement-btn', (e) => {
-                    if (!this.isSalesActive) return;
-                    const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
-                    const item = $item.data('item');
-                    const price = parseFloat($item.data('price') || 0);
-                    this.decrement(item, price);
-                });
-
-                $(document).on('click', '.add-custom', () => {
-                    if (!this.isSalesActive) return;
-                    const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
-                    if ($custom.hasClass('disabled')) return;
-                    const amount = parseFloat($custom.find('input').val()) || 0;
-                    if (amount > 0) {
-                        this.increment('CASH (CUSTOM)', amount);
-                        $custom.find('input').val('');
-                    }
-                });
-
-                $('#toggleSalesBtn').on('click', () => {
-                    this.toggleSales();
-                });
-
-                $('#logSaleBtn').on('click', () => {
-                    this.logSale();
-                });
-            }
-
-            increment(item, price) {
-                this.items[item] = (this.items[item] || 0) + 1;
-                if (price > 0) this.cashTotal += price;
-                if (item !== 'CASH (CUSTOM)') this.doorCount++;
-                this.updateDisplay();
-            }
-
-            decrement(item, price) {
-                if (this.items[item] > 0) {
-                    this.items[item]--;
-                    if (price > 0) this.cashTotal -= price;
-                    if (item !== 'CASH (CUSTOM)') this.doorCount--;
-                    this.updateDisplay();
-                }
-            }
-
-            updateDisplay() {
-                $('#cashTotal').text(this.cashTotal.toFixed(2));
-                $('#doorCount').text(this.doorCount);
-                $('.product-item').each((_, el) => {
-                    const $el = $(el);
-                    const item = $el.data('item');
-                    $el.find('.count').text(this.items[item] || 0);
-                });
-                $('#logSaleBtn').prop('disabled', this.cashTotal <= 0 && this.doorCount <= 0);
-            }
-
-            toggleSales() {
-                this.isSalesActive = !this.isSalesActive;
-                $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
-                $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
-                if (this.isSalesActive) {
-                    const sessionId = Date.now().toString();
-                    localStorage.setItem('activeSessionId', sessionId);
-                    const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
-                    this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
-                    $('#editLayoutBtn').hide();
-                } else {
-                    localStorage.removeItem('activeSessionId');
-                    $('#editLayoutBtn').show();
-                }
-            }
-
-            logSale() {
-                if (!this.isSalesActive || (this.cashTotal <= 0 && this.doorCount <= 0)) return;
-                const sessionId = localStorage.getItem('activeSessionId');
-                const transaction = {
-                    type: 'TRANSACTION',
-                    sessionId,
-                    timestamp: new Date().toISOString(),
-                    time: new Date().toLocaleTimeString(),
-                    itemList: Object.entries(this.items).map(([item, quantity]) => {
-                        const price = parseFloat($(`[data-item="${item}"]`).data('price') || 0);
-                        return { item, price, quantity, type: itemConfig[item].class.replace('-item', '') };
-                    }),
-                    total: this.cashTotal,
-                    note: $('#noteInput').val().trim(),
-                    doorCount: this.doorCount
-                };
-                this.sendPostRequest(transaction);
-                this.reset();
-            }
-
-            sendPostRequest(data) {
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Bypass CORS; we don't need the response
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                }).then(() => {
-                    $('#message').text('Data sent successfully').css('color', '#4CAF50');
-                }).catch(error => {
-                    console.error('Error sending data:', error);
-                    $('#message').text('Failed to send data: ' + error.message).css('color', '#ff6b6b');
-                });
-            }
-
-            reset() {
-                this.cashTotal = 0;
-                this.doorCount = 0;
-                this.items = {};
-                this.updateDisplay();
-                $('#noteInput').val('');
-            }
+        function logSale() {
+            if (!salesOpen || Object.keys(items).length === 0) return;
+            const sessionId = `${$('#eventDate').val()}-${$('#eventVenue').val()}-${$('#eventName').val()}`.replace(/[^a-zA-Z0-9-]/g, '');
+            const itemList = Object.entries(items).map(([item, qty]) => ({
+                name: item,
+                quantity: qty,
+                price: itemConfig[item].price,
+                type: itemConfig[item].class.replace('item-', '')
+            }));
+            const note = $('#noteInput').val().trim();
+            $.post(WEB_APP_URL, JSON.stringify({
+                type: 'TRANSACTION',
+                sessionId: sessionId,
+                timestamp: new Date().toISOString(),
+                time: new Date().toLocaleTimeString(),
+                itemList: itemList,
+                total: cashTotal,
+                note: note,
+                doorCount: doorCount
+            }), () => {
+                $('#message').text('Sale logged successfully!').fadeIn().delay(2000).fadeOut();
+                resetSale();
+            }).fail(() => alert('Error logging sale'));
         }
 
-        const app = new SalesApp();
-        renderButtons();
+        function resetSale() {
+            items = {};
+            cashTotal = 0;
+            doorCount = 0;
+            $('#noteInput').val('');
+            updateDisplay();
+        }
     </script>
 </body>
 </html>
