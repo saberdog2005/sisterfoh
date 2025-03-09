@@ -70,13 +70,8 @@
 
             request.onsuccess = (event) => {
                 db = event.target.result;
-                if (localStorage.getItem('isAdminLoggedIn') === 'true') {
-                    $('#mainContent').show();
-                    loadSessions();
-                    loadButtonVisibility();
-                } else {
-                    $('#loginForm').show();
-                }
+                initializeData();
+                checkLoginStatus();
             };
 
             request.onerror = () => alert('Failed to open database.');
@@ -109,6 +104,39 @@
 
             $('#sessionSelect').on('change', () => updateLog());
         });
+
+        function initializeData() {
+            const tx = db.transaction(['permissions', 'buttonVisibility'], 'readwrite');
+            const permissionsStore = tx.objectStore('permissions');
+            permissionsStore.count().onsuccess = (event) => {
+                if (event.target.result === 0) {
+                    permissionsStore.add({ username: 'brad', password: '12345678' });
+                }
+            };
+            const defaultButtons = [
+                'CASH $20', 'CASH $15', 'CASH $12', 'CASH $10',
+                'CC TRANS', 'TICKET', 'COMP', 'CASH (CUSTOM)'
+            ];
+            const visibilityStore = tx.objectStore('buttonVisibility');
+            visibilityStore.count().onsuccess = (event) => {
+                if (event.target.result === 0) {
+                    defaultButtons.forEach(item => {
+                        visibilityStore.add({ item: item, visible: true });
+                    });
+                }
+            };
+        }
+
+        function checkLoginStatus() {
+            if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+                $('#loginForm').hide();
+                $('#mainContent').show();
+                loadSessions();
+                loadButtonVisibility();
+            } else {
+                $('#loginForm').show();
+            }
+        }
 
         function loadSessions() {
             const tx = db.transaction('sessions', 'readonly');
