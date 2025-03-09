@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,9 +17,6 @@
             padding: 20px;
             background-color: #121212;
             color: #e0e0e0;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
         }
         .modal {
             display: none;
@@ -51,18 +50,11 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
         }
         .graph-container {
-            flex: 1;
-            min-width: 400px;
-            max-width: 600px;
-        }
-        .details-container {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
         }
         .summary-grid {
             display: grid;
@@ -121,19 +113,18 @@
         <h2>People In Over Time</h2>
         <canvas id="salesGraph"></canvas>
     </div>
-    <div class="details-container" style="display: none;">
-        <div class="log-container">
-            <h2>Live Sales Summary</h2>
-            <select id="sessionSelect"><option value="">Select a session</option></select>
-            <button id="refreshBtn">Refresh</button>
-            <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 10s)</label>
-            <div class="summary-grid" id="summaryGrid"></div>
-        </div>
-        <div class="log-container">
-            <h2>Transaction Log</h2>
-            <div id="transactionLog"></div>
-            <button id="logoutBtn">Logout</button>
-        </div>
+    <div class="log-container" style="display: none;">
+        <h2>Live Sales Summary</h2>
+        <select id="sessionSelect"><option value="">Select a session</option></select>
+        <button id="refreshBtn">Refresh</button>
+        <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 10s)</label>
+        <button id="generatePdfBtn" style="display: none;">Generate PDF</button>
+        <div class="summary-grid" id="summaryGrid"></div>
+    </div>
+    <div class="log-container" style="display: none;">
+        <h2>Transaction Log</h2>
+        <div id="transactionLog"></div>
+        <button id="logoutBtn">Logout</button>
     </div>
     <script>
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
@@ -142,6 +133,7 @@
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         let salesChart, autoRefreshInterval;
+        let currentSessionId, sessionDate, sessionVenue, sessionEvent, sessionCashier, salesOpenTimestamp, closedTimestamp, transactions;
 
         function handleClientLoad() {
             gapi.load('client', initClient);
@@ -153,20 +145,15 @@
                 discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
                 if (localStorage.getItem('adminLoggedIn') === 'true') {
-                    $('.log-container, .details-container').show();
-                    const activeSessionId = localStorage.getItem('activeSessionId');
-                    if (activeSessionId) {
-                        loadSessions(activeSessionId);
-                    } else {
-                        loadSessions();
-                    }
+                    $('.log-container').show();
+                    loadSessions();
                 } else {
                     $('#loginModal').show();
                 }
             }, error => console.error('Error initializing client:', error));
         }
 
-        function loadSessions(selectedSessionId = null) {
+        function loadSessions() {
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!B2:B'
@@ -174,13 +161,7 @@
                 const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
                 const select = $('#sessionSelect');
                 select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                if (selectedSessionId && sessionIds.includes(selectedSessionId)) {
-                    select.val(selectedSessionId);
-                    updateLog(selectedSessionId);
-                } else if (sessionIds.length > 0) {
-                    select.val(sessionIds[0]);
-                    updateLog(sessionIds[0]);
-                }
+                if (sessionIds.length > 0) updateLog(sessionIds[0]);
             }, error => console.error('Error loading sessions:', error));
         }
 
@@ -191,12 +172,20 @@
                 range: 'Sheet1!A2:H'
             }).then(response => {
                 const rows = response.result.values || [];
-                const transactions = rows.filter(tr => tr[1] === sessionId && tr[0] === 'TRANSACTION');
+                const sessionRows = rows.filter(tr => tr[1] === sessionId);
+                const salesOpenRow = sessionRows.find(tr => tr[0] === 'SALES OPEN');
+                const closedRow = sessionRows.find(tr => tr[0] === 'CLOSED');
+                transactions = sessionRows.filter(tr => tr[0] === 'TRANSACTION');
 
-                if (!transactions.length) {
+                if (!transactions.length && !salesOpenRow && !closedRow) {
                     resetDisplay();
                     return;
                 }
+
+                currentSessionId = sessionId;
+                [sessionDate, sessionVenue, sessionEvent, sessionCashier] = sessionId.split('_');
+                salesOpenTimestamp = salesOpenRow ? salesOpenRow[2] : 'N/A';
+                closedTimestamp = closedRow ? closedRow[2] : 'N/A';
 
                 let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
                 const doorData = { labels: [], cash: [], card: [], comp: [], tickets: [] };
@@ -254,6 +243,12 @@
                         scales: { y: { beginAtZero: true, title: { display: true, text: 'People In' } } }
                     }
                 });
+
+                if (closedRow) {
+                    $('#generatePdfBtn').show();
+                } else {
+                    $('#generatePdfBtn').hide();
+                }
             }, error => console.error('Error updating log:', error));
         }
 
@@ -261,6 +256,7 @@
             $('#summaryGrid').empty().html('<div class="summary-item">No data available</div>');
             if (salesChart) salesChart.destroy();
             salesChart = null;
+            $('#generatePdfBtn').hide();
         }
 
         function toggleAutoRefresh() {
@@ -272,10 +268,36 @@
             }
         }
 
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text(`Session Details`, 10, 10);
+            doc.text(`Date: ${sessionDate}`, 10, 20);
+            doc.text(`Venue: ${sessionVenue}`, 10, 30);
+            doc.text(`Event: ${sessionEvent}`, 10, 40);
+            doc.text(`Cashier: ${sessionCashier}`, 10, 50);
+            doc.text(`Session Start: ${salesOpenTimestamp}`, 10, 60);
+            doc.text(`Session End: ${closedTimestamp}`, 10, 70);
+
+            const transactionData = transactions.map(tr => {
+                const items = JSON.parse(tr[4] || '[]').map(item => `${item.item} x${item.quantity}`).join(', ');
+                return [tr[3], items, tr[5], tr[6], tr[7]]; // Time, Items, Total, Note, DoorCount
+            });
+
+            doc.autoTable({
+                head: [['Time', 'Items', 'Total', 'Note', 'Door Count']],
+                body: transactionData,
+                startY: 80
+            });
+
+            doc.save(`Session_${currentSessionId}.pdf`);
+        }
+
         $(document).ready(() => {
             handleClientLoad();
             if (localStorage.getItem('adminLoggedIn') === 'true') {
-                $('.log-container, .details-container').show();
+                $('.log-container').show();
             }
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
@@ -283,13 +305,8 @@
                 if (user === 'admin' && pass === 'password123') {
                     localStorage.setItem('adminLoggedIn', 'true');
                     $('#loginModal').hide();
-                    $('.log-container, .details-container').show();
-                    const activeSessionId = localStorage.getItem('activeSessionId');
-                    if (activeSessionId) {
-                        loadSessions(activeSessionId);
-                    } else {
-                        loadSessions();
-                    }
+                    $('.log-container').show();
+                    loadSessions();
                 } else {
                     alert('Incorrect credentials');
                 }
@@ -300,20 +317,13 @@
                 clearInterval(autoRefreshInterval);
                 location.reload();
             });
-            $('#refreshBtn').on('click', () => {
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (activeSessionId) {
-                    $('#sessionSelect').val(activeSessionId);
-                    updateLog(activeSessionId);
-                } else {
-                    updateLog($('#sessionSelect').val());
-                }
-            });
+            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
             $('#autoRefresh').on('change', toggleAutoRefresh);
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) updateLog(sessionId);
             });
+            $('#generatePdfBtn').on('click', generatePDF);
         });
     </script>
 </body>
