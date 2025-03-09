@@ -6,210 +6,48 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 10px;
-            font-size: 18px;
-            overflow-x: hidden;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #2d2d2d;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        #sessionInfo {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
-        .toggle-section {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .toggle-btn {
-            padding: 8px 16px;
-            font-size: 1em;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-            width: 150px;
-            background: #388e3c;
-        }
-        .container {
-            max-width: 1024px;
-            margin: 0 auto;
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            min-height: 600px;
-        }
-        .button-container {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .product-item {
-            background: #3c3c3c;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        #sessionInfo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .toggle-btn { padding: 8px 16px; font-size: 1em; border: none; border-radius: 4px; cursor: pointer; color: white; width: 150px; background: #388e3c; }
+        .container { max-width: 1024px; margin: 0 auto; background: #2d2d2d; padding: 20px; border-radius: 8px; }
+        .button-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
+        .product-item { background: #3c3c3c; padding: 10px; border-radius: 4px; text-align: center; }
         .cash-item { background: #2e7d32; }
         .card-item { background: #d32f2f; }
         .ticket-item { background: #1a73e8; }
         .comp-item { background: #ffa500; }
-        .increment-btn {
-            width: 100%;
-            height: 60px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1.2em;
-            color: white;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+        .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; }
         .increment-btn.cash { background: #1b4f1f; }
         .increment-btn.cc { background: #a62626; }
         .increment-btn.ticket { background: #0d47a1; }
         .increment-btn.comp { background: #cc8400; }
-        .decrement-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1.5em;
-            color: white;
-            background: #d32f2f;
-        }
-        .control-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-        }
-        .count {
-            font-size: 1.5em;
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
-            font-weight: bold;
-            background: #000;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-        }
-        .custom-input {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        .custom-input input {
-            width: 100px;
-            padding: 8px;
-            background: #444;
-            color: #e0e0e0;
-            border: 1px solid #666;
-            border-radius: 4px;
-            font-size: 1em;
-        }
-        .add-custom {
-            padding: 8px 16px;
-            background: #1b4f1f;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-        .totals-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0;
-            background: #3c3c3c;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .cash-total {
-            font-size: 2em;
-            font-weight: bold;
-        }
-        .door-count {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        #logSaleBtn {
-            display: block;
-            margin: 20px auto;
-            padding: 15px 30px;
-            font-size: 1.5em;
-            background: #388e3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .note-section {
-            margin: 20px 0;
-            text-align: center;
-        }
-        #noteInput {
-            width: 80%;
-            padding: 10px;
-            background: #444;
-            border: 1px solid #666;
-            color: #e0e0e0;
-            border-radius: 4px;
-            font-size: 1em;
-        }
-        input[readonly] {
-            background: #424242;
-            color: #a0a0a0;
-        }
-        label {
-            margin-right: 5px;
-        }
-        .message {
-            color: #ff6b6b;
-            margin-top: 10px;
-            text-align: center;
-        }
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
-        @media (max-width: 1024px) {
-            .button-container {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
+        .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #d32f2f; }
+        .control-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px; }
+        .count { font-size: 1.5em; width: 40px; height: 40px; line-height: 40px; background: #000; color: white; border-radius: 50%; text-align: center; }
+        .custom-input { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .custom-input input { width: 100px; padding: 8px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; }
+        .add-custom { padding: 8px 16px; background: #1b4f1f; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .totals-container { display: flex; justify-content: space-between; margin: 20px 0; background: #3c3c3c; padding: 10px; border-radius: 4px; }
+        .cash-total { font-size: 2em; font-weight: bold; }
+        .door-count { font-size: 1.5em; font-weight: bold; }
+        #logSaleBtn { display: block; margin: 20px auto; padding: 15px 30px; font-size: 1.5em; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .note-section { margin: 20px 0; text-align: center; }
+        #noteInput { width: 80%; padding: 10px; background: #444; border: 1px solid #666; color: #e0e0e0; border-radius: 4px; }
+        input[readonly] { background: #424242; color: #a0a0a0; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        @media (max-width: 1024px) { .button-container { grid-template-columns: repeat(3, 1fr); } }
     </style>
 </head>
 <body>
     <div class="header">
         <div id="sessionInfo">
-            <label for="eventDate">Date:</label><input type="date" id="eventDate">
-            <label for="eventVenue">Venue:</label><input type="text" id="eventVenue" value="Sister">
-            <label for="eventName">Event Name:</label><input type="text" id="eventName" value="Open Mic">
+            <label>Date:</label><input type="date" id="eventDate">
+            <label>Venue:</label><input type="text" id="eventVenue" value="Sister">
+            <label>Event:</label><input type="text" id="eventName" value="Open Mic">
         </div>
-        <div class="toggle-section">
-            <label for="cashierName">Cashier Name:</label><input type="text" id="cashierName" value="Default">
+        <div>
+            <label>Cashier:</label><input type="text" id="cashierName" value="Default">
             <button id="toggleSalesBtn" class="toggle-btn">Open Sales</button>
         </div>
     </div>
@@ -252,12 +90,10 @@
                 <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
             <div class="product-item cash-item" data-item="CASH (CUSTOM)">
-                <div class="product-controls cash">
-                    <h4>CASH (CUSTOM)</h4>
-                    <div class="custom-input">
-                        <input type="number" step="0.25" min="0.25" placeholder="Amount">
-                        <button class="add-custom">Add</button>
-                    </div>
+                <h4>CASH (CUSTOM)</h4>
+                <div class="custom-input">
+                    <input type="number" step="0.25" min="0.25" placeholder="Amount">
+                    <button class="add-custom">Add</button>
                 </div>
             </div>
         </div>
@@ -266,11 +102,9 @@
             <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
         </div>
         <div class="note-section">
-            <label for="noteInput">Add a note...</label>
             <textarea id="noteInput" placeholder="Add a note..."></textarea>
         </div>
         <button id="logSaleBtn" disabled>Log Sale</button>
-        <div id="message" class="message"></div>
     </div>
     <script>
         class SalesApp {
@@ -280,25 +114,24 @@
                 this.currentItems = [];
                 this.total = 0;
                 this.doorCount = 0;
-                this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw7DRI1XBgK7IecjzbvoJDwxcJ9qhfjdjZfY_P-LJ4/dev'; // Update after redeploying Apps Script
+                this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your Web App URL
             }
             init() {
                 this.checkSessionStatus();
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
-                $(document).on('click', '.increment-btn', (e) => {
+                $('.increment-btn').on('click', (e) => {
                     const item = $(e.target).closest('.product-item');
                     this.incrementItem(item.data('item'), parseFloat(item.data('price')));
                 });
-                $(document).on('click', '.decrement-btn', (e) => {
+                $('.decrement-btn').on('click', (e) => {
                     const item = $(e.target).closest('.product-item');
                     this.decrementItem(item.data('item'));
                 });
-                $(document).on('click', '.add-custom', (e) => {
+                $('.add-custom').on('click', (e) => {
                     const item = $(e.target).closest('.product-item');
                     let price = parseFloat(item.find('input').val());
                     if (isNaN(price) || price <= 0) {
                         alert('Please enter a valid amount');
-                        item.find('input').val('');
                     } else {
                         price = Math.round(price / 0.25) * 0.25;
                         this.incrementItem(`CASH (CUSTOM) $${price.toFixed(2)}`, price);
@@ -317,10 +150,6 @@
                     this.updateTotals();
                     $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
                     $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true);
-                } else {
-                    this.sessionStarted = false;
-                    $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
-                    $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false);
                 }
             }
             toggleSales() {
@@ -336,13 +165,12 @@
                     this.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.sessionId);
                     localStorage.setItem('doorCount', '0');
-                    this.doorCount = 0;
                     this.sendSessionStart(date, venue, eventName, cashier);
                     this.sessionStarted = true;
                     $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
                     $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true);
                 } else {
-                    const pin = prompt('Enter PIN to close sales (default: 1234)');
+                    const pin = prompt('Enter PIN to close (default: 1234)');
                     if (pin === '1234') {
                         this.sendSessionClose();
                         localStorage.removeItem('activeSessionId');
@@ -359,7 +187,7 @@
                 countEl.text(count);
                 const item = this.currentItems.find(i => i.item === itemName);
                 if (item) item.quantity++;
-                else this.currentItems.push({ item: itemName, price, quantity: 1, type: this.getItemType(itemName) });
+                else this.currentItems.push({ item: itemName, price, quantity: 1 });
                 this.updateTotals();
             }
             decrementItem(itemName) {
@@ -378,25 +206,21 @@
             }
             updateTotals() {
                 this.total = this.currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                const currentDoorCount = this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0);
-                const totalDoorCount = this.doorCount + currentDoorCount;
+                const currentDoorCount = this.currentItems.filter(i => i.item === 'TICKET' || i.item === 'COMP').reduce((sum, i) => sum + i.quantity, 0);
                 $('#cashTotal').text(this.total.toFixed(2));
-                $('#doorCount').text(totalDoorCount);
+                $('#doorCount').text(this.doorCount + currentDoorCount);
                 $('#logSaleBtn').prop('disabled', this.currentItems.length === 0 || !this.sessionStarted);
             }
             logSale() {
-                if (!this.sessionStarted || this.currentItems.length === 0) {
-                    alert('No items in sale or session not started');
-                    return;
-                }
+                if (!this.sessionStarted || this.currentItems.length === 0) return;
                 const transaction = {
                     sessionId: this.sessionId,
                     timestamp: new Date().toISOString(),
                     time: new Date().toLocaleTimeString(),
-                    itemList: this.currentItems.map(item => ({ item: item.item, price: item.price, quantity: item.quantity, type: item.type })),
+                    itemList: this.currentItems,
                     total: this.total,
                     note: $('#noteInput').val(),
-                    doorCount: this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0)
+                    doorCount: this.currentItems.filter(i => i.item === 'TICKET' || i.item === 'COMP').reduce((sum, i) => sum + i.quantity, 0)
                 };
                 this.sendTransaction(transaction);
                 this.doorCount += transaction.doorCount;
@@ -404,16 +228,13 @@
                 this.resetSale();
             }
             async sendSessionStart(date, venue, eventName, cashier) {
-                const data = { type: 'SESSION_START', sessionId: this.sessionId, date, venue, eventName, cashier };
-                await this.sendPostRequest(data);
+                await this.sendPostRequest({ type: 'SESSION_START', sessionId: this.sessionId, date, venue, eventName, cashier });
             }
             async sendTransaction(transaction) {
-                const data = { type: 'TRANSACTION', ...transaction };
-                await this.sendPostRequest(data);
+                await this.sendPostRequest({ type: 'TRANSACTION', ...transaction });
             }
             async sendSessionClose() {
-                const data = { type: 'SESSION_CLOSE', sessionId: this.sessionId, grandTotal: this.total };
-                await this.sendPostRequest(data);
+                await this.sendPostRequest({ type: 'SESSION_CLOSE', sessionId: this.sessionId, grandTotal: this.total });
             }
             async sendPostRequest(data) {
                 try {
@@ -425,10 +246,9 @@
                     if (!response.ok) throw new Error('Network response was not ok');
                     const result = await response.json();
                     if (result.status === 'error') throw new Error(result.message);
-                    console.log('Data sent successfully:', data.type);
                 } catch (error) {
                     console.error('Error sending data:', error);
-                    alert('Failed to send data. Retry or check connection.');
+                    alert('Failed to log data. Check console for details.');
                 }
             }
             resetSale() {
@@ -443,18 +263,9 @@
                 this.sessionStarted = false;
                 this.sessionId = null;
                 this.doorCount = 0;
-                localStorage.removeItem('activeSessionId');
-                localStorage.removeItem('doorCount');
                 $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
                 $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false);
                 this.resetSale();
-            }
-            getItemType(itemName) {
-                if (itemName.startsWith('CASH')) return 'CASH';
-                if (itemName.startsWith('CC')) return 'CARD';
-                if (itemName === 'TICKET') return 'Tickets';
-                if (itemName === 'COMP') return 'COMP';
-                return 'Other';
             }
         }
         const app = new SalesApp();
