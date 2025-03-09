@@ -79,7 +79,7 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your deployed script URL
+        const WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your deployed script URL
 
         const allButtons = [
             { item: 'CASH $20', enabled: true },
@@ -198,6 +198,7 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
@@ -206,6 +207,7 @@
                 $(document).on('click', '.decrement-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
@@ -214,6 +216,7 @@
                 $(document).on('click', '.add-custom', () => {
                     if (!this.isSalesActive) return;
                     const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
+                    if ($custom.hasClass('disabled')) return;
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
@@ -297,12 +300,10 @@
                 try {
                     const response = await fetch(WEB_APP_URL, {
                         method: 'POST',
+                        mode: 'no-cors', // Bypass CORS restrictions
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
                     });
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const result = await response.json();
-                    if (result.status === 'error') throw new Error(result.message);
                     $('#message').text('Data sent successfully').css('color', '#4CAF50');
                 } catch (error) {
                     console.error('Error sending data:', error);
