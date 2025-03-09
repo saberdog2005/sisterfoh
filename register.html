@@ -343,8 +343,8 @@
                         if (session && session.status === 'open') {
                             this.sessionStarted = true;
                             this.sessionId = session.id;
-                            this.doorCount = session.doorCount || 0; // Load persisted door count
                             $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            // Set each input field individually
                             $('#eventDate').val(session.date);
                             $('#eventVenue').val(session.venue);
                             $('#eventName').val(session.eventName);
@@ -352,7 +352,6 @@
                             $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
                             localStorage.setItem('salesStatus', 'open');
                             localStorage.setItem('cashierName', session.cashier);
-                            this.updateDoorCountDisplay();
                         } else {
                             this.resetSession();
                         }
@@ -365,7 +364,6 @@
             resetSession() {
                 this.sessionStarted = false;
                 this.sessionId = null;
-                this.doorCount = 0;
                 localStorage.removeItem('activeSessionId');
                 localStorage.setItem('salesStatus', 'closed');
                 localStorage.removeItem('cashierName');
@@ -376,6 +374,7 @@
                 this.loadLastSessionDefaults();
                 $('#cashTotal').text('0.00');
                 $('#doorCount').text('0');
+                this.doorCount = 0;
                 this.currentItems = [];
             }
 
@@ -409,8 +408,7 @@
                         eventName: $('#eventName').val().trim(),
                         cashier: cashierName,
                         status: 'open',
-                        startTime: new Date().toISOString(),
-                        doorCount: 0 // Initialize door count for new session
+                        startTime: new Date().toISOString()
                     };
                     const tx = this.db.transaction(['sessions'], 'readwrite');
                     const store = tx.objectStore('sessions');
@@ -419,16 +417,14 @@
                         this.sessionId = event.target.result;
                         localStorage.setItem('activeSessionId', this.sessionId);
                         this.sessionStarted = true;
-                        this.doorCount = 0;
                         $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
                         $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
                         localStorage.setItem('salesStatus', 'open');
                         localStorage.setItem('cashierName', cashierName);
-                        this.updateDoorCountDisplay();
                     };
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
-                    if (pin === '1234') { // Placeholder PIN; consider enhancing security later
+                    if (pin === '1234') { // Placeholder PIN; secure method needed later
                         const tx = this.db.transaction(['sessions'], 'readwrite');
                         const store = tx.objectStore('sessions');
                         const request = store.get(this.sessionId);
@@ -436,7 +432,6 @@
                             const session = event.target.result;
                             session.status = 'closed';
                             session.endTime = new Date().toISOString();
-                            session.doorCount = this.doorCount; // Save final door count
                             store.put(session);
                             this.resetSession();
                         };
@@ -458,7 +453,6 @@
                 }
                 if (itemName === 'TICKET') {
                     this.doorCount++;
-                    this.updateSessionDoorCount();
                 }
                 this.updateTotals();
             }
@@ -477,7 +471,6 @@
                         }
                         if (itemName === 'TICKET') {
                             this.doorCount--;
-                            this.updateSessionDoorCount();
                         }
                     }
                     this.updateTotals();
@@ -487,24 +480,7 @@
             updateTotals() {
                 this.total = this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 $('#cashTotal').text(this.total.toFixed(2));
-                this.updateDoorCountDisplay();
-            }
-
-            updateDoorCountDisplay() {
                 $('#doorCount').text(this.doorCount);
-            }
-
-            updateSessionDoorCount() {
-                if (this.sessionStarted) {
-                    const tx = this.db.transaction(['sessions'], 'readwrite');
-                    const store = tx.objectStore('sessions');
-                    const request = store.get(this.sessionId);
-                    request.onsuccess = (event) => {
-                        const session = event.target.result;
-                        session.doorCount = this.doorCount;
-                        store.put(session);
-                    };
-                }
             }
 
             logSale() {
@@ -541,12 +517,12 @@
             }
 
             resetSale() {
-                this.currentItems = []; // Clear items for the current sale
-                this.total = 0; // Reset sale total
-                $('.count').text('0'); // Reset displayed counts
-                $('#cashTotal').text('0.00');
-                $('#noteInput').val('');
-                // Note: doorCount persists and is not reset here
+                this.currentItems = []; // Clear all items, including tickets
+                this.total = 0; // Reset the transaction total
+                $('.count').text('0'); // Reset all item counts to zero, including tickets
+                $('#cashTotal').text('0.00'); // Update the displayed total
+                $('#noteInput').val(''); // Clear any notes
+                // Note: doorCount is cumulative and not reset here
             }
 
             showError(message) {
