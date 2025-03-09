@@ -17,6 +17,7 @@
         .container { max-width: 1024px; margin: 0 auto; background: #2d2d2d; padding: 20px; border-radius: 8px; }
         .button-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
         .product-item { background: #3c3c3c; padding: 10px; border-radius: 4px; text-align: center; position: relative; }
+        .product-item.disabled { opacity: 0.5; pointer-events: none; }
         .cash-item { background: #006400; }
         .card-item { background: #8B0000; }
         .ticket-item { background: #00008B; }
@@ -79,13 +80,11 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        // API Constants (for reference, not directly used here)
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your actual Web App URL
+        const WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_WEB_APP_URL/exec'; // Replace with your actual Web App URL
 
         const allButtons = [
             { item: 'CASH $20', enabled: true },
@@ -197,7 +196,6 @@
                 this.doorCount = 0;
                 this.items = {};
                 this.isSalesActive = false;
-                this.cumulativeDoorCount = 0; // Track cumulative door count
                 this.initEvents();
             }
 
@@ -250,7 +248,6 @@
                 this.items[item] = (this.items[item] || 0) + 1;
                 if (price > 0) this.cashTotal += price;
                 this.doorCount++;
-                this.cumulativeDoorCount++; // Increment cumulative door count
                 this.updateDisplay();
             }
 
@@ -259,14 +256,13 @@
                     this.items[item]--;
                     if (price > 0) this.cashTotal -= price;
                     this.doorCount--;
-                    if (this.cumulativeDoorCount > 0) this.cumulativeDoorCount--; // Decrement cumulative door count if positive
                     this.updateDisplay();
                 }
             }
 
             updateDisplay() {
                 $('#cashTotal').text(this.cashTotal.toFixed(2));
-                $('#doorCount').text(this.cumulativeDoorCount); // Display cumulative door count
+                $('#doorCount').text(this.doorCount);
                 $('.product-item').each((_, el) => {
                     const $el = $(el);
                     const item = $el.data('item');
@@ -281,10 +277,9 @@
                 $('#message').text('Sales are now active.');
                 const sessionId = `${$('#eventDate').val()}_${$('#eventVenue').val()}_${$('#eventName').val()}_${$('#cashierName').val()}`.replace(/[^a-zA-Z0-9_]/g, '');
                 localStorage.setItem('activeSessionId', sessionId);
-                this.cumulativeDoorCount = 0; // Reset cumulative door count when opening new session
-                const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
+                const titleRow = ['Type', 'SessionID', 'Timestamp', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
                 this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
-                this.sendPostRequest({ type: 'SALES OPEN', sessionId });
+                this.sendPostRequest({ type: 'SALES OPEN', sessionId, timestamp: new Date().toISOString() });
                 $('#editLayoutBtn').hide();
                 this.lockSessionInfo();
             }
@@ -294,7 +289,7 @@
                 $('#toggleSalesBtn').text('Open Sales');
                 $('#message').text('Sales are closed.');
                 const sessionId = localStorage.getItem('activeSessionId');
-                this.sendPostRequest({ type: 'CLOSED', sessionId, data: ['CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED'] });
+                this.sendPostRequest({ type: 'CLOSED', sessionId, timestamp: new Date().toISOString() });
                 localStorage.removeItem('activeSessionId');
                 $('#editLayoutBtn').show();
                 this.unlockSessionInfo();
@@ -323,10 +318,10 @@
                     }),
                     total: this.cashTotal,
                     note: $('#noteInput').val().trim(),
-                    doorCount: this.cumulativeDoorCount // Log cumulative door count
+                    doorCount: this.doorCount
                 };
                 this.sendPostRequest(transaction);
-                this.resetCash(); // Reset cash total and items, but keep cumulative door count
+                this.reset();
                 $('#noteInput').val('');
             }
 
@@ -348,14 +343,6 @@
             reset() {
                 this.cashTotal = 0;
                 this.doorCount = 0;
-                this.items = {};
-                this.cumulativeDoorCount = 0; // Reset cumulative door count when session closes
-                this.updateDisplay();
-            }
-
-            resetCash() {
-                this.cashTotal = 0;
-                this.doorCount = 0; // Reset temporary door count for next sale
                 this.items = {};
                 this.updateDisplay();
             }
