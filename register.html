@@ -1,77 +1,287 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Sister Bar Register</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        .product-item { margin: 10px; }
-        .hidden { display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 10px;
+            font-size: 18px;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .header label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .header input {
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+            width: 22%; /* Equal width for 4 inputs */
+            margin: 0 5px;
+        }
+        .header input.locked {
+            background: #555;
+            color: #888;
+        }
+        .container {
+            max-width: 85%; /* Leave space on right for scrolling */
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            min-height: 600px; /* Fit iPad height */
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for primary buttons */
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .increment-btn {
+            width: 100%;
+            height: 100px; /* Large buttons for quick access */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: white;
+        }
+        .increment-btn.cash { background: #2e7d32; }
+        .increment-btn.cc { background: #d32f2f; }
+        .increment-btn.ticket { background: #1a73e8; }
+        .increment-btn.comp { background: #ffa500; }
+        .control-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .count {
+            font-size: 1.5em;
+            width: 40px;
+            font-weight: bold; /* Make counts bold */
+        }
+        .minus {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .custom-input input {
+            width: 100px;
+            padding: 8px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .add-custom {
+            padding: 8px 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .totals-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .cash-total {
+            font-size: 2em;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .door-count {
+            font-size: 1.5em;
+            color: #e0e0e0;
+            font-weight: bold; /* Make door count bold */
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logSaleBtn.flash {
+            animation: flash 0.5s;
+        }
+        @keyframes flash {
+            0% { background: #388e3c; }
+            50% { background: #66bb6a; }
+            100% { background: #388e3c; }
+        }
+        .note-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #noteInput {
+            width: 80%;
+            padding: 10px;
+            background: #444;
+            border: 1px solid #666;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .footer {
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 20px;
+            position: relative;
+        }
+        #errorMessage, #successMessage {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.1em;
+            display: none;
+        }
+        #errorMessage { color: #ff6b6b; }
+        #successMessage { color: #2e7d32; }
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            .container {
+                max-width: 85%;
+            }
+            .button-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="header">
+        <label for="eventDate">Date:</label>
+        <input type="date" id="eventDate">
+        <label for="eventVenue">Venue:</label>
+        <input type="text" id="eventVenue" value="Sister Bar">
+        <label for="eventName">Event Name:</label>
+        <input type="text" id="eventName" placeholder="Event Name">
+        <label for="cashierName">Cashier Name:</label>
+        <input type="text" id="cashierName" placeholder="Cashier">
+    </div>
     <div class="container">
-        <h1 class="my-4">Register</h1>
-        <div id="salesClosed" class="alert alert-warning">
-            Sales are closed. Please enter cashier name to open sales:
-            <input type="text" id="cashierName" class="form-control my-2" placeholder="Cashier Name">
-            <button id="openSalesBtn" class="btn btn-primary">Open Sales</button>
-        </div>
-        <div id="salesOpen" style="display: none;">
-            <h2>Cashier: <span id="currentCashier"></span></h2>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="product-item" data-item="CASH $20">
-                        <button class="btn btn-success btn-lg w-100">CASH $20</button>
+        <div class="button-container">
+            <!-- Cash Buttons (Highest to Lowest) -->
+            <div class="product-item" data-item="CASH $20" data-price="20">
+                <button class="increment-btn cash">CASH $20</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $15" data-price="15">
+                <button class="increment-btn cash">CASH $15</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $12" data-price="12">
+                <button class="increment-btn cash">CASH $12</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $10" data-price="10">
+                <button class="increment-btn cash">CASH $10</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Single CC Transaction Button -->
+            <div class="product-item" data-item="CC TRANS" data-price="0">
+                <button class="increment-btn cc">CC TRANS</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Ticket Count Button -->
+            <div class="product-item" data-item="TICKET" data-price="0">
+                <button class="increment-btn ticket">TICKET</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Comp Button -->
+            <div class="product-item" data-item="COMP" data-price="0">
+                <button class="increment-btn comp">COMP</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <!-- Custom Cash -->
+            <div class="product-item" data-item="CASH (CUSTOM)">
+                <div class="product-controls cash">
+                    <h4>CASH (CUSTOM)</h4>
+                    <div class="custom-input">
+                        <input type="number" step="0.01" min="0.01" placeholder="Amount">
+                        <button class="add-custom">Add</button>
                     </div>
-                    <div class="product-item" data-item="CASH $15">
-                        <button class="btn btn-success btn-lg w-100">CASH $15</button>
-                    </div>
-                    <div class="product-item" data-item="CASH $12">
-                        <button class="btn btn-success btn-lg w-100">CASH $12</button>
-                    </div>
-                    <div class="product-item" data-item="CASH $10">
-                        <button class="btn btn-success btn-lg w-100">CASH $10</button>
-                    </div>
-                    <div class="product-item" data-item="CC TRANS">
-                        <button class="btn btn-primary btn-lg w-100">CC TRANS</button>
-                    </div>
-                    <div class="product-item" data-item="TICKET">
-                        <button class="btn btn-info btn-lg w-100">TICKET</button>
-                    </div>
-                    <div class="product-item" data-item="COMP">
-                        <button class="btn btn-warning btn-lg w-100">COMP</button>
-                    </div>
-                    <div class="product-item" data-item="CASH (CUSTOM)">
-                        <input type="number" class="form-control d-inline-block w-50" id="customCash" placeholder="Custom Cash">
-                        <button class="btn btn-success w-25">Add</button>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h3>Current Sale</h3>
-                    <ul id="currentSale" class="list-group"></ul>
-                    <p>Total: $<span id="totalAmount">0</span></p>
-                    <button id="logSaleBtn" class="btn btn-primary mt-2">Log Sale</button>
-                    <button id="closeSalesBtn" class="btn btn-danger mt-2">Close Sales</button>
                 </div>
             </div>
         </div>
+        <div class="totals-container">
+            <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
+            <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
+        </div>
+        <div class="note-section">
+            <label for="noteInput">Add a note...</label>
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
+        </div>
+        <button id="logSaleBtn">Log Sale</button>
+    </div>
+    <div class="footer">
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <div id="successMessage"></div>
+        <div id="errorMessage"></div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         class SalesApp {
             constructor() {
                 this.db = null;
-                this.currentSessionId = null;
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.currentItems = [];
                 this.total = 0;
-                this.currentSaleItems = [];
+                this.doorCount = 0;
             }
 
             init() {
-                const request = indexedDB.open('SalesDB', 2); // Version 2 for new stores
+                // Open IndexedDB
+                const request = indexedDB.open('SalesDB', 2);
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
                     if (!this.db.objectStoreNames.contains('sessions')) {
@@ -81,154 +291,277 @@
                         const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
                     }
-                    if (!this.db.objectStoreNames.contains('permissions')) {
-                        this.db.createObjectStore('permissions', { keyPath: 'username' });
-                    }
-                    if (!this.db.objectStoreNames.contains('buttonVisibility')) {
-                        this.db.createObjectStore('buttonVisibility', { keyPath: 'item' });
-                    }
                 };
-
                 request.onsuccess = (event) => {
                     this.db = event.target.result;
                     this.checkSessionStatus();
-                    this.applyButtonVisibility();
+                };
+                request.onerror = () => {
+                    this.showError('Failed to open database.');
                 };
 
-                request.onerror = () => alert('Failed to open database.');
-            }
+                // Set up event listeners
+                $('#toggleSalesBtn').on('click', () => this.toggleSales());
+                $(document).on('click', '.increment-btn', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    const itemPrice = parseFloat($item.data('price'));
+                    this.incrementItem(itemName, itemPrice);
+                });
+                $(document).on('click', '.minus', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    this.decrementItem(itemName);
+                });
+                $(document).on('click', '.add-custom', (event) => {
+                    const $item = $(event.target).closest('.product-item');
+                    const amount = parseFloat($item.find('input').val());
+                    if (isNaN(amount) || amount <= 0) {
+                        this.showError('Please enter a valid amount greater than zero.');
+                        return;
+                    }
+                    const itemName = `${$item.data('item')} $${amount.toFixed(2)}`;
+                    this.currentItems.push({ item: itemName, price: amount, quantity: 1 });
+                    this.updateTotals();
+                    $item.find('input').val('');
+                });
+                $('#logSaleBtn').on('click', () => this.logSale());
 
-            applyButtonVisibility() {
-                const tx = this.db.transaction(['buttonVisibility'], 'readonly');
-                const store = tx.objectStore('buttonVisibility');
-                const request = store.getAll();
-                request.onsuccess = (event) => {
-                    const visibilityMap = {};
-                    event.target.result.forEach(entry => {
-                        visibilityMap[entry.item] = entry.visible;
-                    });
-                    $('.product-item').each(function() {
-                        const item = $(this).data('item');
-                        if (visibilityMap[item] === false) {
-                            $(this).addClass('hidden');
-                        } else {
-                            $(this).removeClass('hidden');
-                        }
-                    });
-                };
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                $('#eventDate').val(today);
             }
 
             checkSessionStatus() {
-                const tx = this.db.transaction('sessions', 'readonly');
-                const store = tx.objectStore('sessions');
-                const request = store.getAll();
-                request.onsuccess = (event) => {
-                    const sessions = event.target.result;
-                    const openSession = sessions.find(s => !s.endTime);
-                    if (openSession) {
-                        this.currentSessionId = openSession.id;
-                        $('#currentCashier').text(openSession.cashier);
-                        $('#salesClosed').hide();
-                        $('#salesOpen').show();
-                        this.bindEvents();
-                    } else {
-                        $('#salesClosed').show();
-                        $('#salesOpen').hide();
-                        $('#openSalesBtn').on('click', () => this.openSales());
-                    }
-                };
-            }
-
-            openSales() {
-                const cashier = $('#cashierName').val().trim();
-                if (!cashier) {
-                    alert('Please enter a cashier name.');
-                    return;
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) {
+                    const tx = this.db.transaction(['sessions'], 'readonly');
+                    const store = tx.objectStore('sessions');
+                    const request = store.get(Number(activeSessionId));
+                    request.onsuccess = (event) => {
+                        const session = event.target.result;
+                        if (session && session.status === 'open') {
+                            this.sessionStarted = true;
+                            this.sessionId = session.id;
+                            this.doorCount = session.doorCount || 0; // Load persisted door count
+                            $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            $('#eventDate').val(session.date);
+                            $('#eventVenue').val(session.venue);
+                            $('#eventName').val(session.eventName);
+                            $('#cashierName').val(session.cashier);
+                            $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
+                            localStorage.setItem('salesStatus', 'open');
+                            localStorage.setItem('cashierName', session.cashier);
+                            this.updateDoorCountDisplay();
+                        } else {
+                            this.resetSession();
+                        }
+                    };
+                } else {
+                    this.resetSession();
                 }
-                const tx = this.db.transaction('sessions', 'readwrite');
+            }
+
+            resetSession() {
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.doorCount = 0;
+                localStorage.removeItem('activeSessionId');
+                localStorage.setItem('salesStatus', 'closed');
+                localStorage.removeItem('cashierName');
+                $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
+                const today = new Date().toISOString().split('T')[0];
+                $('#eventDate').val(today);
+                this.loadLastSessionDefaults();
+                $('#cashTotal').text('0.00');
+                $('#doorCount').text('0');
+                this.currentItems = [];
+            }
+
+            loadLastSessionDefaults() {
+                const tx = this.db.transaction(['sessions'], 'readonly');
                 const store = tx.objectStore('sessions');
-                const session = { cashier: cashier, startTime: new Date().toISOString() };
-                const request = store.add(session);
+                const request = store.openCursor(null, 'prev');
                 request.onsuccess = (event) => {
-                    this.currentSessionId = event.target.result;
-                    $('#currentCashier').text(cashier);
-                    $('#salesClosed').hide();
-                    $('#salesOpen').show();
-                    this.bindEvents();
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const lastSession = cursor.value;
+                        $('#eventVenue').val(lastSession.venue);
+                        $('#eventName').val(lastSession.eventName);
+                        $('#cashierName').val(lastSession.cashier);
+                    }
                 };
             }
 
-            bindEvents() {
-                $('.product-item button').off('click').on('click', (e) => {
-                    const $item = $(e.target).closest('.product-item');
-                    const item = $item.data('item');
-                    let amount = 0;
-                    if (item === 'CASH (CUSTOM)') {
-                        amount = parseFloat($('#customCash').val()) || 0;
-                    } else if (item.startsWith('CASH $')) {
-                        amount = parseFloat(item.replace('CASH $', ''));
+            toggleSales() {
+                if (!this.sessionStarted) {
+                    const date = $('#eventDate').val().trim();
+                    const venue = $('#eventVenue').val().trim();
+                    const cashierName = $('#cashierName').val().trim();
+                    if (!date || !venue || !cashierName) {
+                        this.showError('Please fill in date, venue, and cashier name.');
+                        return;
                     }
-                    this.addToSale(item, amount);
-                });
-
-                $('#logSaleBtn').off('click').on('click', () => this.logSale());
-                $('#closeSalesBtn').off('click').on('click', () => this.closeSales());
+                    const session = {
+                        date: date,
+                        venue: venue,
+                        eventName: $('#eventName').val().trim(),
+                        cashier: cashierName,
+                        status: 'open',
+                        startTime: new Date().toISOString(),
+                        doorCount: 0 // Initialize door count for new session
+                    };
+                    const tx = this.db.transaction(['sessions'], 'readwrite');
+                    const store = tx.objectStore('sessions');
+                    const request = store.add(session);
+                    request.onsuccess = (event) => {
+                        this.sessionId = event.target.result;
+                        localStorage.setItem('activeSessionId', this.sessionId);
+                        this.sessionStarted = true;
+                        this.doorCount = 0;
+                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                        $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
+                        localStorage.setItem('salesStatus', 'open');
+                        localStorage.setItem('cashierName', cashierName);
+                        this.updateDoorCountDisplay();
+                    };
+                } else {
+                    const pin = prompt('Enter PIN to close sales (default: 1234)');
+                    if (pin === '1234') { // Placeholder PIN; consider enhancing security later
+                        const tx = this.db.transaction(['sessions'], 'readwrite');
+                        const store = tx.objectStore('sessions');
+                        const request = store.get(this.sessionId);
+                        request.onsuccess = (event) => {
+                            const session = event.target.result;
+                            session.status = 'closed';
+                            session.endTime = new Date().toISOString();
+                            session.doorCount = this.doorCount; // Save final door count
+                            store.put(session);
+                            this.resetSession();
+                        };
+                    } else {
+                        this.showError('Incorrect PIN.');
+                    }
+                }
             }
 
-            addToSale(item, amount) {
-                this.currentSaleItems.push({ item, amount });
-                this.total += amount;
-                this.updateCurrentSale();
+            incrementItem(itemName, price) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text()) + 1;
+                $count.text(count);
+                const existingItem = this.currentItems.find(i => i.item === itemName);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    this.currentItems.push({ item: itemName, price: price, quantity: 1 });
+                }
+                if (itemName === 'TICKET') {
+                    this.doorCount++;
+                    this.updateSessionDoorCount();
+                }
+                this.updateTotals();
             }
 
-            updateCurrentSale() {
-                const $list = $('#currentSale').empty();
-                this.currentSaleItems.forEach(item => {
-                    $list.append(`<li class="list-group-item">${item.item}: $${item.amount.toFixed(2)}</li>`);
-                });
-                $('#totalAmount').text(this.total.toFixed(2));
+            decrementItem(itemName) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text());
+                if (count > 0) {
+                    count--;
+                    $count.text(count);
+                    const existingItem = this.currentItems.find(i => i.item === itemName);
+                    if (existingItem) {
+                        existingItem.quantity--;
+                        if (existingItem.quantity <= 0) {
+                            this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                        }
+                        if (itemName === 'TICKET') {
+                            this.doorCount--;
+                            this.updateSessionDoorCount();
+                        }
+                    }
+                    this.updateTotals();
+                }
+            }
+
+            updateTotals() {
+                this.total = this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                $('#cashTotal').text(this.total.toFixed(2));
+                this.updateDoorCountDisplay();
+            }
+
+            updateDoorCountDisplay() {
+                $('#doorCount').text(this.doorCount);
+            }
+
+            updateSessionDoorCount() {
+                if (this.sessionStarted) {
+                    const tx = this.db.transaction(['sessions'], 'readwrite');
+                    const store = tx.objectStore('sessions');
+                    const request = store.get(this.sessionId);
+                    request.onsuccess = (event) => {
+                        const session = event.target.result;
+                        session.doorCount = this.doorCount;
+                        store.put(session);
+                    };
+                }
             }
 
             logSale() {
-                if (this.currentSaleItems.length === 0) {
-                    alert('No items to log.');
+                if (!this.sessionStarted) {
+                    this.showError('Please open sales to start the session.');
                     return;
                 }
-                const tx = this.db.transaction('transactions', 'readwrite');
-                const store = tx.objectStore('transactions');
+                if (this.currentItems.length === 0 && !$('#noteInput').val()) {
+                    this.showError('No items or note to log.');
+                    return;
+                }
                 const transaction = {
-                    sessionId: this.currentSessionId,
-                    items: this.currentSaleItems,
+                    sessionId: this.sessionId,
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    itemList: this.currentItems.map(item => ({ ...item })),
                     total: this.total,
-                    timestamp: new Date().toISOString()
+                    note: $('#noteInput').val()
                 };
-                store.add(transaction).onsuccess = () => {
-                    this.currentSaleItems = [];
-                    this.total = 0;
-                    this.updateCurrentSale();
+                const tx = this.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const request = store.add(transaction);
+                request.onsuccess = () => {
+                    tx.oncomplete = () => {
+                        this.resetSale();
+                        $('#logSaleBtn').addClass('flash');
+                        setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+                        this.showSuccess('Sale logged successfully.');
+                    };
+                };
+                request.onerror = () => {
+                    this.showError('Failed to log sale.');
                 };
             }
 
-            closeSales() {
-                const tx = this.db.transaction('sessions', 'readwrite');
-                const store = tx.objectStore('sessions');
-                const request = store.get(this.currentSessionId);
-                request.onsuccess = (event) => {
-                    const session = event.target.result;
-                    session.endTime = new Date().toISOString();
-                    store.put(session).onsuccess = () => {
-                        this.currentSessionId = null;
-                        $('#salesOpen').hide();
-                        $('#salesClosed').show();
-                    };
-                };
+            resetSale() {
+                this.currentItems = []; // Clear items for the current sale
+                this.total = 0; // Reset sale total
+                $('.count').text('0'); // Reset displayed counts
+                $('#cashTotal').text('0.00');
+                $('#noteInput').val('');
+                // Note: doorCount persists and is not reset here
+            }
+
+            showError(message) {
+                $('#errorMessage').text(message).show();
+                setTimeout(() => $('#errorMessage').hide(), 3000);
+            }
+
+            showSuccess(message) {
+                $('#successMessage').text(message).show();
+                setTimeout(() => $('#successMessage').hide(), 2000);
             }
         }
 
-        $(document).ready(() => {
-            const app = new SalesApp();
-            app.init();
-        });
+        const app = new SalesApp();
+        app.init();
     </script>
 </body>
 </html>
