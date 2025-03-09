@@ -68,16 +68,10 @@
                 this.currentSessionId = null;
                 this.total = 0;
                 this.currentSaleItems = [];
-                this.doorCount = 0;
-                this.saleLogged = false;
-                this.defaultButtons = [
-                    'CASH $20', 'CASH $15', 'CASH $12', 'CASH $10',
-                    'CC TRANS', 'TICKET', 'COMP', 'CASH (CUSTOM)'
-                ];
             }
 
             init() {
-                const request = indexedDB.open('SalesDB', 2);
+                const request = indexedDB.open('SalesDB', 2); // Version 2 for new stores
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
                     if (!this.db.objectStoreNames.contains('sessions')) {
@@ -97,30 +91,11 @@
 
                 request.onsuccess = (event) => {
                     this.db = event.target.result;
-                    this.initializeDatabase();
                     this.checkSessionStatus();
                     this.applyButtonVisibility();
                 };
 
                 request.onerror = () => alert('Failed to open database.');
-            }
-
-            initializeDatabase() {
-                const tx = this.db.transaction(['permissions', 'buttonVisibility'], 'readwrite');
-                const permissionsStore = tx.objectStore('permissions');
-                permissionsStore.count().onsuccess = (event) => {
-                    if (event.target.result === 0) {
-                        permissionsStore.add({ username: 'brad', password: '12345678' });
-                    }
-                };
-                const visibilityStore = tx.objectStore('buttonVisibility');
-                visibilityStore.count().onsuccess = (event) => {
-                    if (event.target.result === 0) {
-                        this.defaultButtons.forEach(item => {
-                            visibilityStore.add({ item: item, visible: true });
-                        });
-                    }
-                };
             }
 
             applyButtonVisibility() {
@@ -194,9 +169,6 @@
                         amount = parseFloat(item.replace('CASH $', ''));
                     }
                     this.addToSale(item, amount);
-                    if (item === 'TICKET' && this.saleLogged) {
-                        this.doorCount += 1;
-                    }
                 });
 
                 $('#logSaleBtn').off('click').on('click', () => this.logSale());
@@ -233,7 +205,6 @@
                 store.add(transaction).onsuccess = () => {
                     this.currentSaleItems = [];
                     this.total = 0;
-                    this.saleLogged = true;
                     this.updateCurrentSale();
                 };
             }
