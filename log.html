@@ -60,7 +60,7 @@
     </div>
     <script>
         const API_KEY = 'YOUR_API_KEY'; // Replace with your Google API Key
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // Replace with your Spreadsheet ID
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         let db, updateInterval, salesChart;
         const username = 'brad', passwordHash = CryptoJS.SHA256('password123').toString();
 
@@ -102,8 +102,8 @@
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
-            store.getAll().onsuccess = (t) => {
-                const sessions = t.target.result;
+            store.getAll().onsuccess = (e) => {
+                const sessions = e.target.result;
                 const $select = $('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
                 sessions.forEach(s => $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`));
