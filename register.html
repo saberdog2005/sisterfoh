@@ -7,6 +7,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
+        /* Dark Theme and General Styling */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -20,93 +21,150 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            max-width: 600px;
+            max-width: 1024px;
             margin: 0 auto;
         }
-        h1, h2 {
-            margin-top: 0;
+        /* Header Section */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-        button {
-            padding: 8px 16px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            background: #4CAF50;
-            color: white;
-            cursor: pointer;
+        .header label {
+            display: flex;
+            flex-direction: column;
         }
-        button:hover {
-            background: #45a049;
-        }
-        input, select {
+        .header input {
             padding: 8px;
-            margin: 5px;
             background: #34495e;
             color: #e0e0e0;
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        .cart-grid {
+        /* Transaction Buttons Grid */
+        .transaction-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
-            margin: 20px 0;
+            margin-bottom: 20px;
         }
-        .cart-item {
-            background: #2c3e50;
+        button {
             padding: 10px;
-            border-radius: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .cash-btn {
+            background: #4CAF50; /* Green */
+            color: white;
+        }
+        .cc-btn {
+            background: #d32f2f; /* Red */
+            color: white;
+        }
+        .ticket-btn {
+            background: #1a73e8; /* Blue */
+            color: white;
+        }
+        .comp-btn {
+            background: #ffa500; /* Orange */
+            color: white;
+        }
+        .custom-cash {
+            display: flex;
+            gap: 5px;
+        }
+        .custom-cash input {
+            flex: 1;
+            padding: 10px;
+            background: #34495e;
+            color: #e0e0e0;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        /* Summary Section */
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 20px;
         }
         #doorCount {
-            color: #800080; /* Purple for "thru door" */
+            color: #800080; /* Purple for "Thru Door" */
             font-weight: bold;
         }
-        #cartTotal {
-            font-size: 20px;
-            font-weight: bold;
+        /* Note and Log Sale Section */
+        .note-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #noteInput {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            background: #34495e;
+            color: #e0e0e0;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        #logSaleBtn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+        }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .transaction-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sales Register</h1>
-        <div>
+        <!-- Header Section -->
+        <div class="header">
             <label>Date: <input type="date" id="sessionDate"></label>
             <label>Venue: <input type="text" id="sessionVenue" placeholder="Venue"></label>
             <label>Event: <input type="text" id="sessionEvent" placeholder="Event"></label>
             <label>Cashier: <input type="text" id="sessionCashier" placeholder="Cashier"></label>
-            <button id="startSessionBtn">Start Session</button>
-            <button id="endSessionBtn" style="background: #e74c3c; display: none;">End Session</button>
+            <button id="toggleSalesBtn">Open Sales</button>
         </div>
-        <h2>Cart</h2>
-        <div id="cartItems" class="cart-grid"></div>
-        <div>
-            <select id="itemSelect">
-                <option value="">Select Item</option>
-                <option value="Ticket ($10)">Ticket ($10)</option>
-                <option value="Comp ($0)">Comp ($0)</option>
-            </select>
-            <input type="number" id="itemQuantity" min="1" value="1" style="width: 60px;">
-            <button id="addItemBtn">Add to Cart</button>
+        <!-- Transaction Buttons Grid -->
+        <div class="transaction-grid">
+            <button class="cash-btn" data-amount="20">$20</button>
+            <button class="cash-btn" data-amount="15">$15</button>
+            <button class="cash-btn" data-amount="12">$12</button>
+            <button class="cash-btn" data-amount="10">$10</button>
+            <button class="cash-btn" data-amount="7">$7</button>
+            <button class="cash-btn" data-amount="5">$5</button>
+            <button class="cc-btn">CC TRANS</button>
+            <button class="ticket-btn">TICKET</button>
+            <button class="comp-btn">COMP</button>
+            <div class="custom-cash">
+                <input type="number" id="customCashInput" placeholder="Custom Amount">
+                <button id="addCustomCashBtn">Add</button>
+            </div>
         </div>
-        <div>
-            Total: $<span id="cartTotal">0.00</span>
-            <br>
-            Thru Door: <span id="doorCount">0</span>
-            <br>
-            <button id="incrementDoor">+1 Thru Door</button>
-            <button id="decrementDoor">-1 Thru Door</button>
+        <!-- Summary Section -->
+        <div class="summary">
+            <div>Cash Total: $<span id="cashTotal">0.00</span></div>
+            <div>Thru Door: <span id="doorCount">0</span></div>
         </div>
-        <div>
-            <button id="cashBtn">Cash</button>
-            <button id="cardBtn">Card</button>
-            <button id="clearCartBtn" style="background: #e74c3c;">Clear Cart</button>
+        <!-- Note and Log Sale Section -->
+        <div class="note-section">
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
+            <button id="logSaleBtn">Log Sale</button>
         </div>
     </div>
     <script>
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        // Google Sheets API Configuration
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // Replace with your Spreadsheet ID
+        const CLIENT_ID = 'YOUR_CLIENT_ID'; // Replace with your Client ID
+        const API_KEY = 'YOUR_API_KEY'; // Replace with your API Key
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         class SalesApp {
@@ -114,6 +172,7 @@
                 this.cart = [];
                 this.sessionId = '';
                 this.doorCount = parseInt(localStorage.getItem('doorCount') || '0');
+                this.cashTotal = 0;
                 this.updateDisplay();
             }
 
@@ -126,8 +185,7 @@
                     valueInputOption: 'RAW',
                     resource: { values: [['SALES OPEN', this.sessionId, new Date().toISOString()]] }
                 }).then(() => {
-                    $('#startSessionBtn').hide();
-                    $('#endSessionBtn').show();
+                    $('#toggleSalesBtn').text('Close Sales').css('background', '#e74c3c');
                 });
             }
 
@@ -143,60 +201,70 @@
                     this.sessionId = '';
                     this.doorCount = 0;
                     this.cart = [];
+                    this.cashTotal = 0;
                     this.updateDisplay();
-                    $('#startSessionBtn').show();
-                    $('#endSessionBtn').hide();
+                    $('#toggleSalesBtn').text('Open Sales').css('background', '#4CAF50');
                 });
             }
 
-            addItem(item, price, quantity, type) {
-                this.cart.push({ item, price, quantity, type });
-                this.updateDisplay();
-            }
-
-            clearCart() {
-                this.cart = [];
-                this.updateDisplay();
-            }
-
-            incrementDoorCount() {
+            addCashTransaction(amount) {
+                this.cart.push({ type: 'cash', amount });
+                this.cashTotal += amount;
                 this.doorCount++;
-                localStorage.setItem('doorCount', this.doorCount);
                 this.updateDisplay();
             }
 
-            decrementDoorCount() {
-                if (this.doorCount > 0) {
-                    this.doorCount--;
-                    localStorage.setItem('doorCount', this.doorCount);
+            addCustomCashTransaction(amount) {
+                if (amount > 0) {
+                    this.cart.push({ type: 'cash', amount });
+                    this.cashTotal += amount;
+                    this.doorCount++;
                     this.updateDisplay();
                 }
             }
 
-            processSale(paymentType) {
+            addCcTransaction() {
+                this.cart.push({ type: 'cc' });
+                this.doorCount++;
+                this.updateDisplay();
+            }
+
+            addTicketTransaction() {
+                this.cart.push({ type: 'ticket' });
+                this.doorCount++;
+                this.updateDisplay();
+            }
+
+            addCompTransaction() {
+                this.cart.push({ type: 'comp' });
+                this.doorCount++;
+                this.updateDisplay();
+            }
+
+            logSale() {
                 if (!this.cart.length || !this.sessionId) return;
-                const total = this.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                const itemsJson = JSON.stringify(this.cart);
                 const timestamp = new Date().toISOString();
-                const note = paymentType === 'cash' ? 'Cash Payment' : 'Card Payment';
+                const note = $('#noteInput').val().trim();
+                const transactionData = this.cart.map(item => item.type === 'cash' ? `Cash: $${item.amount}` : item.type.toUpperCase()).join(', ');
                 gapi.client.sheets.spreadsheets.values.append({
                     spreadsheetId: SPREADSHEET_ID,
                     range: 'Sheet1!A1',
                     valueInputOption: 'RAW',
                     resource: {
-                        values: [['TRANSACTION', this.sessionId, timestamp, timestamp.slice(11, 19), itemsJson, total.toFixed(2), note, this.doorCount]]
+                        values: [['TRANSACTION', this.sessionId, timestamp, transactionData, this.cashTotal.toFixed(2), note, this.doorCount]]
                     }
-                }).then(() => this.clearCart());
+                }).then(() => {
+                    this.cart = [];
+                    this.cashTotal = 0;
+                    $('#noteInput').val('');
+                    this.updateDisplay();
+                });
             }
 
             updateDisplay() {
-                const total = this.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                $('#cartTotal').text(total.toFixed(2));
+                $('#cashTotal').text(this.cashTotal.toFixed(2));
                 $('#doorCount').text(this.doorCount);
-                const cartItems = $('#cartItems').empty();
-                this.cart.forEach((item, index) => {
-                    cartItems.append(`<div class="cart-item">${item.item} x${item.quantity} = $${(item.price * item.quantity).toFixed(2)}</div>`);
-                });
+                localStorage.setItem('doorCount', this.doorCount);
             }
         }
 
@@ -211,8 +279,7 @@
                 }).then(() => {
                     if (localStorage.getItem('sessionId')) {
                         app.sessionId = localStorage.getItem('sessionId');
-                        $('#startSessionBtn').hide();
-                        $('#endSessionBtn').show();
+                        $('#toggleSalesBtn').text('Close Sales').css('background', '#e74c3c');
                     }
                 });
             });
@@ -220,28 +287,30 @@
 
         $(document).ready(() => {
             handleClientLoad();
-            $('#startSessionBtn').on('click', () => {
-                const date = $('#sessionDate').val();
-                const venue = $('#sessionVenue').val().trim();
-                const event = $('#sessionEvent').val().trim();
-                const cashier = $('#sessionCashier').val().trim();
-                if (date && venue && event && cashier) app.startSession(date, venue, event, cashier);
-            });
-            $('#endSessionBtn').on('click', () => app.endSession());
-            $('#addItemBtn').on('click', () => {
-                const itemText = $('#itemSelect').val();
-                const quantity = parseInt($('#itemQuantity').val());
-                if (itemText && quantity > 0) {
-                    const price = itemText.includes('Ticket') ? 10 : 0;
-                    const type = itemText.includes('Ticket') ? 'ticket' : 'comp';
-                    app.addItem(itemText, price, quantity, type);
+            $('#toggleSalesBtn').on('click', () => {
+                if (app.sessionId) {
+                    app.endSession();
+                } else {
+                    const date = $('#sessionDate').val();
+                    const venue = $('#sessionVenue').val().trim();
+                    const event = $('#sessionEvent').val().trim();
+                    const cashier = $('#sessionCashier').val().trim();
+                    if (date && venue && event && cashier) app.startSession(date, venue, event, cashier);
                 }
             });
-            $('#cashBtn').on('click', () => app.processSale('cash'));
-            $('#cardBtn').on('click', () => app.processSale('card'));
-            $('#clearCartBtn').on('click', () => app.clearCart());
-            $('#incrementDoor').on('click', () => app.incrementDoorCount());
-            $('#decrementDoor').on('click', () => app.decrementDoorCount());
+            $('.cash-btn').on('click', function() {
+                const amount = parseFloat($(this).data('amount'));
+                app.addCashTransaction(amount);
+            });
+            $('#addCustomCashBtn').on('click', () => {
+                const amount = parseFloat($('#customCashInput').val());
+                app.addCustomCashTransaction(amount);
+                $('#customCashInput').val('');
+            });
+            $('.cc-btn').on('click', () => app.addCcTransaction());
+            $('.ticket-btn').on('click', () => app.addTicketTransaction());
+            $('.comp-btn').on('click', () => app.addCompTransaction());
+            $('#logSaleBtn').on('click', () => app.logSale());
         });
     </script>
 </body>
