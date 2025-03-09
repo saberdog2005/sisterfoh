@@ -35,7 +35,7 @@
             flex-grow: 1;
             width: 100%;
             max-height: calc(100vh - 60px);
-            display: none; /* Hidden until login */
+            display: none;
             transition: opacity 0.3s ease-in-out;
         }
         .log-container {
@@ -113,7 +113,7 @@
         }
         .count-value, .summary-value { font-weight: bold; }
         .modal {
-            display: block; /* Shown by default */
+            display: block;
             position: fixed;
             z-index: 1;
             left: 0;
@@ -190,7 +190,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Login</h2>
@@ -202,8 +201,6 @@
             <div class="forgot-password">Forgot Password?</div>
         </div>
     </div>
-
-    <!-- Main Content (Hidden until login) -->
     <div class="grid-container">
         <div class="log-container" id="session-selection">
             <h2>Select Session</h2>
@@ -249,16 +246,14 @@
             <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
-
     <script>
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // API Key
         let db;
         let transactionChart;
         let updateInterval;
         const username = 'brad';
-        const passwordHash = CryptoJS.SHA256('password123').toString(); // Pre-hashed password
-
+        const passwordHash = CryptoJS.SHA256('password123').toString();
         $(document).ready(() => {
-            // Handle login
             $('#loginBtn').on('click', () => {
                 const inputUsername = $('#username').val().trim();
                 const inputPassword = $('#password').val().trim();
@@ -282,20 +277,15 @@
                         $('.modal-content button, .modal-content input').prop('disabled', false);
                         $('.loading').hide();
                     }
-                }, 500); // Simulate server delay
+                }, 500);
             });
-
             $('#cancelBtn').on('click', () => {
-                $('#username, #password').val(''); // Clear inputs
+                $('#username, #password').val('');
             });
-
-            // Placeholder for Forgot Password
             $('.forgot-password').on('click', () => {
                 alert('Forgot Password functionality is not implemented yet.');
             });
         });
-
-        // IndexedDB Setup
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -313,8 +303,6 @@
         request.onerror = function() {
             alert('Failed to open database.');
         };
-
-        // Load session options
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
@@ -334,8 +322,6 @@
                 }
             };
         }
-
-        // Debounce utility for graph updates
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -343,8 +329,6 @@
                 timeout = setTimeout(() => func.apply(this, args), wait);
             };
         }
-
-        // Item styling classes
         function getItemClass(itemName) {
             if (itemName.startsWith('CASH')) return 'item-cash';
             if (itemName.startsWith('CC')) return 'item-cc';
@@ -352,8 +336,6 @@
             if (itemName === 'COMP') return 'item-comp';
             return '';
         }
-
-        // Update log data
         function updateLog(sessionId) {
             if (!sessionId) {
                 resetDisplay();
@@ -369,7 +351,6 @@
                 let cashCumulative = 0, cardCumulative = 0;
                 const cashCustomers = [], cardCustomers = [];
                 const categoryCounts = {};
-
                 transactions.forEach(t => {
                     let hasCash = t.itemList.some(item => item.item.startsWith('CASH'));
                     let hasCard = t.itemList.some(item => item.item.startsWith('CC'));
@@ -387,30 +368,25 @@
                         } else if (item.item.startsWith('CC')) {
                             cardTotal += item.price * item.quantity;
                         } else if (item.item === 'TICKET') {
-                            doorCount += item.quantity; // Accumulate "Thru Door" from tickets
+                            doorCount += item.quantity;
                         }
                         categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
                     });
                 });
-
                 const totalSales = cashTotal + cardTotal;
                 const grandTotal = transactions.reduce((sum, t) => sum + t.total, 0);
-
                 $('#cashSales').text(cashTotal.toFixed(2));
                 $('#cardSales').text(cardTotal.toFixed(2));
                 $('#totalSales').text(totalSales.toFixed(2));
                 $('#totalCashCustomers').text(cashCumulative);
                 $('#totalCardCustomers').text(cardCumulative);
-                $('#doorCount').text(doorCount); // Reflects total ticket entries
+                $('#doorCount').text(doorCount);
                 $('#grandTotal').html(`Total Sales: $<span class="summary-value">${grandTotal.toFixed(2)}</span>`);
-
                 const $categoryCounts = $('#categoryCounts').empty();
                 Object.entries(categoryCounts).forEach(([item, count]) => {
                     $categoryCounts.append(`<p class="category-count ${getItemClass(item)}">${item}: <span class="count-value">${count}</span></p>`);
                 });
-
                 updateGraphDebounced(cashCustomers, cardCustomers);
-
                 const $tbody = $('#transactionTable tbody').empty();
                 transactions.reverse().forEach(t => {
                     const itemsHtml = t.itemList.map(i => {
@@ -422,8 +398,6 @@
                 });
             };
         }
-
-        // Reset display when no session is selected
         function resetDisplay() {
             $('#cashSales').text('0.00');
             $('#cardSales').text('0.00');
@@ -439,8 +413,6 @@
             }
             $('#transactionTable tbody').empty();
         }
-
-        // Debounced graph update
         const updateGraphDebounced = debounce((cashCustomers, cardCustomers) => {
             const ctx = document.getElementById('transactionGraph').getContext('2d');
             if (transactionChart) {
@@ -472,23 +444,16 @@
                 });
             }
         }, 500);
-
         $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
-
-        // Start periodic updates
         function startUpdating(sessionId) {
             clearInterval(updateInterval);
             updateLog(sessionId);
             updateInterval = setInterval(() => updateLog(sessionId), 5000);
         }
-
-        // Stop updates
         function stopUpdating() {
             clearInterval(updateInterval);
             updateInterval = null;
         }
-
-        // Session selection handler
         $('#sessionSelect').on('change', function() {
             const sessionId = $(this).val();
             if (sessionId) startUpdating(sessionId);
@@ -497,10 +462,7 @@
                 resetDisplay();
             }
         });
-
         window.addEventListener('beforeunload', stopUpdating);
-
-        // PDF report generation
         $('#printPdfBtn').on('click', function() {
             const sessionId = $('#sessionSelect').val();
             if (!sessionId) {
