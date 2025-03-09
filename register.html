@@ -53,20 +53,38 @@
             border-radius: 8px;
             min-height: 600px;
         }
-        input[readonly] {
-            background: #424242;
-            color: #a0a0a0;
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
         }
-        label {
-            margin-right: 5px;
+        .product-btn {
+            padding: 15px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        .cash-btn { background: #2e7d32; }
+        .card-btn { background: #d32f2f; }
+        .ticket-btn { background: #1a73e8; }
+        .comp-btn { background: #ffa500; }
+        .custom-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .custom-input input {
+            padding: 8px;
+            font-size: 1em;
+            width: 100px;
         }
         .message {
             color: #ff6b6b;
             margin-top: 10px;
-        }
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
         }
     </style>
 </head>
@@ -83,7 +101,21 @@
         </div>
     </div>
     <div class="container">
-        <button id="logSaleBtn" disabled>Log Sample Sale</button>
+        <div class="button-container">
+            <button class="product-btn cash-btn" data-type="CASH" data-amount="20">CASH $20</button>
+            <button class="product-btn cash-btn" data-type="CASH" data-amount="15">CASH $15</button>
+            <button class="product-btn cash-btn" data-type="CASH" data-amount="10">CASH $10</button>
+            <button class="product-btn cash-btn" data-type="CASH" data-amount="5">CASH $5</button>
+            <button class="product-btn card-btn" data-type="CARD" data-amount="0">CARD TRANS</button>
+            <button class="product-btn ticket-btn" data-type="TICKET" data-amount="0">TICKET</button>
+            <button class="product-btn comp-btn" data-type="COMP" data-amount="0">COMP</button>
+        </div>
+        <div class="custom-input">
+            <label for="customCash">Custom Cash:</label>
+            <input type="number" id="customCash" placeholder="Amount" step="0.01">
+            <button id="addCustomCashBtn">Add Custom Cash</button>
+        </div>
+        <button id="logSaleBtn" disabled>Log Sale</button>
         <p>Session Total: $<span id="sessionTotalDisplay">0.00</span></p>
         <div id="message" class="message"></div>
     </div>
@@ -93,13 +125,23 @@
                 this.sessionOpen = false;
                 this.sessionId = null;
                 this.sessionTotal = 0;
+                this.currentSale = [];
+                // Replace with your Web App URL
                 this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
             }
 
             init() {
                 this.checkSessionStatus();
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
-                $('#logSaleBtn').on('click', () => this.logSampleSale());
+                $('.product-btn').on('click', (e) => this.addToSale(e.target.dataset.type, parseFloat(e.target.dataset.amount)));
+                $('#addCustomCashBtn').on('click', () => {
+                    const amount = parseFloat($('#customCash').val());
+                    if (!isNaN(amount) && amount > 0) {
+                        this.addToSale('CASH', amount);
+                        $('#customCash').val('');
+                    }
+                });
+                $('#logSaleBtn').on('click', () => this.logSale());
             }
 
             checkSessionStatus() {
@@ -176,22 +218,29 @@
                 await this.sendPostRequest(data);
             }
 
-            async logSampleSale() {
+            addToSale(type, amount) {
                 if (!this.sessionOpen) {
                     this.showMessage('Please open a session first');
                     return;
                 }
-                const itemList = [
-                    { item: 'Coffee', price: 3.50, quantity: 1 },
-                    { item: 'Pastry', price: 2.50, quantity: 1 }
-                ];
-                const total = itemList.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                const doorCount = itemList.length;
-                const note = 'Sample sale';
+                this.currentSale.push({ type, amount });
+                this.showMessage(`Added ${type} $${amount.toFixed(2)} to sale`);
+            }
+
+            async logSale() {
+                if (!this.sessionOpen || this.currentSale.length === 0) {
+                    this.showMessage('No items in sale or session not open');
+                    return;
+                }
+                const total = this.currentSale.reduce((sum, item) => sum + item.amount, 0);
+                const itemList = this.currentSale.map(item => ({ item: item.type, price: item.amount, quantity: 1 }));
+                const doorCount = this.currentSale.filter(item => item.type === 'TICKET' || item.type === 'COMP').length;
+                const note = 'Sale logged';
                 await this.sendTransaction(itemList, total, note, doorCount);
                 this.sessionTotal += total;
                 localStorage.setItem('sessionTotal', this.sessionTotal.toString());
                 this.updateTotalDisplay();
+                this.currentSale = [];
                 this.showMessage('Sale logged successfully');
             }
 
