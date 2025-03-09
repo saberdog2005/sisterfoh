@@ -6,168 +6,36 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 10px;
-            font-size: 18px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #2d2d2d;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        .header label { margin-right: 5px; font-weight: bold; }
-        .header input {
-            padding: 8px;
-            background: #3c3c3c;
-            border: 1px solid #555;
-            color: #e0e0e0;
-            border-radius: 4px;
-            font-size: 1em;
-            width: 18%;
-            margin: 0 5px;
-        }
-        .header input.locked { background: #555; color: #888; }
-        .toggle-btn {
-            padding: 8px 16px;
-            font-size: 1em;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-            width: 15%;
-            background: #388e3c;
-        }
-        .container {
-            max-width: 85%;
-            margin: 0 auto;
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .button-container {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .product-item {
-            background: #3c3c3c;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .cash-item { background: #2e7d32; }
-        .card-item { background: #d32f2f; }
-        .ticket-item { background: #1a73e8; }
-        .comp-item { background: #ffa500; }
-        .increment-btn {
-            width: 100%;
-            height: 60px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1.2em;
-            color: white;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .decrement-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1.5em;
-            color: white;
-            background: #d32f2f;
-        }
-        .increment-btn.cash { background: #2e7d32; }
-        .increment-btn.cc { background: #d32f2f; }
-        .increment-btn.ticket { background: #1a73e8; }
-        .increment-btn.comp { background: #ffa500; }
-        .control-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-        }
-        .count {
-            font-size: 1.5em;
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
-            font-weight: bold;
-            background: #000;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-        }
-        .custom-input {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        .custom-input input {
-            width: 100px;
-            padding: 8px;
-            background: #444;
-            color: #e0e0e0;
-            border: 1px solid #666;
-            border-radius: 4px;
-            font-size: 1em;
-        }
-        .add-custom {
-            padding: 8px 16px;
-            background: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-        .totals-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0;
-            background: #3c3c3c;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .cash-total { font-size: 2em; font-weight: bold; }
-        .door-count { font-size: 1.5em; font-weight: bold; }
-        #logSaleBtn {
-            display: block;
-            margin: 20px auto;
-            padding: 15px 30px;
-            font-size: 1.5em;
-            background: #388e3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .note-section { margin: 20px 0; text-align: center; }
-        #noteInput {
-            width: 80%;
-            padding: 10px;
-            background: #444;
-            border: 1px solid #666;
-            color: #e0e0e0;
-            border-radius: 4px;
-            font-size: 1em;
-        }
+        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:10px;font-size:18px;overflow-x:hidden;}
+        .header{display:flex;justify-content:space-between;align-items:center;background:#2d2d2d;padding:10px;border-radius:8px;margin-bottom:10px;flex-wrap:wrap;}
+        .header label{margin-right:5px;font-weight:bold;}
+        .header input{padding:8px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0;border-radius:4px;font-size:1em;width:18%;margin:0 5px;}
+        .header input.locked{background:#555;color:#888;}
+        .toggle-btn{padding:8px 16px;font-size:1em;border:none;border-radius:4px;cursor:pointer;color:white;width:15%;background:#388e3c;}
+        .container{max-width:85%;margin:0 auto;background:#2d2d2d;padding:20px;border-radius:8px;min-height:600px;}
+        .button-container{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-top:20px;}
+        .product-item{background:#3c3c3c;padding:10px;border-radius:4px;text-align:center;}
+        .cash-item{background:#2e7d32;}
+        .card-item{background:#d32f2f;}
+        .ticket-item{background:#1a73e8;}
+        .comp-item{background:#ffa500;}
+        .increment-btn{width:100%;height:60px;border:none;border-radius:4px;cursor:pointer;font-size:1.2em;color:white;font-weight:bold;margin-bottom:5px;}
+        .decrement-btn{width:40px;height:40px;border:none;border-radius:4px;cursor:pointer;font-size:1.5em;color:white;background:#d32f2f;}
+        .increment-btn.cash{background:#2e7d32;}
+        .increment-btn.cc{background:#d32f2f;}
+        .increment-btn.ticket{background:#1a73e8;}
+        .increment-btn.comp{background:#ffa500;}
+        .control-row{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:5px;}
+        .count{font-size:1.5em;width:40px;height:40px;line-height:40px;font-weight:bold;background:#000;color:white;border-radius:50%;text-align:center;}
+        .custom-input{display:flex;gap:10px;justify-content:center;margin-top:10px;}
+        .custom-input input{width:100px;padding:8px;background:#444;color:#e0e0e0;border:1px solid #666;border-radius:4px;font-size:1em;}
+        .add-custom{padding:8px 16px;background:#2e7d32;color:white;border:none;border-radius:4px;cursor:pointer;font-size:1em;}
+        .totals-container{display:flex;justify-content:space-between;align-items:center;margin:20px 0;background:#3c3c3c;padding:10px;border-radius:4px;}
+        .cash-total{font-size:2em;font-weight:bold;}
+        .door-count{font-size:1.5em;font-weight:bold;}
+        #logSaleBtn{display:block;margin:20px auto;padding:15px 30px;font-size:1.5em;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;}
+        .note-section{margin:20px 0;text-align:center;}
+        #noteInput{width:80%;padding:10px;background:#444;border:1px solid #666;color:#e0e0e0;border-radius:4px;font-size:1em;}
     </style>
 </head>
 <body>
@@ -180,7 +48,6 @@
     </div>
     <div class="container">
         <div class="button-container">
-            <!-- Cash Items Grouped Together -->
             <div class="product-item cash-item" data-item="CASH $20" data-price="20">
                 <button class="increment-btn cash">CASH $20</button>
                 <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
@@ -214,7 +81,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Other Items -->
             <div class="product-item card-item" data-item="CC TRANS" data-price="0">
                 <button class="increment-btn cc">CC TRANS</button>
                 <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
@@ -241,163 +107,90 @@
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
         class SalesApp {
-            constructor() {
-                this.db = null;
-                this.sessionStarted = false;
-                this.sessionId = null;
-                this.currentItems = [];
-                this.total = 0;
-                this.doorCount = 0;
-            }
-            init() {
-                const request = indexedDB.open('SalesDB', 2);
-                request.onupgradeneeded = (e) => {
-                    this.db = e.target.result;
-                    if (!this.db.objectStoreNames.contains('sessions')) {
-                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                    }
-                };
-                request.onsuccess = (e) => { this.db = e.target.result; this.checkSessionStatus(); };
-                $('#toggleSalesBtn').on('click', () => this.toggleSales());
-                $(document).on('click', '.increment-btn', (t) => {
-                    const e = $(t.target).closest('.product-item');
-                    this.incrementItem(e.data('item'), parseFloat(e.data('price')));
-                });
-                $(document).on('click', '.decrement-btn', (t) => {
-                    const e = $(t.target).closest('.product-item');
-                    this.decrementItem(e.data('item'));
-                });
-                $(document).on('click', '.add-custom', (t) => {
-                    const e = $(t.target).closest('.product-item');
-                    let i = parseFloat(e.find('input').val());
-                    if (isNaN(i) || i <= 0) { alert('Please enter a valid amount'); e.find('input').val(''); }
-                    else { i = Math.round(i / 0.25) * 0.25; this.incrementItem(`CASH (CUSTOM) $${i.toFixed(2)}`, i); e.find('input').val(''); }
-                });
-                $('#logSaleBtn').on('click', () => this.logSale());
+            constructor(){this.db=null;this.sessionStarted=false;this.sessionId=null;this.currentItems=[];this.total=0;this.doorCount=0;}
+            init(){
+                const request=indexedDB.open('SalesDB',2);
+                request.onupgradeneeded=(e)=>{this.db=e.target.result;if(!this.db.objectStoreNames.contains('sessions')){this.db.createObjectStore('sessions',{keyPath:'id',autoIncrement:true});}};
+                request.onsuccess=(e)=>{this.db=e.target.result;this.checkSessionStatus();};
+                $('#toggleSalesBtn').on('click',()=>this.toggleSales());
+                $(document).on('click','.increment-btn',(t)=>{const e=$(t.target).closest('.product-item');this.incrementItem(e.data('item'),parseFloat(e.data('price')));});
+                $(document).on('click','.decrement-btn',(t)=>{const e=$(t.target).closest('.product-item');this.decrementItem(e.data('item'));});
+                $(document).on('click','.add-custom',(t)=>{const e=$(t.target).closest('.product-item');let i=parseFloat(e.find('input').val());if(isNaN(i)||i<=0){alert('Please enter a valid amount');e.find('input').val('');}else{i=Math.round(i/0.25)*0.25;this.incrementItem(`CASH (CUSTOM) $${i.toFixed(2)}`,i);e.find('input').val('');}});
+                $('#logSaleBtn').on('click',()=>this.logSale());
                 $('#eventDate').val(new Date().toISOString().split('T')[0]);
             }
-            checkSessionStatus() {
-                const e = localStorage.getItem('activeSessionId');
-                if (e) {
-                    this.db.transaction(['sessions'], 'readonly').objectStore('sessions').get(Number(e)).onsuccess = (t) => {
-                        const i = t.target.result;
-                        if (i && i.status === 'open') {
-                            this.sessionStarted = true;
-                            this.sessionId = i.id;
-                            this.doorCount = i.doorCount || 0;
-                            $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
-                            $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
-                            this.updateTotals();
-                        }
-                    };
+            checkSessionStatus(){
+                const e=localStorage.getItem('activeSessionId');
+                if(e){this.db.transaction(['sessions'],'readonly').objectStore('sessions').get(Number(e)).onsuccess=(t)=>{const i=t.target.result;if(i&&i.status==='open'){this.sessionStarted=true;this.sessionId=i.id;this.doorCount=i.doorCount||0;$('#toggleSalesBtn').text('Close Sales').css('background','#d32f2f');$('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly',true).addClass('locked');this.updateTotals();}};}
+            }
+            toggleSales(){
+                if(!this.sessionStarted){
+                    const e=$('#eventDate').val(),t=$('#eventVenue').val(),i=$('#cashierName').val();
+                    if(!e||!t||!i)return;
+                    const s={date:e,venue:t,eventName:$('#eventName').val(),cashier:i,status:'open',doorCount:0};
+                    const n=this.db.transaction(['sessions'],'readwrite').objectStore('sessions');
+                    n.add(s).onsuccess=(e)=>{this.sessionId=e.target.result;localStorage.setItem('activeSessionId',this.sessionId);this.sessionStarted=true;this.doorCount=0;$('#toggleSalesBtn').text('Close Sales').css('background','#d32f2f');$('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly',true).addClass('locked');};
+                }else{
+                    const e=prompt('Enter PIN to close sales (default: 1234)');
+                    if(e==='1234'){this.db.transaction(['sessions'],'readwrite').objectStore('sessions').get(this.sessionId).onsuccess=(e)=>{const t=e.target.result;t.status='closed';this.db.transaction(['sessions'],'readwrite').objectStore('sessions').put(t);this.resetSession();};}
                 }
             }
-            toggleSales() {
-                if (!this.sessionStarted) {
-                    const e = $('#eventDate').val(), t = $('#eventVenue').val(), i = $('#cashierName').val();
-                    if (!e || !t || !i) return;
-                    const s = { date: e, venue: t, eventName: $('#eventName').val(), cashier: i, status: 'open', doorCount: 0 };
-                    const n = this.db.transaction(['sessions'], 'readwrite').objectStore('sessions');
-                    n.add(s).onsuccess = (e) => {
-                        this.sessionId = e.target.result;
-                        localStorage.setItem('activeSessionId', this.sessionId);
-                        this.sessionStarted = true;
-                        this.doorCount = 0;
-                        $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
-                        $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true).addClass('locked');
-                    };
-                } else {
-                    const e = prompt('Enter PIN to close sales (default: 1234)');
-                    if (e === '1234') {
-                        this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').get(this.sessionId).onsuccess = (e) => {
-                            const t = e.target.result;
-                            t.status = 'closed';
-                            this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').put(t);
-                            this.resetSession();
-                        };
-                    }
-                }
-            }
-            incrementItem(e, t) {
-                const i = $(`.product-item[data-item="${e}"] .count`);
-                let s = parseInt(i.text()) + 1;
+            incrementItem(e,t){
+                const i=$(`.product-item[data-item="${e}"] .count`);
+                let s=parseInt(i.text())+1;
                 i.text(s);
-                const n = this.currentItems.find(t => t.item === e);
-                if (n) n.quantity++;
-                else this.currentItems.push({ item: e, price: t, quantity: 1, type: this.getItemType(e) });
+                const n=this.currentItems.find(t=>t.item===e);
+                if(n)n.quantity++;else this.currentItems.push({item:e,price:t,quantity:1,type:this.getItemType(e)});
                 this.updateTotals();
             }
-            decrementItem(e) {
-                const t = $(`.product-item[data-item="${e}"] .count`);
-                let i = parseInt(t.text());
-                if (i > 0) {
-                    i--;
-                    t.text(i);
-                    const n = this.currentItems.find(t => t.item === e);
-                    if (n) {
-                        n.quantity--;
-                        if (n.quantity <= 0) this.currentItems = this.currentItems.filter(t => t.item !== e);
-                    }
-                    this.updateTotals();
-                }
+            decrementItem(e){
+                const t=$(`.product-item[data-item="${e}"] .count`);
+                let i=parseInt(t.text());
+                if(i>0){i--;t.text(i);const n=this.currentItems.find(t=>t.item===e);if(n){n.quantity--;if(n.quantity<=0)this.currentItems=this.currentItems.filter(t=>t.item!==e);}this.updateTotals();}
             }
-            updateTotals() {
-                this.total = this.currentItems.reduce((e, t) => e + t.price * t.quantity, 0);
-                const currentDoorCount = this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0);
-                const totalDoorCount = (this.doorCount || 0) + currentDoorCount;
+            updateTotals(){
+                this.total=this.currentItems.reduce((e,t)=>e+t.price*t.quantity,0);
+                const currentDoorCount=this.currentItems.filter(item=>item.type==='Tickets'||item.type==='COMP').reduce((sum,item)=>sum+item.quantity,0);
+                const totalDoorCount=(this.doorCount||0)+currentDoorCount;
                 $('#cashTotal').text(this.total.toFixed(2));
                 $('#doorCount').text(totalDoorCount);
             }
-            logSale() {
-                if (!this.sessionStarted || this.currentItems.length === 0) return;
-                const transaction = {
-                    sessionId: this.sessionId,
-                    timestamp: new Date().toISOString(),
-                    time: new Date().toLocaleTimeString(),
-                    itemList: this.currentItems.map(item => ({ item: item.item, price: item.price, quantity: item.quantity, type: item.type })),
-                    total: this.total,
-                    note: $('#noteInput').val(),
-                    doorCount: this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0)
+            logSale(){
+                if(!this.sessionStarted||this.currentItems.length===0)return;
+                const transaction={
+                    sessionId:this.sessionId,
+                    timestamp:new Date().toISOString(),
+                    time:new Date().toLocaleTimeString(),
+                    itemList:this.currentItems.map(item=>({item:item.item,price:item.price,quantity:item.quantity,type:item.type})),
+                    total:this.total,
+                    note:$('#noteInput').val(),
+                    doorCount:this.currentItems.filter(item=>item.type==='Tickets'||item.type==='COMP').reduce((sum,item)=>sum+item.quantity,0)
                 };
                 this.sendToGoogleSheet(transaction);
                 this.resetSale();
             }
-            resetSale() {
-                this.currentItems = [];
-                this.total = 0;
-                $('.count').text('0');
-                $('#cashTotal').text('0.00');
-                $('#noteInput').val('');
+            resetSale(){this.currentItems=[];this.total=0;$('.count').text('0');$('#cashTotal').text('0.00');$('#noteInput').val('');}
+            sendToGoogleSheet(transaction){
+                fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(transaction)})
+                    .then(response=>response.json())
+                    .then(data=>console.log('Data sent to Google Sheet:',data))
+                    .catch(error=>console.error('Error sending to Google Sheet:',error));
             }
-            sendToGoogleSheet(transaction) {
-                fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(transaction)
-                }).then(response => response.json()).then(data => {
-                    console.log('Data sent to Google Sheet:', data);
-                }).catch(error => {
-                    console.error('Error sending to Google Sheet:', error);
-                });
-            }
-            resetSession() {
-                this.sessionStarted = false;
-                this.sessionId = null;
-                this.doorCount = 0;
-                localStorage.removeItem('activeSessionId');
-                $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
-                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false).removeClass('locked');
+            resetSession(){
+                this.sessionStarted=false;this.sessionId=null;this.doorCount=0;localStorage.removeItem('activeSessionId');
+                $('#toggleSalesBtn').text('Open Sales').css('background','#388e3c');
+                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly',false).removeClass('locked');
                 this.resetSale();
             }
-            getItemType(itemName) {
-                if (itemName.startsWith('CASH')) return 'CASH';
-                if (itemName.startsWith('CC')) return 'CARD';
-                if (itemName === 'TICKET') return 'Tickets';
-                if (itemName === 'COMP') return 'COMP';
-                return 'Other';
+            getItemType(itemName){
+                if(itemName.startsWith('CASH'))return'CASH';
+                if(itemName.startsWith('CC'))return'CARD';
+                if(itemName==='TICKET')return'Tickets';
+                if(itemName==='COMP')return'COMP';
+                return'Other';
             }
         }
-        const app = new SalesApp();
+        const app=new SalesApp();
         app.init();
     </script>
 </body>
