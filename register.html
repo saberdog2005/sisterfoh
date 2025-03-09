@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -81,6 +81,10 @@
             font-weight: bold;
             margin-bottom: 5px;
         }
+        .increment-btn.cash { background: #1b4f1f; }
+        .increment-btn.cc { background: #a62626; }
+        .increment-btn.ticket { background: #0d47a1; }
+        .increment-btn.comp { background: #cc8400; }
         .decrement-btn {
             width: 40px;
             height: 40px;
@@ -126,7 +130,7 @@
         }
         .add-custom {
             padding: 8px 16px;
-            background: #2e7d32;
+            background: #1b4f1f;
             color: white;
             border: none;
             border-radius: 4px;
@@ -276,9 +280,8 @@
                 this.currentItems = [];
                 this.total = 0;
                 this.doorCount = 0;
-                this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
+                this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Update after redeploying Apps Script
             }
-
             init() {
                 this.checkSessionStatus();
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
@@ -305,7 +308,6 @@
                 $('#logSaleBtn').on('click', () => this.logSale());
                 $('#eventDate').val(new Date().toISOString().split('T')[0]);
             }
-
             checkSessionStatus() {
                 const sessionId = localStorage.getItem('activeSessionId');
                 if (sessionId) {
@@ -313,9 +315,14 @@
                     this.sessionId = sessionId;
                     this.doorCount = parseInt(localStorage.getItem('doorCount') || '0');
                     this.updateTotals();
+                    $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
+                    $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true);
+                } else {
+                    this.sessionStarted = false;
+                    $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
+                    $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false);
                 }
             }
-
             toggleSales() {
                 if (!this.sessionStarted) {
                     const date = $('#eventDate').val();
@@ -346,7 +353,6 @@
                     }
                 }
             }
-
             incrementItem(itemName, price) {
                 const countEl = $(`.product-item[data-item="${itemName}"] .count`);
                 let count = parseInt(countEl.text()) + 1;
@@ -356,7 +362,6 @@
                 else this.currentItems.push({ item: itemName, price, quantity: 1, type: this.getItemType(itemName) });
                 this.updateTotals();
             }
-
             decrementItem(itemName) {
                 const countEl = $(`.product-item[data-item="${itemName}"] .count`);
                 let count = parseInt(countEl.text());
@@ -371,7 +376,6 @@
                     this.updateTotals();
                 }
             }
-
             updateTotals() {
                 this.total = this.currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
                 const currentDoorCount = this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0);
@@ -380,7 +384,6 @@
                 $('#doorCount').text(totalDoorCount);
                 $('#logSaleBtn').prop('disabled', this.currentItems.length === 0 || !this.sessionStarted);
             }
-
             logSale() {
                 if (!this.sessionStarted || this.currentItems.length === 0) {
                     alert('No items in sale or session not started');
@@ -400,22 +403,18 @@
                 localStorage.setItem('doorCount', this.doorCount);
                 this.resetSale();
             }
-
             async sendSessionStart(date, venue, eventName, cashier) {
                 const data = { type: 'SESSION_START', sessionId: this.sessionId, date, venue, eventName, cashier };
                 await this.sendPostRequest(data);
             }
-
             async sendTransaction(transaction) {
                 const data = { type: 'TRANSACTION', ...transaction };
                 await this.sendPostRequest(data);
             }
-
             async sendSessionClose() {
                 const data = { type: 'SESSION_CLOSE', sessionId: this.sessionId, grandTotal: this.total };
                 await this.sendPostRequest(data);
             }
-
             async sendPostRequest(data) {
                 try {
                     const response = await fetch(this.WEB_APP_URL, {
@@ -432,7 +431,6 @@
                     alert('Failed to send data. Retry or check connection.');
                 }
             }
-
             resetSale() {
                 this.currentItems = [];
                 this.total = 0;
@@ -441,7 +439,6 @@
                 $('#noteInput').val('');
                 $('#logSaleBtn').prop('disabled', true);
             }
-
             resetSession() {
                 this.sessionStarted = false;
                 this.sessionId = null;
@@ -452,7 +449,6 @@
                 $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false);
                 this.resetSale();
             }
-
             getItemType(itemName) {
                 if (itemName.startsWith('CASH')) return 'CASH';
                 if (itemName.startsWith('CC')) return 'CARD';
@@ -461,7 +457,6 @@
                 return 'Other';
             }
         }
-
         const app = new SalesApp();
         $(document).ready(() => app.init());
     </script>
