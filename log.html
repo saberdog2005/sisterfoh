@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log</title>
+    <title>Transaction Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -12,362 +12,285 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #121212;
-            color: #e0e0e0;
+            background-color: #f0f0f0;
         }
-        #loginForm, #mainContent {
-            max-width: 800px;
+        #login-form {
+            max-width: 300px;
             margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        #loginForm {
+        #main-content {
             display: none;
         }
-        .flex-container {
+        .container {
             display: flex;
             gap: 20px;
-            flex-wrap: wrap;
-        }
-        .graph-container {
-            flex: 1;
-            min-width: 300px;
-        }
-        .summary-log-container {
-            flex: 1;
-            min-width: 300px;
-        }
-        #salesGraph {
-            height: 400px;
-            width: 100%;
-        }
-        #transactionTable {
-            width: 100%;
-            border-collapse: collapse;
             margin-top: 20px;
         }
-        #transactionTable th, #transactionTable td {
-            border: 1px solid #34495e;
+        .left-side, .right-side {
+            flex: 1;
+        }
+        .left-side {
+            max-width: 50%;
+        }
+        .right-side {
+            max-width: 50%;
+        }
+        #thru-door {
+            color: purple;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            margin-top: 10px;
+        }
+        th, td {
             padding: 8px;
+            border: 1px solid #ddd;
             text-align: left;
         }
-        #transactionTable th {
-            background-color: #2c3e50;
+        th {
+            background-color: #f2f2f2;
         }
-        #transactionTable tbody {
+        tbody {
+            display: block;
             max-height: 300px;
             overflow-y: auto;
-            display: block;
         }
-        #transactionTable thead, #transactionTable tbody tr {
+        thead, tbody tr {
             display: table;
             width: 100%;
             table-layout: fixed;
         }
-        #thruDoor {
-            color: purple;
-            font-weight: bold;
-        }
-        #salesStatus {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
         button, select {
-            padding: 8px 12px;
-            margin: 5px;
-            background-color: #34495e;
-            color: #e0e0e0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #2c3e50;
-        }
-        #loginForm input {
-            width: 100%;
             padding: 8px;
             margin: 5px 0;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
-        #loginError {
-            color: red;
-            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="loginForm">
+    <!-- Login Form -->
+    <div id="login-form">
         <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button id="loginBtn">Login</button>
-        <p id="loginError">Invalid credentials</p>
+        <input type="text" id="username" placeholder="Username" required><br>
+        <input type="password" id="password" placeholder="Password" required><br>
+        <button onclick="login()">Login</button>
     </div>
-    <div id="mainContent" style="display: none;">
-        <div class="flex-container">
-            <div class="graph-container">
-                <canvas id="salesGraph"></canvas>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <h1>Transaction Log</h1>
+        <select id="session-selector" onchange="updateSession()"></select>
+        <button onclick="refreshData()">Refresh</button>
+        <button onclick="logout()">Logout</button>
+        <label><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh</label>
+        
+        <div class="container">
+            <div class="left-side">
+                <canvas id="cashGraph"></canvas>
             </div>
-            <div class="summary-log-container">
-                <select id="sessionSelect"><option value="">Select a session</option></select>
-                <button id="refreshBtn">Refresh</button>
-                <label><input type="checkbox" id="autoRefresh"> Auto-refresh</label>
-                <div id="salesStatus">Select a session</div>
-                <div>Thru Door: <span id="thruDoor">0</span></div>
-                <table id="transactionTable">
+            <div class="right-side">
+                <p>Sales Status: <span id="sales-status"></span></p>
+                <p>Cashier: <span id="cashier-name"></span></p>
+                <p>Thru Door Count: <span id="thru-door">0</span></p>
+                <h3>Last 20 Transactions</h3>
+                <table>
                     <thead>
                         <tr>
                             <th>Timestamp</th>
-                            <th>Items</th>
-                            <th>Cash Total</th>
-                            <th>Note</th>
-                            <th>Door Count</th>
+                            <th>Type</th>
+                            <th>Amount</th>
                         </tr>
                     </thead>
-                    <tbody></tbody>
+                    <tbody id="transaction-table"></tbody>
                 </table>
-                <button id="logoutBtn">Logout</button>
             </div>
         </div>
     </div>
-    <script>
-        // Google Sheets API credentials (replace with your own)
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
-        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-        const API_KEY = 'YOUR_API_KEY_HERE';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
-        let salesChart;
+    <script>
+        // Google Sheets API Credentials (same as previous iterations)
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
+
+        let chart;
         let autoRefreshInterval;
 
-        // Load Google API client
-        function handleClientLoad() {
-            gapi.load('client', initClient);
-        }
-
+        /** Initialize Google API Client */
         function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: DISCOVERY_DOCS
-            }).then(() => {
-                if (localStorage.getItem('loggedIn') === 'true') {
-                    showMainContent();
-                    loadSessions();
-                } else {
-                    $('#loginForm').show();
-                }
+            gapi.load('client:auth2', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    clientId: CLIENT_ID,
+                    discoveryDocs: DISCOVERY_DOCS,
+                    scope: SCOPES
+                }).then(() => {
+                    checkLoginStatus();
+                }).catch(error => {
+                    console.error('Error initializing API client:', error);
+                    alert('Failed to initialize API client. Please try again later.');
+                });
             });
         }
 
-        // Handle login
-        $('#loginBtn').on('click', () => {
-            const username = $('#username').val();
-            const password = $('#password').val();
-            if (username === 'admin' && password === 'password') { // Hardcoded for simplicity
-                localStorage.setItem('loggedIn', 'true');
-                $('#loginForm').hide();
-                showMainContent();
+        /** Check if user is logged in */
+        function checkLoginStatus() {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                $('#login-form').hide();
+                $('#main-content').show();
                 loadSessions();
             } else {
-                $('#loginError').show();
+                $('#login-form').show();
+                $('#main-content').hide();
             }
-        });
-
-        // Handle logout
-        $('#logoutBtn').on('click', () => {
-            localStorage.removeItem('loggedIn');
-            localStorage.removeItem('selectedSession');
-            location.reload();
-        });
-
-        // Show main content after login
-        function showMainContent() {
-            $('#loginForm').hide();
-            $('#mainContent').show();
         }
 
-        // Load session data from Google Sheet
+        /** Handle login */
+        function login() {
+            const username = $('#username').val();
+            const password = $('#password').val();
+            // Simple hardcoded check (replace with actual authentication if needed)
+            if (username === 'admin' && password === 'password') {
+                localStorage.setItem('isLoggedIn', 'true');
+                checkLoginStatus();
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        /** Handle logout */
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('selectedSession');
+            location.reload();
+        }
+
+        /** Load session list from Google Sheet */
         function loadSessions() {
-            gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A:H' // Adjust range as per your sheet structure
+            gapi.client.sheets.spreadsheets.get({
+                spreadsheetId: SPREADSHEET_ID
             }).then(response => {
-                const rows = response.result.values || [];
-                const sessionIds = [...new Set(rows.map(row => row[1]))].filter(id => id);
-                const select = $('#sessionSelect');
-                select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                const selectedSession = localStorage.getItem('selectedSession');
-                if (selectedSession && sessionIds.includes(selectedSession)) {
-                    select.val(selectedSession);
-                    updateLog(selectedSession, rows);
+                const sheets = response.result.sheets;
+                const sessionSelector = $('#session-selector');
+                sessionSelector.empty();
+                sheets.forEach(sheet => {
+                    sessionSelector.append(`<option value="${sheet.properties.title}">${sheet.properties.title}</option>`);
+                });
+                
+                const savedSession = localStorage.getItem('selectedSession');
+                if (savedSession && sheets.some(sheet => sheet.properties.title === savedSession)) {
+                    sessionSelector.val(savedSession);
                 }
-            }).catch(err => {
-                console.error('Error loading sessions:', err);
+                updateSession();
+            }).catch(error => {
+                console.error('Error loading sessions:', error);
                 alert('Failed to load sessions. Please try again.');
             });
         }
 
-        // Update log display for selected session
-        function updateLog(sessionId, allRows) {
-            if (!sessionId) {
-                resetDisplay();
-                return;
-            }
-            localStorage.setItem('selectedSession', sessionId);
-            const rows = allRows.filter(row => row[1] === sessionId);
-            const { isOpen, cashier, cumulativeData, thruDoorCount, transactionRows } = processData(rows);
-            const statusText = isOpen ? `Sales open by ${cashier}` : 'Sales closed';
-            $('#salesStatus').text(statusText);
-            updateThruDoor(thruDoorCount);
-            updateGraph(cumulativeData);
-            updateTransactionLog(transactionRows);
+        /** Update data when session changes */
+        function updateSession() {
+            const selectedSession = $('#session-selector').val();
+            localStorage.setItem('selectedSession', selectedSession);
+            refreshData();
         }
 
-        // Process data from rows
-        function processData(rows) {
-            let isOpen = false;
-            let cashier = '';
-            let cumulativeCash = 0;
-            const cumulativeData = { labels: [], data: [] };
-            let thruDoorCount = 0;
-            const transactionRows = [];
+        /** Fetch and refresh data for the selected session */
+        function refreshData() {
+            const selectedSession = $('#session-selector').val();
+            if (!selectedSession) return;
 
-            rows.forEach(row => {
-                const [type, sessionId, timestamp, time, itemsJson, cashTotal, note, doorCount] = row;
-                if (type === 'SALES OPEN') {
-                    isOpen = true;
-                    cashier = sessionId.split('_')[3] || 'Unknown'; // Extract cashier from sessionId
-                } else if (type === 'CLOSED') {
-                    isOpen = false;
-                } else if (type === 'TRANSACTION') {
-                    cumulativeCash += parseFloat(cashTotal || 0);
-                    thruDoorCount = parseInt(doorCount || 0);
-                    const date = new Date(timestamp);
-                    const label = date.toLocaleTimeString();
-                    cumulativeData.labels.push(label);
-                    cumulativeData.data.push(cumulativeCash);
-                    transactionRows.push({ timestamp: label, itemsJson, cashTotal, note, doorCount });
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `'${selectedSession}'!A:C`
+            }).then(response => {
+                const data = response.result.values || [];
+                updateUI(data, selectedSession);
+            }).catch(error => {
+                console.error('Error fetching data:', error);
+                alert('Failed to fetch data. Please try again.');
+            });
+        }
+
+        /** Update the UI with fetched data */
+        function updateUI(data, sessionId) {
+            let thruDoorCount = 0;
+            let salesOpen = false;
+            let cashTotal = 0;
+            const transactions = [];
+            const graphData = { 
+                labels: [], 
+                datasets: [{ 
+                    label: 'Cumulative Cash', 
+                    data: [], 
+                    borderColor: 'blue', 
+                    fill: false 
+                }] 
+            };
+
+            data.forEach(row => {
+                const [timestamp, type, amount] = row;
+                if (type === 'SALE') {
+                    thruDoorCount++;
+                    cashTotal += parseFloat(amount) || 0;
+                    transactions.push({ timestamp, type, amount });
+                    graphData.labels.push(timestamp);
+                    graphData.datasets[0].data.push(cashTotal);
+                } else if (type === 'SALES OPEN' || type === 'CLOSED') {
+                    salesOpen = type === 'SALES OPEN';
                 }
             });
 
-            transactionRows.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-            return { isOpen, cashier, cumulativeData, thruDoorCount, transactionRows: transactionRows.slice(0, 20) };
-        }
+            $('#sales-status').text(salesOpen ? 'Open' : 'Closed');
+            $('#cashier-name').text(sessionId.split('-')[0] || 'Unknown');
+            $('#thru-door').text(thruDoorCount);
 
-        // Update Thru Door count
-        function updateThruDoor(count) {
-            $('#thruDoor').text(count);
-        }
-
-        // Update sales graph
-        function updateGraph({ labels, data }) {
-            if (salesChart) {
-                salesChart.data.labels = labels;
-                salesChart.data.datasets[0].data = data;
-                salesChart.update();
-            } else {
-                const ctx = $('#salesGraph')[0].getContext('2d');
-                salesChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Cumulative Cash Total',
-                            data: data,
-                            borderColor: 'green',
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-            }
-        }
-
-        // Update transaction log table
-        function updateTransactionLog(rows) {
-            const tbody = $('#transactionTable tbody');
+            const recentTransactions = transactions.slice(-20).reverse();
+            const tbody = $('#transaction-table');
             tbody.empty();
-            rows.forEach(row => {
-                const items = formatItems(JSON.parse(row.itemsJson || '[]'));
-                const tr = `<tr>
-                    <td>${row.timestamp}</td>
-                    <td>${items}</td>
-                    <td>${row.cashTotal}</td>
-                    <td>${row.note}</td>
-                    <td>${row.doorCount}</td>
-                </tr>`;
-                tbody.append(tr);
+            recentTransactions.forEach(t => {
+                tbody.append(`<tr><td>${t.timestamp}</td><td>${t.type}</td><td>${t.amount}</td></tr>`);
             });
+
+            updateGraph(graphData);
         }
 
-        // Format items for display
-        function formatItems(items) {
-            const itemCounts = {};
-            items.forEach(item => {
-                const key = `${item.type}_${item.amount}`;
-                itemCounts[key] = (itemCounts[key] || 0) + 1;
-            });
-            return Object.entries(itemCounts).map(([key, count]) => {
-                const [type, amount] = key.split('_');
-                const label = type === 'cash' ? `$${amount}` : type.toUpperCase();
-                return `${count}x ${label}`;
-            }).join(', ');
-        }
-
-        // Reset display when no session is selected
-        function resetDisplay() {
-            $('#salesStatus').text('Select a session');
-            updateThruDoor(0);
-            if (salesChart) {
-                salesChart.data.labels = [];
-                salesChart.data.datasets[0].data = [];
-                salesChart.update();
-            }
-            $('#transactionTable tbody').empty();
-        }
-
-        // Handle auto-refresh
-        $('#autoRefresh').on('change', function() {
-            if (this.checked) {
-                autoRefreshInterval = setInterval(() => {
-                    const selectedSession = $('#sessionSelect').val();
-                    if (selectedSession) {
-                        loadSessions();
+        /** Update the cumulative cash graph */
+        function updateGraph(graphData) {
+            if (chart) chart.destroy();
+            chart = new Chart($('#cashGraph'), {
+                type: 'line',
+                data: graphData,
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Cumulative Cash ($)' } }
                     }
-                }, 10000); // Refresh every 10 seconds
+                }
+            });
+        }
+
+        /** Toggle auto-refresh every 10 seconds */
+        function toggleAutoRefresh() {
+            if ($('#auto-refresh').is(':checked')) {
+                autoRefreshInterval = setInterval(refreshData, 10000);
             } else {
                 clearInterval(autoRefreshInterval);
             }
-        });
+        }
 
-        // Handle manual refresh
-        $('#refreshBtn').on('click', () => {
-            const selectedSession = $('#sessionSelect').val();
-            if (selectedSession) {
-                loadSessions();
-            }
-        });
-
-        // Handle session selection
-        $('#sessionSelect').on('change', function() {
-            const sessionId = $(this).val();
-            gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A:H'
-            }).then(response => {
-                updateLog(sessionId, response.result.values || []);
-            });
-        });
-
-        // Initialize on page load
+        /** Initialize on page load */
         $(document).ready(() => {
-            handleClientLoad();
+            initClient();
         });
     </script>
 </body>
