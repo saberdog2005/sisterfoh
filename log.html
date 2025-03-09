@@ -7,7 +7,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,26 +15,75 @@
             background-color: #121212;
             color: #e0e0e0;
         }
-        .modal {
+        #loginForm, #mainContent {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #loginForm {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        }
+        .flex-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .graph-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        .summary-log-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        #salesGraph {
+            height: 400px;
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
         }
-        .modal-content {
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 8px;
-            width: 300px;
-            text-align: center;
+        #transactionTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
         }
-        .modal-content input {
-            width: 80%;
+        #transactionTable th, #transactionTable td {
+            border: 1px solid #34495e;
+            padding: 8px;
+            text-align: left;
+        }
+        #transactionTable th {
+            background-color: #2c3e50;
+        }
+        #transactionTable tbody {
+            max-height: 300px;
+            overflow-y: auto;
+            display: block;
+        }
+        #transactionTable thead, #transactionTable tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        #thruDoor {
+            color: purple;
+            font-weight: bold;
+        }
+        #salesStatus {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        button, select {
+            padding: 8px 12px;
+            margin: 5px;
+            background-color: #34495e;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2c3e50;
+        }
+        #loginForm input {
+            width: 100%;
             padding: 8px;
             margin: 5px 0;
             background: #34495e;
@@ -43,234 +91,283 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        .log-container {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            flex: 1;
-        }
-        .graph-container { flex: 2; }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .summary-item {
-            background: #34495e;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        button, select {
-            padding: 8px 16px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            background: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-        #logoutBtn { background: #e74c3c; }
-        #saveToPdfBtn { background: #2196F3; }
-        .cash-total { color: #2e7d32; }
-        .card-total { color: #d32f2f; }
-        .comp-total { color: #ffa500; }
-        .ticket-total { color: #1a73e8; }
-        .total-sales { color: #ffffff; }
-        .door-count-total { color: #800080; }
-        #drawerStatus { margin-top: 10px; font-weight: bold; }
-        @media (max-width: 768px) {
-            .container { flex-direction: column; }
+        #loginError {
+            color: red;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button id="loginBtn">Login</button>
-            <p id="loginError" style="color: red; display: none;">Invalid credentials</p>
-        </div>
+    <div id="loginForm">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="loginBtn">Login</button>
+        <p id="loginError">Invalid credentials</p>
     </div>
-    <div class="container" style="display: none;">
-        <div class="log-container graph-container">
-            <h2>Sales Over Time</h2>
-            <canvas id="salesGraph"></canvas>
-        </div>
-        <div class="log-container">
-            <h2>Sales Summary</h2>
-            <select id="sessionSelect"><option value="">Select a session</option></select>
-            <button id="refreshBtn">Refresh</button>
-            <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
-            <button id="logoutBtn">Logout</button>
-            <div id="drawerStatus" style="display: none;"></div>
-            <div class="summary-grid" id="summaryGrid"></div>
+    <div id="mainContent" style="display: none;">
+        <div class="flex-container">
+            <div class="graph-container">
+                <canvas id="salesGraph"></canvas>
+            </div>
+            <div class="summary-log-container">
+                <select id="sessionSelect"><option value="">Select a session</option></select>
+                <button id="refreshBtn">Refresh</button>
+                <label><input type="checkbox" id="autoRefresh"> Auto-refresh</label>
+                <div id="salesStatus">Select a session</div>
+                <div>Thru Door: <span id="thruDoor">0</span></div>
+                <table id="transactionTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Items</th>
+                            <th>Cash Total</th>
+                            <th>Note</th>
+                            <th>Door Count</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button id="logoutBtn">Logout</button>
+            </div>
         </div>
     </div>
     <script>
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        // Google Sheets API credentials (replace with your own)
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+        const API_KEY = 'YOUR_API_KEY_HERE';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         let salesChart;
+        let autoRefreshInterval;
 
+        // Load Google API client
         function handleClientLoad() {
-            gapi.load('client', () => {
-                gapi.client.init({
-                    apiKey: API_KEY,
-                    clientId: CLIENT_ID,
-                    discoveryDocs: DISCOVERY_DOCS
-                }).then(() => {
-                    if (localStorage.getItem('adminLoggedIn') === 'true') {
-                        $('.container').show();
-                        loadSessions();
-                    } else {
-                        $('#loginModal').show();
-                    }
-                }).catch(err => alert('API init failed: ' + err.message));
+            gapi.load('client', initClient);
+        }
+
+        function initClient() {
+            gapi.client.init({
+                apiKey: API_KEY,
+                clientId: CLIENT_ID,
+                discoveryDocs: DISCOVERY_DOCS
+            }).then(() => {
+                if (localStorage.getItem('loggedIn') === 'true') {
+                    showMainContent();
+                    loadSessions();
+                } else {
+                    $('#loginForm').show();
+                }
             });
         }
 
+        // Handle login
+        $('#loginBtn').on('click', () => {
+            const username = $('#username').val();
+            const password = $('#password').val();
+            if (username === 'admin' && password === 'password') { // Hardcoded for simplicity
+                localStorage.setItem('loggedIn', 'true');
+                $('#loginForm').hide();
+                showMainContent();
+                loadSessions();
+            } else {
+                $('#loginError').show();
+            }
+        });
+
+        // Handle logout
+        $('#logoutBtn').on('click', () => {
+            localStorage.removeItem('loggedIn');
+            localStorage.removeItem('selectedSession');
+            location.reload();
+        });
+
+        // Show main content after login
+        function showMainContent() {
+            $('#loginForm').hide();
+            $('#mainContent').show();
+        }
+
+        // Load session data from Google Sheet
         function loadSessions() {
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!B2:B'
+                range: 'Sheet1!A:H' // Adjust range as per your sheet structure
             }).then(response => {
-                const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
-                $('#sessionSelect').html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                const lastSession = localStorage.getItem('sessionId');
-                if (lastSession && sessionIds.includes(lastSession)) {
-                    $('#sessionSelect').val(lastSession);
-                    updateLog(lastSession);
+                const rows = response.result.values || [];
+                const sessionIds = [...new Set(rows.map(row => row[1]))].filter(id => id);
+                const select = $('#sessionSelect');
+                select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
+                const selectedSession = localStorage.getItem('selectedSession');
+                if (selectedSession && sessionIds.includes(selectedSession)) {
+                    select.val(selectedSession);
+                    updateLog(selectedSession, rows);
                 }
-            }).catch(err => alert('Error loading sessions: ' + err.message));
+            }).catch(err => {
+                console.error('Error loading sessions:', err);
+                alert('Failed to load sessions. Please try again.');
+            });
         }
 
-        function updateLog(sessionId) {
+        // Update log display for selected session
+        function updateLog(sessionId, allRows) {
             if (!sessionId) {
                 resetDisplay();
                 return;
             }
-            gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A2:H'
-            }).then(response => {
-                const rows = response.result.values || [];
-                const sessionRows = rows.filter(row => row[1] === sessionId);
-                const salesOpen = sessionRows.find(row => row[0] === 'SALES OPEN');
-                const closed = sessionRows.find(row => row[0] === 'CLOSED');
-                const transactions = sessionRows.filter(row => row[0] === 'TRANSACTION');
+            localStorage.setItem('selectedSession', sessionId);
+            const rows = allRows.filter(row => row[1] === sessionId);
+            const { isOpen, cashier, cumulativeData, thruDoorCount, transactionRows } = processData(rows);
+            const statusText = isOpen ? `Sales open by ${cashier}` : 'Sales closed';
+            $('#salesStatus').text(statusText);
+            updateThruDoor(thruDoorCount);
+            updateGraph(cumulativeData);
+            updateTransactionLog(transactionRows);
+        }
 
-                if (!transactions.length && !salesOpen) {
-                    resetDisplay();
-                    return;
+        // Process data from rows
+        function processData(rows) {
+            let isOpen = false;
+            let cashier = '';
+            let cumulativeCash = 0;
+            const cumulativeData = { labels: [], data: [] };
+            let thruDoorCount = 0;
+            const transactionRows = [];
+
+            rows.forEach(row => {
+                const [type, sessionId, timestamp, time, itemsJson, cashTotal, note, doorCount] = row;
+                if (type === 'SALES OPEN') {
+                    isOpen = true;
+                    cashier = sessionId.split('_')[3] || 'Unknown'; // Extract cashier from sessionId
+                } else if (type === 'CLOSED') {
+                    isOpen = false;
+                } else if (type === 'TRANSACTION') {
+                    cumulativeCash += parseFloat(cashTotal || 0);
+                    thruDoorCount = parseInt(doorCount || 0);
+                    const date = new Date(timestamp);
+                    const label = date.toLocaleTimeString();
+                    cumulativeData.labels.push(label);
+                    cumulativeData.data.push(cumulativeCash);
+                    transactionRows.push({ timestamp: label, itemsJson, cashTotal, note, doorCount });
                 }
+            });
 
-                const [date, venue, event, cashier] = sessionId.split('_');
-                $('#drawerStatus').text(closed ? 'Drawer Closed' : `Drawer Open by ${cashier}`).css('color', closed ? '#e74c3c' : '#4CAF50').show();
+            transactionRows.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            return { isOpen, cashier, cumulativeData, thruDoorCount, transactionRows: transactionRows.slice(0, 20) };
+        }
 
-                let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, doorCount = 0;
-                const graphData = { labels: [], cash: [], total: [] };
-                let cumulativeCash = 0, cumulativeTotal = 0;
+        // Update Thru Door count
+        function updateThruDoor(count) {
+            $('#thruDoor').text(count);
+        }
 
-                transactions.forEach((row, i) => {
-                    const items = JSON.parse(row[4] || '[]');
-                    items.forEach(item => {
-                        if (item.type === 'cash') cashSales += item.amount;
-                        else if (item.type === 'card') cardSales += item.amount;
-                        else if (item.type === 'comp') compCount++;
-                        else if (item.type === 'ticket') ticketCount++;
-                    });
-                    totalSales += parseFloat(row[5] || 0);
-                    doorCount = parseInt(row[7] || 0);
-                    cumulativeCash += parseFloat(row[5] || 0);
-                    cumulativeTotal += doorCount;
-                    graphData.labels.push(`T${i + 1}`);
-                    graphData.cash.push(cumulativeCash);
-                    graphData.total.push(totalSales);
-                });
-
-                $('#summaryGrid').html(`
-                    <div class="summary-item"><span class="cash-total">Cash:</span> $${cashSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="card-total">Card:</span> $${cardSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="comp-total">Comp:</span> ${compCount}</div>
-                    <div class="summary-item"><span class="ticket-total">Tickets:</span> ${ticketCount}</div>
-                    <div class="summary-item"><span class="total-sales">Total:</span> $${totalSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="door-count-total">Thru Door:</span> ${doorCount}</div>
-                `);
-
-                if (salesChart) salesChart.destroy();
-                salesChart = new Chart($('#salesGraph'), {
+        // Update sales graph
+        function updateGraph({ labels, data }) {
+            if (salesChart) {
+                salesChart.data.labels = labels;
+                salesChart.data.datasets[0].data = data;
+                salesChart.update();
+            } else {
+                const ctx = $('#salesGraph')[0].getContext('2d');
+                salesChart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: graphData.labels,
-                        datasets: [
-                            { label: 'Cumulative Cash', data: graphData.cash, borderColor: '#2e7d32', fill: false },
-                            { label: 'Total Sales', data: graphData.total, borderColor: '#ffffff', fill: false }
-                        ]
+                        labels: labels,
+                        datasets: [{
+                            label: 'Cumulative Cash Total',
+                            data: data,
+                            borderColor: 'green',
+                            fill: false
+                        }]
                     },
-                    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
                 });
-
-                $('#saveToPdfBtn').toggle(!!closed);
-            }).catch(err => alert('Error updating log: ' + err.message));
+            }
         }
 
+        // Update transaction log table
+        function updateTransactionLog(rows) {
+            const tbody = $('#transactionTable tbody');
+            tbody.empty();
+            rows.forEach(row => {
+                const items = formatItems(JSON.parse(row.itemsJson || '[]'));
+                const tr = `<tr>
+                    <td>${row.timestamp}</td>
+                    <td>${items}</td>
+                    <td>${row.cashTotal}</td>
+                    <td>${row.note}</td>
+                    <td>${row.doorCount}</td>
+                </tr>`;
+                tbody.append(tr);
+            });
+        }
+
+        // Format items for display
+        function formatItems(items) {
+            const itemCounts = {};
+            items.forEach(item => {
+                const key = `${item.type}_${item.amount}`;
+                itemCounts[key] = (itemCounts[key] || 0) + 1;
+            });
+            return Object.entries(itemCounts).map(([key, count]) => {
+                const [type, amount] = key.split('_');
+                const label = type === 'cash' ? `$${amount}` : type.toUpperCase();
+                return `${count}x ${label}`;
+            }).join(', ');
+        }
+
+        // Reset display when no session is selected
         function resetDisplay() {
-            $('#summaryGrid').html('<div class="summary-item">No data available</div>');
-            if (salesChart) salesChart.destroy();
-            salesChart = null;
-            $('#saveToPdfBtn, #drawerStatus').hide();
+            $('#salesStatus').text('Select a session');
+            updateThruDoor(0);
+            if (salesChart) {
+                salesChart.data.labels = [];
+                salesChart.data.datasets[0].data = [];
+                salesChart.update();
+            }
+            $('#transactionTable tbody').empty();
         }
 
-        function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const sessionId = $('#sessionSelect').val();
-            const [date, venue, event, cashier] = sessionId.split('_');
-            doc.text(`Session: ${sessionId}`, 10, 10);
-            doc.text(`Date: ${date}`, 10, 20);
-            doc.text(`Venue: ${venue}`, 10, 30);
-            doc.text(`Event: ${event}`, 10, 40);
-            doc.text(`Cashier: ${cashier}`, 10, 50);
-            const imgData = $('#salesGraph')[0].toDataURL('image/png');
-            doc.addImage(imgData, 'PNG', 10, 60, 180, 100);
-            doc.save(`${sessionId}_report.pdf`);
-        }
+        // Handle auto-refresh
+        $('#autoRefresh').on('change', function() {
+            if (this.checked) {
+                autoRefreshInterval = setInterval(() => {
+                    const selectedSession = $('#sessionSelect').val();
+                    if (selectedSession) {
+                        loadSessions();
+                    }
+                }, 10000); // Refresh every 10 seconds
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        });
 
+        // Handle manual refresh
+        $('#refreshBtn').on('click', () => {
+            const selectedSession = $('#sessionSelect').val();
+            if (selectedSession) {
+                loadSessions();
+            }
+        });
+
+        // Handle session selection
+        $('#sessionSelect').on('change', function() {
+            const sessionId = $(this).val();
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Sheet1!A:H'
+            }).then(response => {
+                updateLog(sessionId, response.result.values || []);
+            });
+        });
+
+        // Initialize on page load
         $(document).ready(() => {
             handleClientLoad();
-            $('#loginBtn').on('click', () => {
-                const user = $('#username').val();
-                const pass = $('#password').val();
-                if (user === 'admin' && pass === 'password123') {
-                    localStorage.setItem('adminLoggedIn', 'true');
-                    $('#loginModal').hide();
-                    $('.container').show();
-                    loadSessions();
-                } else {
-                    $('#loginError').show();
-                }
-            });
-            $('#logoutBtn').on('click', () => {
-                localStorage.removeItem('adminLoggedIn');
-                location.reload();
-            });
-            $('#sessionSelect').on('change', () => updateLog($('#sessionSelect').val()));
-            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
-            $('#saveToPdfBtn').on('click', generatePDF);
         });
     </script>
 </body>
