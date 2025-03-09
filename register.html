@@ -21,7 +21,7 @@
         .card-item { background: #8B0000; }
         .ticket-item { background: #00008B; }
         .comp-item { background: #CC8400; }
-        .product-item.disabled { background: #555; opacity: 0.5; }
+        .product-item.disabled { background: #555; opacity: 0.5; pointer-events: none; }
         .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; background: inherit; }
         .increment-btn:hover { filter: brightness(1.1); }
         .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #8B0000; }
@@ -80,17 +80,21 @@
         <div id="message" class="message"></div>
     </div>
     <script>
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Provided API Key
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Provided Spreadsheet ID
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+
         const allButtons = [
-            { item: 'CASH $20', enabled: true },
-            { item: 'CASH $15', enabled: true },
-            { item: 'CASH $12', enabled: true },
-            { item: 'CASH $10', enabled: true },
-            { item: 'CASH $7', enabled: true },
-            { item: 'CASH $5', enabled: true },
-            { item: 'CASH (CUSTOM)', enabled: true },
-            { item: 'CC TRANS', enabled: true },
-            { item: 'TICKET', enabled: true },
-            { item: 'COMP', enabled: true }
+            { item: 'CASH $20', enabled: false },
+            { item: 'CASH $15', enabled: false },
+            { item: 'CASH $12', enabled: false },
+            { item: 'CASH $10', enabled: false },
+            { item: 'CASH $7', enabled: false },
+            { item: 'CASH $5', enabled: false },
+            { item: 'CASH (CUSTOM)', enabled: false },
+            { item: 'CC TRANS', enabled: false },
+            { item: 'TICKET', enabled: false },
+            { item: 'COMP', enabled: false }
         ];
         let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
 
@@ -109,7 +113,7 @@
 
         function createButtonHTML(item, enabled) {
             const config = itemConfig[item] || {};
-            const disabledClass = enabled ? '' : 'disabled';
+            const disabledClass = !enabled ? 'disabled' : '';
             const html = item === 'CASH (CUSTOM)' ? `
                 <div class="product-item ${config.class} ${disabledClass}" data-item="${item}">
                     <div class="custom-input">
@@ -139,7 +143,7 @@
             const $container = $('#buttonContainer').empty();
             const buttonsToShow = editMode ? allButtons : layout.filter(b => b.enabled);
             buttonsToShow.forEach(config => {
-                $container.append(createButtonHTML(config.item, config.enabled));
+                $container.append(createButtonHTML(config.item, editMode ? false : config.enabled));
             });
             if (editMode) {
                 $('.edit-controls').show();
@@ -165,8 +169,8 @@
                 const enabled = !$(this).hasClass('disabled');
                 newLayout.push({ item, enabled });
             });
-            layout = newLayout.filter(b => b.enabled);
-            localStorage.setItem('buttonLayout', JSON.stringify(layout));
+            layout = newLayout.filter(b => b.enabled); // Only enabled buttons remain visible
+            localStorage.setItem('buttonLayout', JSON.stringify(newLayout));
             renderButtons(false);
             $(this).hide();
             $('#editLayoutBtn').show();
@@ -184,6 +188,17 @@
             $('#adminControls').show();
         }
 
+        gapi.load('client', () => {
+            gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: DISCOVERY_DOCS
+            }).then(() => {
+                console.log('Google API client initialized');
+            }).catch(err => {
+                console.error('Error initializing Google API client:', err);
+            });
+        });
+
         class SalesApp {
             constructor() {
                 this.cashTotal = 0;
@@ -197,6 +212,7 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
@@ -205,6 +221,7 @@
                 $(document).on('click', '.decrement-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
@@ -213,6 +230,7 @@
                 $(document).on('click', '.add-custom', () => {
                     if (!this.isSalesActive) return;
                     const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
+                    if ($custom.hasClass('disabled')) return;
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
@@ -232,7 +250,7 @@
             increment(item, price) {
                 this.items[item] = (this.items[item] || 0) + 1;
                 if (price > 0) this.cashTotal += price;
-                if (item !== 'CASH (CUSTOM)') this.doorCount++;
+                if (item === 'TICKET' || item === 'COMP') this.doorCount++;
                 this.updateDisplay();
             }
 
@@ -240,7 +258,7 @@
                 if (this.items[item] > 0) {
                     this.items[item]--;
                     if (price > 0) this.cashTotal -= price;
-                    if (item !== 'CASH (CUSTOM)') this.doorCount--;
+                    if (item === 'TICKET' || item === 'COMP') this.doorCount--;
                     this.updateDisplay();
                 }
             }
@@ -271,15 +289,26 @@
             }
 
             postSessionStart() {
-                const sessionData = {
-                    type: 'SESSION_START',
-                    date: $('#eventDate').val(),
-                    venue: $('#eventVenue').val(),
-                    event: $('#eventName').val(),
-                    cashier: $('#cashierName').val()
-                };
-                // Placeholder for Google Sheets API call
-                console.log('Posting session start to Google Sheet:', sessionData);
+                const sessionData = [
+                    $('#eventDate').val(),
+                    $('#eventVenue').val(),
+                    $('#eventName').val(),
+                    $('#cashierName').val(),
+                    'SESSION_START'
+                ];
+                gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Sheet1!A:E',
+                    valueInputOption: 'RAW',
+                    insertDataOption: 'INSERT_ROWS',
+                    resource: { values: [sessionData] }
+                }).then(response => {
+                    console.log('Session start posted:', response.result);
+                    $('#message').text('Session started successfully.');
+                }).catch(err => {
+                    console.error('Error posting session start:', err);
+                    $('#message').text('Error starting session. Please try again.');
+                });
             }
 
             logSale() {
