@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>  
+    <style>
         body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:10px;font-size:18px;overflow-x:hidden;}
         .header{display:flex;justify-content:space-between;align-items:center;background:#2d2d2d;padding:10px;border-radius:8px;margin-bottom:10px;flex-wrap:wrap;}
         .header label{margin-right:5px;font-weight:bold;}
@@ -158,23 +158,29 @@
             logSale(){
                 if(!this.sessionStarted||this.currentItems.length===0)return;
                 const transaction={
-                    sessionId:this.sessionId,
-                    timestamp:new Date().toISOString(),
-                    time:new Date().toLocaleTimeString(),
-                    itemList:this.currentItems.map(item=>({item:item.item,price:item.price,quantity:item.quantity,type:item.type})),
-                    total:this.total,
-                    note:$('#noteInput').val(),
-                    doorCount:this.currentItems.filter(item=>item.type==='Tickets'||item.type==='COMP').reduce((sum,item)=>sum+item.quantity,0)
+                    sessionId: this.sessionId.toString(),
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    itemList: this.currentItems.map(item=>({item:item.item,price:item.price,quantity:item.quantity,type:item.type})),
+                    total: this.total,
+                    note: $('#noteInput').val(),
+                    doorCount: this.currentItems.filter(item=>item.type==='Tickets'||item.type==='COMP').reduce((sum,item)=>sum+item.quantity,0)
                 };
                 this.sendToGoogleSheet(transaction);
                 this.resetSale();
             }
             resetSale(){this.currentItems=[];this.total=0;$('.count').text('0');$('#cashTotal').text('0.00');$('#noteInput').val('');}
             sendToGoogleSheet(transaction){
-                fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(transaction)})
-                    .then(response=>response.json())
-                    .then(data=>console.log('Data sent to Google Sheet:',data))
-                    .catch(error=>console.error('Error sending to Google Sheet:',error));
+                fetch(API_URL,{
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(transaction)
+                }).then(() => {
+                    console.log('Sale logged successfully');
+                }).catch(error => {
+                    console.error('Error sending to Google Sheet:', error);
+                });
             }
             resetSession(){
                 this.sessionStarted=false;this.sessionId=null;this.doorCount=0;localStorage.removeItem('activeSessionId');
