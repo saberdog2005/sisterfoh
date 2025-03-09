@@ -1,1 +1,158 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Sales Log</title><script src="https://code.jquery.com/jquery-3.6.0.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script><script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script><style>body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;display:flex;flex-direction:column;min-height:100vh;overflow:hidden;font-size:16px}h2{margin-bottom:10px;text-align:center}.grid-container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex-grow:1;width:100%;max-height:calc(100vh-60px);display:none;transition:opacity .3s ease-in-out}.log-container{background:#2d2d2d;padding:15px;border-radius:5px;display:flex;flex-direction:column;box-shadow:0 2px 5px rgba(0,0,0,.3)}.table-wrapper{overflow-y:auto;flex-grow:1}select,button{padding:8px;font-size:14px;margin:5px 0;border-radius:4px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0}select:focus,button:focus{outline:none;border-color:#66bb6a}.graph-container{flex-grow:1;position:relative;width:100%}canvas{width:100%!important;height:100%!important}table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}th,td{padding:10px;text-align:left;border-bottom:1px solid #444}th{background:#3d3d3d;font-weight:bold}#transactionTable td:nth-child(1){width:15%}#transactionTable td:nth-child(2){width:50%;word-wrap:break-word}#transactionTable td:nth-child(3){width:15%}#transactionTable td:nth-child(4){width:20%;word-wrap:break-word}.item-cash{color:#2e7d32}.item-cc{color:#d32f2f}.item-ticket{color:#1a73e8}.item-comp{color:#ffa500}.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-grow:1}.summary-grid p{overflow-wrap:break-word}.category-count{margin:5px 0}#categoryCounts{max-height:200px;overflow-y:auto}#grandTotal{text-align:right;font-size:18px;font-weight:bold;margin-top:10px;color:#e0e0e0}.count-value,.summary-value{font-weight:bold}.modal{display:block;position:fixed;z-index:1;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,.5);opacity:1;transition:opacity .3s ease-in-out}.modal-content{background:#2d2d2d;margin:15% auto;padding:20px;border:1px solid #888;width:30%;border-radius:5px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.5);transform:translateY(0);transition:transform .3s ease-in-out}.modal-content h2{color:#e0e0e0;margin-bottom:15px}.modal-content input{width:80%;padding:10px;margin:10px 0;border:1px solid #555;border-radius:4px;background:#3c3c3c;color:#e0e0e0;font-size:1em}.modal-content button{padding:10px 20px;margin:5px;border:none;border-radius:4px;cursor:pointer;font-size:1em;color:white;transition:background .3s ease}.modal-content #loginBtn{background:#388e3c}.modal-content #loginBtn:hover{background:#66bb6a}.modal-content #cancelBtn{background:#666}.modal-content #cancelBtn:hover{background:#888}.modal-content .forgot-password{color:#66bb6a;text-decoration:underline;cursor:pointer;font-size:.9em;margin-top:10px}.modal.hide,.modal-content.hide{opacity:0;transform:translateY(-20px);pointer-events:none}.loading{display:none;color:#e0e0e0;font-style:italic}@media (max-width:768px){.grid-container{grid-template-columns:1fr;grid-template-rows:auto}.modal-content{width:80%}}</style></head><body><div id="loginModal" class="modal"><div class="modal-content"><h2>Login</h2><input type="text" id="username" placeholder="Username" required><input type="password" id="password" placeholder="Password" required><div class="loading">Logging in...</div><button id="loginBtn">Login</button><button id="cancelBtn">Cancel</button><div class="forgot-password">Forgot Password?</div></div></div><div class="grid-container"><div class="log-container" id="session-selection"><h2>Select Session</h2><select id="sessionSelect"><option value="">Select a session</option></select><button id="printPdfBtn">Print PDF Report</button></div><div class="log-container" id="sales-summary"><h2>Sales Summary</h2><div class="summary-grid"><p>Cash Sales: $<span class="summary-value" id="cashSales">0.00</span></p><p>Card Sales: $<span class="summary-value" id="cardSales">0.00</span></p><p>Total Sales: $<span class="summary-value" id="totalSales">0.00</span></p><p>Total Cash Customers: <span class="summary-value" id="totalCashCustomers">0</span></p><p>Total Card Customers: <span class="summary-value" id="totalCardCustomers">0</span></p><p>Thru Door: <span class="summary-value" id="doorCount">0</span></p></div><div id="categoryCounts"></div></div><div class="log-container" id="customer-graph"><h2>Customer Count Over Time</h2><div class="graph-container"><canvas id="transactionGraph"></canvas></div><button id="resetZoomBtn">Reset Zoom</button></div><div class="log-container" id="transaction-log"><h2>Transaction Log</h2><div class="table-wrapper"><table id="transactionTable"><thead><tr><th>Time</th><th>Items</th><th>Total</th><th>Note</th></tr></thead><tbody></tbody></table></div><div id="grandTotal">Total Sales: $0.00</div></div></div><script>const API_KEY='AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';let db,transactionChart,updateInterval;const username='brad',passwordHash=CryptoJS.SHA256('password123').toString();$(document).ready(()=>{$('#loginBtn').on('click',()=>{const e=$('#username').val().trim(),t=$('#password').val().trim();if(!e||!t)return alert('Please enter both username and password'),!1;$('.modal-content button,.modal-content input').prop('disabled',!0),$('.loading').show(),setTimeout(()=>{const i=CryptoJS.SHA256(t).toString();e===username&&i===passwordHash?($('loginModal').addClass('hide'),setTimeout(()=>{$('#loginModal').hide(),$('.grid-container').show().css('opacity',1),loadSessions()},300)):($('.modal-content button,.modal-content input').prop('disabled',!1),$('.loading').hide(),alert('Incorrect username or password'))},500)}),$('#cancelBtn').on('click',()=>{$('#username,#password').val('')}),$('.forgot-password').on('click',()=>alert('Forgot Password functionality is not implemented yet.'))});const e=indexedDB.open('SalesDB',2);e.onupgradeneeded=t=>{db=t.target.result,db.objectStoreNames.contains('sessions')||db.createObjectStore('sessions',{keyPath:'id',autoIncrement:!0}),db.objectStoreNames.contains('transactions')||db.createObjectStore('transactions',{keyPath:'id',autoIncrement:!0}).createIndex('sessionId','sessionId',{unique:!1})},e.onsuccess=t=>{db=t.target.result},e.onerror=()=>alert('Failed to open database.');function loadSessions(){db.transaction(['sessions'],'readonly').objectStore('sessions').getAll().onsuccess=t=>{const e=t.target.result,s=$('#sessionSelect');s.empty().append('<option value="">Select a session</option>'),e.forEach(e=>{const t=`${e.date} - ${e.venue} - ${e.eventName} - ${e.cashier}${e.status==='open'?' (Current)':''}`;s.append(`<option value="${e.id}">${t}</option>`)}),localStorage.getItem('activeSessionId')&&s.val(localStorage.getItem('activeSessionId'))&&startUpdating(localStorage.getItem('activeSessionId'))}}function debounce(e,t){let s;return function(...i){clearTimeout(s),s=setTimeout(()=>e.apply(this,i),t)}}function getItemClass(e){return e.startsWith('CASH')?'item-cash':e.startsWith('CC')?'item-cc':e==='TICKET'?'item-ticket':e==='COMP'?'item-comp':''}function updateLog(e){if(!e)return resetDisplay(),!1;db.transaction(['transactions'],'readonly').objectStore('transactions').index('sessionId').getAll(Number(e)).onsuccess=t=>{const s=t.target.result.sort((e,t)=>new Date(e.timestamp)-new Date(t.timestamp)),i=0,n=0,a=0,o=[],r=[];let d={};s.forEach(e=>{let t=e.itemList.some(e=>e.item.startsWith('CASH')),s=e.itemList.some(e=>e.item.startsWith('CC'));t&&(i+=1,o.push({x:new Date(e.timestamp),y:i})),s&&(n+=1,r.push({x:new Date(e.timestamp),y:n})),e.itemList.forEach(e=>{e.item.startsWith('CASH')?a+=e.price*e.quantity:e.item.startsWith('CC')?o+=e.price*e.quantity:e.item==='TICKET'&&(d+=e.quantity),d[e.item]=(d[e.item]||0)+e.quantity})}),$('#cashSales').text(a.toFixed(2)),$('#cardSales').text(o.toFixed(2)),$('#totalSales').text((a+o).toFixed(2)),$('#totalCashCustomers').text(i),$('#totalCardCustomers').text(n),$('#doorCount').text(d),$('#grandTotal').html(`Total Sales: $<span class="summary-value">${s.reduce((e,t)=>e+t.total,0).toFixed(2)}</span>`);const l=$('#categoryCounts').empty();Object.entries(d).forEach(([e,t])=>l.append(`<p class="category-count ${getItemClass(e)}">${e}: <span class="count-value">${t}</span></p>`)),updateGraphDebounced(o,r);const c=$('#transactionTable tbody').empty();s.reverse().forEach(e=>{const t=e.itemList.map(t=>{const s=getItemClass(t.item);return`<span class="${s}">${t.item} (<b>${t.quantity}</b>)</span>`}).join(', '),s=e.note||'';c.append(`<tr><td>${e.time}</td><td>${t}</td><td>$<span class="summary-value">${e.total.toFixed(2)}</span></td><td>${s}</td></tr>`)})}}function resetDisplay(){$('#cashSales').text('0.00'),$('#cardSales').text('0.00'),$('#totalSales').text('0.00'),$('#totalCashCustomers').text('0'),$('#totalCardCustomers').text('0'),$('#doorCount').text('0'),$('#categoryCounts').empty(),$('#grandTotal').html('Total Sales: $0.00'),transactionChart&&(transactionChart.data.datasets.forEach(e=>e.data=[]),transactionChart.update('none')),$('#transactionTable tbody').empty()}const updateGraphDebounced=debounce((e,t)=>{const s=document.getElementById('transactionGraph').getContext('2d');transactionChart?(transactionChart.data.datasets[0].data=e,transactionChart.data.datasets[1].data=t,setTimeout(()=>transactionChart.update(),100)):(transactionChart=new Chart(s,{type:'line',data:{datasets:[{label:'Cash Customers',data:e,borderColor:'#2e7d32',fill:!1,tension:.1},{label:'Card Customers',data:t,borderColor:'#d32f2f',fill:!1,tension:.1}]},options:{animation:!1,scales:{x:{type:'time',time:{unit:'minute'},title:{display:!0,text:'Time'}},y:{beginAtZero:!0,title:{display:!0,text:'Number of Customers'},ticks:{stepSize:1}}},plugins:{zoom:{zoom:{wheel:{enabled:!0},pinch:{enabled:!0},mode:'xy'},pan:{enabled:!0,mode:'xy'}}}}})),100},500);$('#resetZoomBtn').on('click',()=>transactionChart&&transactionChart.resetZoom()),$('#sessionSelect').on('change',function(){const e=$(this).val();e?startUpdating(e):(stopUpdating(),resetDisplay())}),window.addEventListener('beforeunload',stopUpdating),$('#printPdfBtn').on('click',function(){const e=$('#sessionSelect').val();if(!e)return alert('Please select a session first'),!1;const{jsPDF:t}=window.jspdf,s=new t,n=db.transaction(['sessions','transactions'],'readonly'),a=n.objectStore('sessions'),o=n.objectStore('transactions'),r=a.get(Number(e)),d=o.index('sessionId').getAll(Number(e));n.oncomplete=function(){const n=r.result,a=d.result;let o=0,l=0,c=0,u=[],p=[];const h={};a.forEach(e=>{let t=e.itemList.some(e=>e.item.startsWith('CASH')),s=e.itemList.some(e=>e.item.startsWith('CC'));t&&(o+=1,u.push({x:new Date(e.timestamp),y:o})),s&&(l+=1,p.push({x:new Date(e.timestamp),y:l})),e.itemList.forEach(e=>{e.item.startsWith('CASH')?c+=e.price*e.quantity:e.item.startsWith('CC')?u+=e.price*e.quantity:e.item==='TICKET'&&(h+=e.quantity),h[e.item]=(h[e.item]||0)+e.quantity})}),s.setFontSize(16),s.text(`Sales Report - Session ${e}`,10,10),s.setFontSize(12),s.text(`Date: ${n.date}`,10,20),s.text(`Venue: ${n.venue}`,10,30),s.text(`Event Name: ${n.eventName}`,10,40),s.text(`Cashier: ${n.cashier}`,10,50),s.text(`Start Time: ${new Date(n.startTime).toLocaleString()}`,10,60),n.endTime&&s.text(`End Time: ${new Date(n.endTime).toLocaleString()}`,10,70),s.text('Sales Summary',10,90),s.text(`Cash Sales: $${c.toFixed(2)}`,10,100),s.text(`Card Sales: $${u.toFixed(2)}`,10,110),s.text(`Total Sales: $${(c+u).toFixed(2)}`,10,120),s.text(`Total Cash Customers: ${o}`,10,130),s.text(`Total Card Customers: ${l}`,10,140),s.text(`Thru Door: ${h}`,10,150);let m=160;s.text('Category Counts',10,m),m+=10;for(const[e,t]of Object.entries(h))s.text(`${e}: ${t}`,10,m),m+=10,m>270&&(s.addPage(),m=10);setTimeout(()=>{const e=transactionChart.toBase64Image();s.addPage(),s.setFontSize(14),s.text('Customer Count Over Time',10,10),s.addImage(e,'PNG',10,20,190,100),s.addPage(),s.setFontSize(14),s.text('Transaction Log',10,10),m=20,a.forEach((e,t)=>{const i=e.time,n=e.itemList.map(e=>`${e.item} (x${e.quantity})`).join(', '),a=e.total.toFixed(2),o=e.note||'';s.text(`${t+1}. ${i}: ${n} - $${a} - Note: ${o}`,10,m),m+=10,m>270&&(s.addPage(),m=10)}),s.output('blob');const t=s.output('blob');window.open(URL.createObjectURL(t),'_blank')},300)}});</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;display:flex;flex-direction:column;min-height:100vh;overflow:hidden}
+        .grid-container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex-grow:1;width:100%;max-height:calc(100vh-60px);overflow:auto}
+        .log-container{background:#2d2d2d;padding:15px;border-radius:5px;display:flex;flex-direction:column;box-shadow:0 2px 5px rgba(0,0,0,.3);overflow-y:auto}
+        .table-wrapper{overflow-y:auto;flex-grow:1}
+        select,button{padding:8px;font-size:14px;margin:5px 0;border-radius:4px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0}
+        .graph-container{flex-grow:1;position:relative;width:100%}
+        canvas{width:100%!important;height:100%!important}
+        table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}
+        th,td{padding:10px;text-align:left;border-bottom:1px solid #444}
+        th{background:#3d3d3d;font-weight:bold}
+        #transactionTable td:nth-child(1){width:15%}
+        #transactionTable td:nth-child(2){width:50%;word-wrap:break-word}
+        #transactionTable td:nth-child(3){width:15%}
+        #transactionTable td:nth-child(4){width:20%;word-wrap:break-word}
+        .item-cash{color:#2e7d32}
+        .item-cc{color:#d32f2f}
+        .item-ticket{color:#1a73e8}
+        .item-comp{color:#ffa500}
+        .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-grow:1}
+        .summary-value{font-weight:bold}
+        #grandTotal{font-size:18px;font-weight:bold;margin-top:10px;color:#e0e0e0}
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        <div class="log-container">
+            <h2>Select Session</h2>
+            <select id="sessionSelect">
+                <option value="">Select a session</option>
+            </select>
+        </div>
+        <div class="log-container">
+            <h2>Sales Summary</h2>
+            <div class="summary-grid">
+                <p>CASH: $<span class="summary-value" id="cashSales">0.00</span></p>
+                <p>CARD: $<span class="summary-value" id="cardSales">0.00</span></p>
+                <p>COMP: $<span class="summary-value" id="compSales">0.00</span></p>
+                <p>Tickets: $<span class="summary-value" id="ticketSales">0.00</span></p>
+                <p>TOTAL IN: $<span class="summary-value" id="totalIn">0.00</span></p>
+            </div>
+        </div>
+        <div class="log-container">
+            <h2>Sales Over Time</h2>
+            <div class="graph-container">
+                <canvas id="transactionGraph"></canvas>
+            </div>
+        </div>
+        <div class="log-container">
+            <h2>Transaction Log</h2>
+            <div class="table-wrapper">
+                <table id="transactionTable">
+                    <thead><tr><th>Time</th><th>Items</th><th>Total</th><th>Note</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="grandTotal">Total Sales: $0.00</div>
+        </div>
+    </div>
+    <script>
+        let db, transactionChart;
+        $(document).ready(() => {
+            const request = indexedDB.open('SalesDB', 2);
+            request.onupgradeneeded = e => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                if (!db.objectStoreNames.contains('transactions')) db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId', { unique: false });
+            };
+            request.onsuccess = e => { db = e.target.result; loadSessions(); };
+            $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
+        });
+        function loadSessions() {
+            const tx = db.transaction(['sessions'], 'readonly');
+            const store = tx.objectStore('sessions');
+            store.getAll().onsuccess = e => {
+                const sessions = e.target.result;
+                const $select = $('#sessionSelect');
+                $select.empty().append('<option value="">Select a session</option>');
+                sessions.forEach(s => $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`));
+            };
+        }
+        function updateLog(sessionId) {
+            if (!sessionId) return resetDisplay();
+            const tx = db.transaction(['transactions'], 'readonly');
+            const store = tx.objectStore('transactions');
+            const index = store.index('sessionId');
+            index.getAll(Number(sessionId)).onsuccess = e => {
+                const transactions = e.target.result.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                let cashTotal = 0, cardTotal = 0, compTotal = 0, ticketTotal = 0, totalIn = 0;
+                const cashData = [], cardData = [], compData = [], ticketData = [];
+                transactions.forEach(t => {
+                    t.itemList.forEach(item => {
+                        const value = item.price * item.quantity;
+                        if (item.type === 'CASH') cashTotal += value;
+                        else if (item.type === 'CARD') cardTotal += value;
+                        else if (item.type === 'COMP') compTotal += value;
+                        else if (item.type === 'Tickets') ticketTotal += value;
+                    });
+                    totalIn += t.total;
+                    cashData.push({ x: new Date(t.timestamp), y: cashTotal });
+                    cardData.push({ x: new Date(t.timestamp), y: cardTotal });
+                    compData.push({ x: new Date(t.timestamp), y: compTotal });
+                    ticketData.push({ x: new Date(t.timestamp), y: ticketTotal });
+                });
+                $('#cashSales').text(cashTotal.toFixed(2));
+                $('#cardSales').text(cardTotal.toFixed(2));
+                $('#compSales').text(compTotal.toFixed(2));
+                $('#ticketSales').text(ticketTotal.toFixed(2));
+                $('#totalIn').text(totalIn.toFixed(2));
+                updateGraph(cashData, cardData, compData, ticketData);
+                const $tbody = $('#transactionTable tbody').empty();
+                transactions.forEach(t => {
+                    const itemsHtml = t.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (${i.quantity})</span>`).join(', ');
+                    $tbody.append(`<tr><td>${t.time}</td><td>${itemsHtml}</td><td>$${t.total.toFixed(2)}</td><td>${t.note || ''}</td></tr>`);
+                });
+                $('#grandTotal').text(`Total Sales: $${totalIn.toFixed(2)}`);
+            };
+        }
+        function resetDisplay() {
+            $('#cashSales, #cardSales, #compSales, #ticketSales, #totalIn').text('0.00');
+            if (transactionChart) transactionChart.data.datasets.forEach(d => d.data = []);
+            $('#transactionTable tbody').empty();
+            $('#grandTotal').text('Total Sales: $0.00');
+        }
+        function updateGraph(cashData, cardData, compData, ticketData) {
+            const ctx = document.getElementById('transactionGraph').getContext('2d');
+            if (!transactionChart) {
+                transactionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'CASH', data: cashData, borderColor: '#2e7d32', fill: false },
+                            { label: 'CARD', data: cardData, borderColor: '#d32f2f', fill: false },
+                            { label: 'COMP', data: compData, borderColor: '#ffa500', fill: false },
+                            { label: 'Tickets', data: ticketData, borderColor: '#1a73e8', fill: false }
+                        ]
+                    },
+                    options: { scales: { x: { type: 'time', time: { unit: 'minute' } }, y: { beginAtZero: true } } }
+                });
+            } else {
+                transactionChart.data.datasets[0].data = cashData;
+                transactionChart.data.datasets[1].data = cardData;
+                transactionChart.data.datasets[2].data = compData;
+                transactionChart.data.datasets[3].data = ticketData;
+                transactionChart.update();
+            }
+        }
+    </script>
+</body>
+</html>
