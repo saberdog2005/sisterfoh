@@ -7,7 +7,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style> 
+    <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         #sessionInfo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -79,13 +79,7 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        // API Constants (included for reference; not directly used in this file)
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-
-        // Replace with your actual Google Apps Script Web App URL
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your actual Web App URL
 
         const allButtons = [
             { item: 'CASH $20', enabled: true },
@@ -228,7 +222,16 @@
                 });
 
                 $('#toggleSalesBtn').on('click', () => {
-                    this.toggleSales();
+                    if (this.isSalesActive) {
+                        const pin = prompt('Enter PIN to close sales:');
+                        if (pin === '1234') {
+                            this.closeSales();
+                        } else {
+                            alert('Incorrect PIN');
+                        }
+                    } else {
+                        this.openSales();
+                    }
                 });
 
                 $('#logSaleBtn').on('click', () => {
@@ -263,20 +266,38 @@
                 $('#logSaleBtn').prop('disabled', this.cashTotal <= 0 && this.doorCount <= 0);
             }
 
-            toggleSales() {
-                this.isSalesActive = !this.isSalesActive;
-                $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
-                $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
-                if (this.isSalesActive) {
-                    const sessionId = Date.now().toString();
-                    localStorage.setItem('activeSessionId', sessionId);
-                    const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
-                    this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
-                    $('#editLayoutBtn').hide();
-                } else {
-                    localStorage.removeItem('activeSessionId');
-                    $('#editLayoutBtn').show();
-                }
+            openSales() {
+                this.isSalesActive = true;
+                $('#toggleSalesBtn').text('Close Sales');
+                $('#message').text('Sales are now active.');
+                const sessionId = Date.now().toString();
+                localStorage.setItem('activeSessionId', sessionId);
+                const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
+                this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
+                this.sendPostRequest({ type: 'SALES OPEN', sessionId });
+                $('#editLayoutBtn').hide();
+                this.lockSessionInfo();
+                window.open('log.html', '_blank');
+            }
+
+            closeSales() {
+                this.isSalesActive = false;
+                $('#toggleSalesBtn').text('Open Sales');
+                $('#message').text('Sales are closed.');
+                const sessionId = localStorage.getItem('activeSessionId');
+                this.sendPostRequest({ type: 'CLOSED', sessionId, data: ['CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED', 'CLOSED'] });
+                localStorage.removeItem('activeSessionId');
+                $('#editLayoutBtn').show();
+                this.unlockSessionInfo();
+                this.reset();
+            }
+
+            lockSessionInfo() {
+                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true);
+            }
+
+            unlockSessionInfo() {
+                $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', false);
             }
 
             logSale() {
@@ -296,7 +317,9 @@
                     doorCount: this.doorCount
                 };
                 this.sendPostRequest(transaction);
-                this.reset();
+                this.items = {}; // Reset items but not totals
+                $('#noteInput').val('');
+                this.updateDisplay();
             }
 
             async sendPostRequest(data) {
@@ -319,7 +342,6 @@
                 this.doorCount = 0;
                 this.items = {};
                 this.updateDisplay();
-                $('#noteInput').val('');
             }
         }
 
