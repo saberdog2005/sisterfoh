@@ -148,18 +148,18 @@
                 transactions.forEach((tr, index) => {
                     const items = JSON.parse(tr[4] || '[]');
                     items.forEach(item => {
-                        if (item.type === 'CASH') cashSales += item.price * item.quantity;
-                        if (item.type === 'CARD') cardSales += item.price * item.quantity;
-                        if (item.type === 'COMP') compCount += item.quantity;
-                        if (item.type === 'Tickets') ticketCount += item.quantity;
+                        if (item.type === 'cash') cashSales += item.price * item.quantity;
+                        if (item.type === 'card') cardSales += item.price * item.quantity;
+                        if (item.type === 'comp') compCount += item.quantity;
+                        if (item.type === 'ticket') ticketCount += item.quantity;
                     });
                     totalSales += parseFloat(tr[5] || 0);
                     totalDoorCount += parseInt(tr[7] || 0);
                     doorData.labels.push(`T${index + 1}`);
-                    doorData.cash.push(items.filter(i => i.type === 'CASH').reduce((sum, i) => sum + i.quantity, 0));
-                    doorData.card.push(items.filter(i => i.type === 'CARD').reduce((sum, i) => sum + i.quantity, 0));
-                    doorData.comp.push(items.filter(i => i.type === 'COMP').reduce((sum, i) => sum + i.quantity, 0));
-                    doorData.tickets.push(items.filter(i => i.type === 'Tickets').reduce((sum, i) => sum + i.quantity, 0));
+                    doorData.cash.push(items.filter(i => i.type === 'cash').reduce((sum, i) => sum + i.quantity, 0));
+                    doorData.card.push(items.filter(i => i.type === 'card').reduce((sum, i) => sum + i.quantity, 0));
+                    doorData.comp.push(items.filter(i => i.type === 'comp').reduce((sum, i) => sum + i.quantity, 0));
+                    doorData.tickets.push(items.filter(i => i.type === 'ticket').reduce((sum, i) => sum + i.quantity, 0));
                 });
 
                 $('#cashSales').text(cashSales.toFixed(2));
