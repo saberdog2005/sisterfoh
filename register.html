@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sister Bar Register</title> 
+    <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
@@ -80,23 +81,25 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Provided API Key
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Provided Spreadsheet ID
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const WEB_APP_URL = 'YOUR_WEB_APP_URL'; // Replace with your Google Apps Script web app URL
 
         const allButtons = [
-            { item: 'CASH $20', enabled: false },
-            { item: 'CASH $15', enabled: false },
-            { item: 'CASH $12', enabled: false },
-            { item: 'CASH $10', enabled: false },
-            { item: 'CASH $7', enabled: false },
-            { item: 'CASH $5', enabled: false },
-            { item: 'CASH (CUSTOM)', enabled: false },
-            { item: 'CC TRANS', enabled: false },
-            { item: 'TICKET', enabled: false },
-            { item: 'COMP', enabled: false }
+            { item: 'CASH $20', enabled: true },
+            { item: 'CASH $15', enabled: true },
+            { item: 'CASH $12', enabled: true },
+            { item: 'CASH $10', enabled: true },
+            { item: 'CASH $7', enabled: true },
+            { item: 'CASH $5', enabled: true },
+            { item: 'CASH (CUSTOM)', enabled: true },
+            { item: 'CC TRANS', enabled: true },
+            { item: 'TICKET', enabled: true },
+            { item: 'COMP', enabled: true }
         ];
         let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
+        let interactionLog = [];
 
         const itemConfig = {
             'CASH $20': { class: 'cash-item', price: 20 },
@@ -143,7 +146,7 @@
             const $container = $('#buttonContainer').empty();
             const buttonsToShow = editMode ? allButtons : layout.filter(b => b.enabled);
             buttonsToShow.forEach(config => {
-                $container.append(createButtonHTML(config.item, editMode ? false : config.enabled));
+                $container.append(createButtonHTML(config.item, editMode ? config.enabled : true));
             });
             if (editMode) {
                 $('.edit-controls').show();
@@ -156,7 +159,35 @@
             }
         }
 
+        function logInteraction(action, details) {
+            const timestamp = new Date().toISOString();
+            interactionLog.push({ timestamp, action, details });
+            sendInteractionToSheet({ timestamp, action, details });
+        }
+
+        async function sendInteractionToSheet(interaction) {
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'INTERACTION',
+                        sessionId: app.sessionId || 'N/A',
+                        timestamp: interaction.timestamp,
+                        action: interaction.action,
+                        details: JSON.stringify(interaction.details)
+                    })
+                });
+                if (!response.ok) throw new Error('Network response was not ok');
+                console.log('Interaction logged:', interaction);
+            } catch (err) {
+                console.error('Error logging interaction:', err);
+                $('#message').text('Error logging interaction. Data saved locally.');
+            }
+        }
+
         $('#editLayoutBtn').on('click', function() {
+            logInteraction('EDIT_LAYOUT_START', {});
             renderButtons(true);
             $(this).hide();
             $('#confirmLayoutBtn').show();
@@ -169,35 +200,31 @@
                 const enabled = !$(this).hasClass('disabled');
                 newLayout.push({ item, enabled });
             });
-            layout = newLayout.filter(b => b.enabled); // Only enabled buttons remain visible
-            localStorage.setItem('buttonLayout', JSON.stringify(newLayout));
+            layout = newLayout;
+            localStorage.setItem('buttonLayout', JSON.stringify(layout));
             renderButtons(false);
+            logInteraction('EDIT_LAYOUT_CONFIRM', { layout: layout });
             $(this).hide();
             $('#editLayoutBtn').show();
         });
 
         $(document).on('click', '.enable-btn', function() {
-            $(this).closest('.product-item').removeClass('disabled');
+            const $item = $(this).closest('.product-item');
+            $item.removeClass('disabled');
+            logInteraction('ENABLE_BUTTON', { item: $item.data('item') });
         });
 
         $(document).on('click', '.disable-btn', function() {
-            $(this).closest('.product-item').addClass('disabled');
+            const $item = $(this).closest('.product-item');
+            $item.addClass('disabled');
+            logInteraction('DISABLE_BUTTON', { item: $item.data('item') });
         });
 
         if (localStorage.getItem('adminLoggedIn') === 'true') {
             $('#adminControls').show();
+        } else {
+            $('#adminControls').hide();
         }
-
-        gapi.load('client', () => {
-            gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: DISCOVERY_DOCS
-            }).then(() => {
-                console.log('Google API client initialized');
-            }).catch(err => {
-                console.error('Error initializing Google API client:', err);
-            });
-        });
 
         class SalesApp {
             constructor() {
@@ -205,6 +232,7 @@
                 this.doorCount = 0;
                 this.items = {};
                 this.isSalesActive = false;
+                this.sessionId = null;
                 this.initEvents();
             }
 
@@ -216,6 +244,7 @@
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
+                    logInteraction('INCREMENT', { item, price });
                 });
 
                 $(document).on('click', '.decrement-btn', (e) => {
@@ -225,6 +254,7 @@
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
+                    logInteraction('DECREMENT', { item, price });
                 });
 
                 $(document).on('click', '.add-custom', () => {
@@ -234,6 +264,7 @@
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
+                        logInteraction('ADD_CUSTOM', { amount });
                         $custom.find('input').val('');
                     }
                 });
@@ -244,6 +275,7 @@
 
                 $('#logSaleBtn').on('click', () => {
                     this.logSale();
+                    logInteraction('LOG_SALE', { cashTotal: this.cashTotal, doorCount: this.doorCount, items: this.items });
                 });
             }
 
@@ -279,41 +311,88 @@
                 $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
                 $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
                 if (this.isSalesActive) {
+                    this.sessionId = Date.now().toString();
                     $('#adminControls').hide();
                     this.postSessionStart();
+                    logInteraction('OPEN_SALES', { sessionId: this.sessionId });
                 } else {
+                    this.postSessionClose();
+                    logInteraction('CLOSE_SALES', { sessionId: this.sessionId, cashTotal: this.cashTotal, doorCount: this.doorCount });
                     if (localStorage.getItem('adminLoggedIn') === 'true') {
                         $('#adminControls').show();
                     }
+                    this.sessionId = null;
                 }
             }
 
-            postSessionStart() {
-                const sessionData = [
-                    $('#eventDate').val(),
-                    $('#eventVenue').val(),
-                    $('#eventName').val(),
-                    $('#cashierName').val(),
-                    'SESSION_START'
-                ];
-                gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A:E',
-                    valueInputOption: 'RAW',
-                    insertDataOption: 'INSERT_ROWS',
-                    resource: { values: [sessionData] }
-                }).then(response => {
-                    console.log('Session start posted:', response.result);
+            async postSessionStart() {
+                try {
+                    const sessionData = {
+                        type: 'SESSION_START',
+                        sessionId: this.sessionId,
+                        date: $('#eventDate').val(),
+                        venue: $('#eventVenue').val(),
+                        eventName: $('#eventName').val(),
+                        cashier: $('#cashierName').val()
+                    };
+                    const response = await fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sessionData)
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
                     $('#message').text('Session started successfully.');
-                }).catch(err => {
+                } catch (err) {
                     console.error('Error posting session start:', err);
                     $('#message').text('Error starting session. Please try again.');
-                });
+                }
             }
 
-            logSale() {
-                console.log('Sale logged:', { cashTotal: this.cashTotal, doorCount: this.doorCount, items: this.items });
-                this.reset();
+            async postSessionClose() {
+                try {
+                    const sessionData = {
+                        type: 'SESSION_CLOSE',
+                        sessionId: this.sessionId,
+                        grandTotal: this.cashTotal,
+                        doorCount: this.doorCount
+                    };
+                    const response = await fetch(https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sessionData)
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    $('#message').text('Session closed successfully.');
+                } catch (err) {
+                    console.error('Error posting session close:', err);
+                    $('#message').text('Error closing session. Please try again.');
+                }
+            }
+
+            async logSale() {
+                try {
+                    const saleData = {
+                        type: 'TRANSACTION',
+                        sessionId: this.sessionId,
+                        timestamp: new Date().toISOString(),
+                        time: new Date().toLocaleTimeString(),
+                        itemList: Object.entries(this.items).map(([item, quantity]) => ({ item, quantity, price: itemConfig[item]?.price || 0 })),
+                        total: this.cashTotal,
+                        note: $('#noteInput').val(),
+                        doorCount: this.doorCount
+                    };
+                    const response = await fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(saleData)
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    $('#message').text('Sale logged successfully.');
+                    this.reset();
+                } catch (err) {
+                    console.error('Error logging sale:', err);
+                    $('#message').text('Error logging sale. Please try again.');
+                }
             }
 
             reset() {
