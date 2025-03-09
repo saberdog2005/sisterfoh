@@ -1,0 +1,36 @@
+// API.html as Google Apps Script
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const spreadsheetId = '1IUqkPTg87Xujvxv_efLFtX7kpji0UdPOLAX5N_97IaY';
+  const sheetName = 'LIVE REGISTER';
+
+  // Open the spreadsheet and get or create the sheet
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['Session ID', 'Timestamp', 'Time', 'Items', 'Total', 'Note']);
+  }
+
+  // Format items as a string
+  const itemsString = data.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
+
+  // Append the transaction to the sheet
+  sheet.appendRow([
+    data.sessionId,
+    data.timestamp,
+    data.time,
+    itemsString,
+    data.total,
+    data.note || ''
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet() {
+  // For testing purposes, return a sample response
+  return ContentService.createTextOutput(JSON.stringify({ message: 'API is live' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
