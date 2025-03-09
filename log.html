@@ -1,146 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 20px; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; width: 300px; }
-        .modal-content input { margin: 10px 0; padding: 8px; width: 80%; background: #424242; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; }
-        .modal-content button { padding: 10px 20px; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .grid-container { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; max-width: 1024px; margin: 0 auto; }
-        .log-container { background: #2d2d2d; padding: 15px; border-radius: 5px; }
-        .graph-container { grid-row: span 2; }
-        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .item-cash { color: #2e7d32; }
-        .item-card { color: #d32f2f; }
-        .item-tickets { color: #1a73e8; }
-        .item-comp { color: #ffa500; }
-        select, button { padding: 5px; background: #424242; color: #e0e0e0; border: none; border-radius: 4px; }
-        #transactionLog { overflow-y: auto; max-height: 200px; }
-        @media (max-width: 1024px) { .grid-container { grid-template-columns: 1fr; grid-template-rows: auto; } .graph-container { grid-row: auto; } }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1024px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .log { border-top: 1px solid #ccc; padding-top: 20px; }
+        .transaction { padding: 10px; border-bottom: 1px solid #eee; }
+        h1 { margin-top: 0; }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Login</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button id="loginBtn">Login</button>
+    <div class="container">
+        <h1>Sales Log</h1>
+        <div class="summary">
+            <p>Cash Sales: $<span id="cashSales">0.00</span></p>
+            <p>Card Sales: $<span id="cardSales">0.00</span></p>
+            <p>Comp Count: <span id="compCount">0</span></p>
+            <p>Ticket Count: <span id="ticketCount">0</span></p>
+            <p>Total Sales: $<span id="totalSales">0.00</span></p>
+            <p>Thru Door: <span id="doorCount">0</span></p>
         </div>
-    </div>
-    <div class="grid-container" style="display:none;">
-        <div class="log-container graph-container">
-            <h2>Sales Over Time</h2>
-            <canvas id="salesGraph"></canvas>
-        </div>
-        <div class="log-container">
-            <h2>Live Summary</h2>
-            <select id="sessionSelect"><option value="">Select a session</option></select>
-            <button id="refreshBtn">Refresh</button>
-            <div class="summary-grid">
-                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
-                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
-                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
-                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
-                <p>Total Sales: $<span id="totalSales">0.00</span></p>
-                <p>Thru Door: <span id="doorCount">0</span></p>
-            </div>
-        </div>
-        <div class="log-container">
-            <h2>Transaction Log</h2>
-            <div id="transactionLog"></div>
-        </div>
+        <div class="log" id="transactionLog"></div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Replace with your API key
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        let salesChart;
-        const username = 'admin';
-        const passwordHash = CryptoJS.SHA256('password123').toString();
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your web app URL
 
-        $(document).ready(() => {
-            $('#loginBtn').on('click', () => {
-                const user = $('#username').val();
-                const passHash = CryptoJS.SHA256($('#password').val()).toString();
-                if (user === username && passHash === passwordHash) {
-                    $('#loginModal').hide();
-                    $('.grid-container').show();
-                    loadSessions();
-                } else {
-                    alert('Incorrect credentials');
+        async function fetchData() {
+            try {
+                const response = await fetch(`${WEB_APP_URL}?action=getLogData`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                processData(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function processData(data) {
+            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, doorCount = 0;
+            const log = document.getElementById('transactionLog');
+            log.innerHTML = '';
+            data.forEach(row => {
+                if (row[0] === 'TRANSACTION') {
+                    const total = parseFloat(row[5]) || 0;
+                    const note = row[6] || '';
+                    const door = parseInt(row[7]) || 0;
+                    totalSales += total;
+                    doorCount += door;
+                    const div = document.createElement('div');
+                    div.className = 'transaction';
+                    div.textContent = `${row[3]} - $${total.toFixed(2)} - Note: ${note}`;
+                    log.appendChild(div);
                 }
             });
-            gapi.load('client', () => {
-                gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-            });
-            $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
-            $('#refreshBtn').on('click', () => { updateLog($('#sessionSelect').val()); });
-        });
-
-        async function loadSessions() {
-            const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A2:B'
-            });
-            const rows = response.result.values || [];
-            const sessions = new Set(rows.filter(row => row[0].includes('SESSION_START')).map(row => row[1]));
-            const $select = $('#sessionSelect');
-            $select.empty().append('<option value="">Select a session</option>');
-            sessions.forEach(id => $select.append(`<option value="${id}">${id}</option>`));
+            document.getElementById('cashSales').textContent = cashSales.toFixed(2);
+            document.getElementById('cardSales').textContent = cardSales.toFixed(2);
+            document.getElementById('compCount').textContent = compCount;
+            document.getElementById('ticketCount').textContent = ticketCount;
+            document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+            document.getElementById('doorCount').textContent = doorCount;
         }
 
-        async function updateLog(sessionId) {
-            if (!sessionId) return;
-            const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A2:H'
-            });
-            const rows = response.result.values || [];
-            const transactions = rows.filter(row => row[1] === sessionId && row[0] === 'TRANSACTION').map(row => ({
-                time: row[3],
-                items: JSON.parse(row[4]),
-                total: parseFloat(row[5] || 0),
-                note: row[6],
-                doorCount: parseInt(row[7] || 0)
-            }));
-            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-            const graphData = { labels: [], sales: [] };
-            transactions.forEach(tr => {
-                tr.items.forEach(item => {
-                    if (item.item.includes('CASH')) cashSales += item.price * item.quantity;
-                    if (item.item.includes('CC')) cardSales += item.price * item.quantity;
-                    if (item.item === 'COMP') compCount += item.quantity;
-                    if (item.item === 'TICKET') ticketCount += item.quantity;
-                });
-                totalSales += tr.total;
-                totalDoorCount += tr.doorCount;
-                graphData.labels.push(tr.time);
-                graphData.sales.push(totalSales);
-            });
-            $('#cashSales').text(cashSales.toFixed(2));
-            $('#cardSales').text(cardSales.toFixed(2));
-            $('#compCount').text(compCount);
-            $('#ticketCount').text(ticketCount);
-            $('#totalSales').text(totalSales.toFixed(2));
-            $('#doorCount').text(totalDoorCount);
-            const $log = $('#transactionLog').empty();
-            transactions.forEach(tr => $log.append(`<p>${tr.time} - ${tr.items.map(i => `${i.item} x${i.quantity}`).join(', ')} - $${tr.total.toFixed(2)} ${tr.note ? '(' + tr.note + ')' : ''}</p>`));
-            if (salesChart) salesChart.destroy();
-            salesChart = new Chart(document.getElementById('salesGraph').getContext('2d'), {
-                type: 'line',
-                data: { labels: graphData.labels, datasets: [{ label: 'Total Sales', data: graphData.sales, borderColor: '#388e3c', fill: false }] },
-                options: { scales: { y: { beginAtZero: true } } }
-            });
-        }
+        setInterval(fetchData, 5000); // Update every 5 seconds
+        fetchData(); // Initial fetch
     </script>
 </body>
 </html>
