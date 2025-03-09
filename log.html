@@ -7,10 +7,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <style> 
+    <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -23,7 +22,7 @@
             gap: 20px;
         }
         .left-panel {
-            /* Graph width is controlled by .graph-container */
+            flex: 0 0 40%;
         }
         .right-panel {
             flex: 1;
@@ -62,11 +61,6 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             margin-bottom: 20px;
         }
-        .graph-container {
-            width: 40%;
-            max-width: 600px;
-            margin: 0 auto;
-        }
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -97,16 +91,21 @@
         #logoutBtn {
             background: #e74c3c;
             color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-top: 10px;
         }
-        .status-open {
+        .cash-total { color: #2e7d32; }
+        .card-total { color: #d32f2f; }
+        .comp-total { color: #ffa500; }
+        .ticket-total { color: #1a73e8; }
+        .total-sales { color: #ffffff; }
+        .door-count-total { color: #00bcd4; }
+        #drawerStatus {
+            margin-top: 10px;
+            font-weight: bold;
             color: #4CAF50;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .status-closed {
-            color: #e74c3c;
-            font-weight: bold;
-            margin-left: 10px;
         }
     </style>
 </head>
@@ -131,7 +130,7 @@
             <div class="log-container" style="display: none;">
                 <h2>Live Sales Summary</h2>
                 <select id="sessionSelect"><option value="">Select a session</option></select>
-                <span id="drawerStatus"></span>
+                <div id="drawerStatus" style="display: none;"></div>
                 <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
                 <button id="refreshBtn">Refresh</button>
                 <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 3s)</label>
@@ -180,10 +179,10 @@
                 const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
                 const select = $('#sessionSelect');
                 select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                const currentSessionId = localStorage.getItem('sessionId');
-                if (currentSessionId && sessionIds.includes(currentSessionId)) {
-                    select.val(currentSessionId);
-                    updateLog(currentSessionId);
+                const activeSessionId = localStorage.getItem('sessionId');
+                if (activeSessionId && sessionIds.includes(activeSessionId)) {
+                    select.val(activeSessionId);
+                    updateLog(activeSessionId);
                 }
             }, error => console.error('Error loading sessions:', error));
         }
@@ -211,9 +210,9 @@
                 closedTimestamp = closedRow ? closedRow[2] : 'N/A';
 
                 if (!closedRow) {
-                    $('#drawerStatus').text(`Drawer open by ${sessionCashier}`).removeClass('status-closed').addClass('status-open');
+                    $('#drawerStatus').text(`Drawer open by ${sessionCashier}`).show();
                 } else {
-                    $('#drawerStatus').text('Session closed').removeClass('status-open').addClass('status-closed');
+                    $('#drawerStatus').hide();
                 }
 
                 let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
@@ -224,7 +223,7 @@
                     const items = JSON.parse(tr[4] || '[]');
                     items.forEach(item => {
                         if (item.type === 'cash') {
-                            cashSales += item.amount * 1;
+                            cashSales += item.amount || 0;
                             cumulativeCash += 1;
                         } else if (item.type === 'card') {
                             cardSales += item.amount || 0;
@@ -272,9 +271,7 @@
                     },
                     options: {
                         responsive: true,
-                        scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count / Total Sales ($)' } }
-                        }
+                        scales: { y: { beginAtZero: true, type: 'linear', title: { display: true, text: 'Cumulative Count / Total Sales ($)' } } }
                     }
                 });
 
@@ -287,11 +284,11 @@
         }
 
         function resetDisplay() {
-            $('#summaryGrid').html('<div class="summary-item">No data available</div>');
+            $('#summaryGrid').empty().html('<div class="summary-item">No data available</div>');
             if (salesChart) salesChart.destroy();
             salesChart = null;
             $('#saveToPdfBtn').hide();
-            $('#drawerStatus').text('');
+            $('#drawerStatus').hide();
         }
 
         function toggleAutoRefresh() {
@@ -333,6 +330,11 @@
 
         $(document).ready(() => {
             handleClientLoad();
+            if (localStorage.getItem('adminLoggedIn') === 'true') {
+                $('.log-container').show();
+            } else {
+                $('#loginModal').show();
+            }
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
                 const pass = $('#password').val().trim();
@@ -354,15 +356,6 @@
             $('#autoRefresh').on('change', toggleAutoRefresh);
             $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
             $('#saveToPdfBtn').on('click', generatePDF);
-            window.addEventListener('storage', function(e) {
-                if (e.key === 'sessionId') {
-                    const newSessionId = e.newValue;
-                    if (newSessionId && $('#sessionSelect').find(`option[value="${newSessionId}"]`).length) {
-                        $('#sessionSelect').val(newSessionId);
-                        updateLog(newSessionId);
-                    }
-                }
-            });
         });
     </script>
 </body>
