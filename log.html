@@ -119,7 +119,7 @@
         <button id="logoutBtn">Logout</button>
     </div>
     <script>
-        // API Constants integrated here
+        // Integrated API Constants
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
@@ -138,14 +138,19 @@
             }).then(() => {
                 if (localStorage.getItem('adminLoggedIn') === 'true') {
                     $('.log-container').show();
-                    loadSessions();
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    if (activeSessionId) {
+                        loadSessions(activeSessionId);
+                    } else {
+                        loadSessions();
+                    }
                 } else {
                     $('#loginModal').show();
                 }
             }, error => console.error('Error initializing client:', error));
         }
 
-        function loadSessions() {
+        function loadSessions(selectedSessionId = null) {
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!B2:B'
@@ -153,7 +158,13 @@
                 const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
                 const select = $('#sessionSelect');
                 select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                if (sessionIds.length > 0) updateLog(sessionIds[0]);
+                if (selectedSessionId && sessionIds.includes(selectedSessionId)) {
+                    select.val(selectedSessionId);
+                    updateLog(selectedSessionId);
+                } else if (sessionIds.length > 0) {
+                    select.val(sessionIds[0]);
+                    updateLog(sessionIds[0]);
+                }
             }, error => console.error('Error loading sessions:', error));
         }
 
@@ -257,7 +268,12 @@
                     localStorage.setItem('adminLoggedIn', 'true');
                     $('#loginModal').hide();
                     $('.log-container').show();
-                    loadSessions();
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    if (activeSessionId) {
+                        loadSessions(activeSessionId);
+                    } else {
+                        loadSessions();
+                    }
                 } else {
                     alert('Incorrect credentials');
                 }
