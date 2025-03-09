@@ -8,21 +8,21 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;font-size:16px;}
-        h2{margin-bottom:10px;text-align:center;}
-        .container{background:#2d2d2d;padding:15px;border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,0.3);max-height:80vh;overflow-y:auto;}
-        select{padding:8px;font-size:14px;margin:5px 0;border-radius:4px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0;width:100%;}
-        .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
-        .item-cash{color:#2e7d32;}
-        .item-card{color:#d32f2f;}
-        .item-tickets{color:#1a73e8;}
-        .item-comp{color:#ffa500;}
-        .graph-container{margin-top:20px;height:300px;}
-        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;}
-        .modal-content{background:#2d2d2d;padding:20px;border-radius:8px;text-align:center;}
-        .modal-content input{margin:10px 0;padding:8px;width:80%;}
-        .modal-content button{padding:10px 20px;margin:5px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;}
-        .modal-content button:hover{background:#66bb6a;}
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 20px; font-size: 16px; }
+        h2 { margin-bottom: 10px; text-align: center; }
+        .grid-container { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; }
+        .log-container { background: #2d2d2d; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow-y: auto; }
+        .graph-container { grid-row: span 2; height: 100%; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .item-cash { color: #2e7d32; }
+        .item-card { color: #d32f2f; }
+        .item-tickets { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; }
+        .modal-content input { margin: 10px 0; padding: 8px; width: 80%; }
+        .modal-content button { padding: 10px 20px; margin: 5px; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .modal-content button:hover { background: #66bb6a; }
     </style>
 </head>
 <body>
@@ -36,115 +36,177 @@
             <div class="forgot-password">Forgot Password?</div>
         </div>
     </div>
-    <div class="container" style="display:none;">
-        <h2>Live Sales Summary</h2>
-        <select id="sessionSelect">
-            <option value="">Select a session</option>
-        </select>
-        <div class="summary-grid">
-            <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
-            <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
-            <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
-            <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
-            <p>Total Sales: $<span id="totalSales">0.00</span></p>
-            <p>Thru Door: <span id="doorCount">0</span></p>
-        </div>
-        <div class="graph-container">
+    <div class="grid-container" style="display:none;">
+        <div class="log-container graph-container">
+            <h2>Sales and Counts Over Time</h2>
             <canvas id="salesGraph"></canvas>
+        </div>
+        <div class="log-container">
+            <h2>Live Sales Summary</h2>
+            <select id="sessionSelect"><option value="">Select a session</option></select>
+            <div class="summary-grid">
+                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
+                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
+                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
+                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
+                <p>Total Sales: $<span id="totalSales">0.00</span></p>
+                <p>Thru Door: <span id="doorCount">0</span></p>
+            </div>
+        </div>
+        <div class="log-container">
+            <h2>Transaction Log</h2>
+            <div id="transactionLog" style="overflow-y:auto; max-height:200px;"></div>
         </div>
     </div>
     <script>
-        const API_KEY='AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID='1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        let db,updateInterval,salesChart;
-        const username='brad',passwordHash=CryptoJS.SHA256('password123').toString();
+        const API_KEY = 'YOUR_API_KEY'; // Replace with your Google API Key
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // Replace with your Spreadsheet ID
+        let db, updateInterval, salesChart;
+        const username = 'brad', passwordHash = CryptoJS.SHA256('password123').toString();
 
-        $(document).ready(()=>{
-            $('#loginBtn').on('click',()=>{
-                const user=$('#username').val().trim(),pass=$('#password').val().trim();
-                if(!user||!pass){alert('Please enter both username and password');return;}
-                const inputHash=CryptoJS.SHA256(pass).toString();
-                if(user===username&&inputHash===passwordHash){
+        $(document).ready(() => {
+            $('#loginBtn').on('click', () => {
+                const user = $('#username').val().trim(), pass = $('#password').val().trim();
+                if (!user || !pass) { alert('Please enter both username and password'); return; }
+                const inputHash = CryptoJS.SHA256(pass).toString();
+                if (user === username && inputHash === passwordHash) {
                     $('#loginModal').hide();
-                    $('.container').show();
+                    $('.grid-container').show();
                     loadSessions();
-                }else{alert('Incorrect username or password');}
+                } else { alert('Incorrect username or password'); }
             });
-            $('#cancelBtn').on('click',()=>$('#username, #password').val(''));
-            $('.forgot-password').on('click',()=>alert('Forgot Password not implemented.'));
+            $('#cancelBtn').on('click', () => $('#username, #password').val(''));
+            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
 
-            const request=indexedDB.open('SalesDB',2);
-            request.onupgradeneeded=(e)=>{db=e.target.result;if(!db.objectStoreNames.contains('sessions')){db.createObjectStore('sessions',{keyPath:'id',autoIncrement:true});}};
-            request.onsuccess=(e)=>{db=e.target.result;};
-            $('#sessionSelect').on('change',function(){const sessionId=$(this).val();if(sessionId){updateLog(sessionId);clearInterval(updateInterval);updateInterval=setInterval(()=>updateLog(sessionId),5000);}else{clearInterval(updateInterval);resetDisplay();}});
+            const request = indexedDB.open('SalesDB', 2);
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('sessions')) {
+                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (e) => { db = e.target.result; };
+            $('#sessionSelect').on('change', function () {
+                const sessionId = $(this).val();
+                if (sessionId) {
+                    updateLog(sessionId);
+                    clearInterval(updateInterval);
+                    updateInterval = setInterval(() => updateLog(sessionId), 5000);
+                } else {
+                    clearInterval(updateInterval);
+                    resetDisplay();
+                }
+            });
         });
 
-        function loadSessions(){
-            const tx=db.transaction(['sessions'],'readonly');
-            const store=tx.objectStore('sessions');
-            store.getAll().onsuccess=(t)=>{
-                const sessions=t.target.result;
-                const $select=$('#sessionSelect');
+        function loadSessions() {
+            const tx = db.transaction(['sessions'], 'readonly');
+            const store = tx.objectStore('sessions');
+            store.getAll().onsuccess = (t) => {
+                const sessions = t.target.result;
+                const $select = $('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
-                sessions.forEach(s=>$select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status==='open'?' (Current)':''}</option>`));
-                const activeSessionId=localStorage.getItem('activeSessionId');
-                if(activeSessionId)$select.val(activeSessionId);
+                sessions.forEach(s => $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`));
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) $select.val(activeSessionId);
             };
         }
 
-        async function fetchTransactions(){
-            const range='Sheet1!A2:Z';
-            const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
-            try{
-                const response=await fetch(url);
-                const data=await response.json();
-                const rows=data.values||[];
-                const transactions=rows.map(row=>({
-                    sessionId:row[0],timestamp:row[1],time:row[2],itemList:JSON.parse(row[3]),total:parseFloat(row[4]),note:row[5],doorCount:parseInt(row[6])
+        async function fetchTransactions() {
+            const range = 'Sheet1!A2:Z';
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const rows = data.values || [];
+                return rows.map(row => ({
+                    sessionId: row[0],
+                    timestamp: row[1],
+                    time: row[2],
+                    itemList: JSON.parse(row[3]),
+                    total: parseFloat(row[4]),
+                    note: row[5],
+                    doorCount: parseInt(row[6])
                 }));
-                return transactions;
-            }catch(error){console.error('Error fetching transactions:',error);return[];}
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                return [];
+            }
         }
 
-        async function updateLog(sessionId){
-            const transactions=await fetchTransactions();
-            const sessionTransactions=transactions.filter(tr=>tr.sessionId===sessionId);
-            if(!sessionTransactions.length){resetDisplay();return;}
-            let cashSales=0,cardSales=0,compCount=0,ticketCount=0,totalSales=0,totalDoorCount=0;
-            const graphData={labels:[],cash:[],card:[],comp:[],tickets:[]};
-            sessionTransactions.forEach(tr=>{
-                let transactionCash=0,transactionCard=0,transactionComp=0,transactionTicket=0;
-                tr.itemList.forEach(item=>{
-                    const value=item.price*item.quantity;
-                    if(item.type==='CASH')transactionCash+=value;
-                    else if(item.type==='CARD')transactionCard+=value;
-                    if(item.type==='COMP')transactionComp+=item.quantity;
-                    if(item.type==='Tickets')transactionTicket+=item.quantity;
+        async function updateLog(sessionId) {
+            const transactions = await fetchTransactions();
+            const sessionTransactions = transactions.filter(tr => tr.sessionId === sessionId);
+            if (!sessionTransactions.length) { resetDisplay(); return; }
+            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
+            const graphData = { labels: [], cash: [], card: [], comp: [], tickets: [], door: [] };
+
+            sessionTransactions.forEach(tr => {
+                let transactionCash = 0, transactionCard = 0, transactionComp = 0, transactionTicket = 0;
+                tr.itemList.forEach(item => {
+                    const value = item.price * item.quantity;
+                    if (item.type === 'CASH') transactionCash += value;
+                    else if (item.type === 'CARD') transactionCard += value;
+                    if (item.type === 'COMP') transactionComp += item.quantity;
+                    if (item.type === 'Tickets') transactionTicket += item.quantity;
                 });
-                cashSales+=transactionCash;cardSales+=transactionCard;compCount+=transactionComp;ticketCount+=transactionTicket;totalSales+=tr.total;totalDoorCount+=tr.doorCount;
-                graphData.labels.push(tr.time);graphData.cash.push(cashSales);graphData.card.push(cardSales);graphData.comp.push(compCount);graphData.tickets.push(ticketCount);
+                cashSales += transactionCash;
+                cardSales += transactionCard;
+                compCount += transactionComp;
+                ticketCount += transactionTicket;
+                totalSales += tr.total;
+                totalDoorCount += tr.doorCount;
+
+                graphData.labels.push(tr.time);
+                graphData.cash.push(cashSales);
+                graphData.card.push(cardSales);
+                graphData.comp.push(compCount);
+                graphData.tickets.push(ticketCount);
+                graphData.door.push(totalDoorCount);
             });
-            $('#cashSales').text(cashSales.toFixed(2));$('#cardSales').text(cardSales.toFixed(2));$('#compCount').text(compCount);$('#ticketCount').text(ticketCount);$('#totalSales').text(totalSales.toFixed(2));$('#doorCount').text(totalDoorCount);
+
+            $('#cashSales').text(cashSales.toFixed(2));
+            $('#cardSales').text(cardSales.toFixed(2));
+            $('#compCount').text(compCount);
+            $('#ticketCount').text(ticketCount);
+            $('#totalSales').text(totalSales.toFixed(2));
+            $('#doorCount').text(totalDoorCount);
             updateGraph(graphData);
+            updateTransactionLog(sessionTransactions);
         }
 
-        function resetDisplay(){$('#cashSales, #cardSales').text('0.00');$('#compCount, #ticketCount, #doorCount').text('0');$('#totalSales').text('0.00');if(salesChart)salesChart.destroy();}
+        function updateTransactionLog(transactions) {
+            const $log = $('#transactionLog').empty();
+            transactions.forEach(tr => {
+                const items = tr.itemList.map(i => `${i.item} (${i.quantity})`).join(', ');
+                $log.append(`<p>${tr.time} - ${items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
+            });
+        }
 
-        function updateGraph(data){
-            const ctx=document.getElementById('salesGraph').getContext('2d');
-            if(salesChart)salesChart.destroy();
-            salesChart=new Chart(ctx,{
-                type:'line',
-                data:{
-                    labels:data.labels,
-                    datasets:[
-                        {label:'CASH Sales',data:data.cash,borderColor:'#2e7d32',fill:false},
-                        {label:'CARD Sales',data:data.card,borderColor:'#d32f2f',fill:false},
-                        {label:'COMP Count',data:data.comp,borderColor:'#ffa500',fill:false},
-                        {label:'Ticket Count',data:data.tickets,borderColor:'#1a73e8',fill:false}
+        function resetDisplay() {
+            $('#cashSales, #cardSales').text('0.00');
+            $('#compCount, #ticketCount, #doorCount').text('0');
+            $('#totalSales').text('0.00');
+            if (salesChart) salesChart.destroy();
+            $('#transactionLog').empty();
+        }
+
+        function updateGraph(data) {
+            const ctx = document.getElementById('salesGraph').getContext('2d');
+            if (salesChart) salesChart.destroy();
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { label: 'CASH Sales', data: data.cash, borderColor: '#2e7d32', fill: false },
+                        { label: 'CARD Sales', data: data.card, borderColor: '#d32f2f', fill: false },
+                        { label: 'COMP Count', data: data.comp, borderColor: '#ffa500', fill: false },
+                        { label: 'Ticket Count', data: data.tickets, borderColor: '#1a73e8', fill: false },
+                        { label: 'Thru Door', data: data.door, borderColor: '#ffffff', fill: false }
                     ]
                 },
-                options:{scales:{y:{beginAtZero:true}}}
+                options: { scales: { y: { beginAtZero: true } } }
             });
         }
     </script>
