@@ -53,7 +53,10 @@
         .cc-btn { background: #d32f2f; }
         .ticket-btn { background: #1a73e8; }
         .comp-btn { background: #ffa500; }
-        .inactive { opacity: 0.5; }
+        .hidden { display: none; }
+        .disabled { opacity: 0.5; pointer-events: none; }
+        .sales-open { background-color: green; }
+        .sales-closed { background-color: red; }
         .custom-cash input {
             width: 100px;
             padding: 8px;
@@ -98,7 +101,6 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -161,9 +163,19 @@
                 // Initialize button states
                 this.transactionButtons.each((_, btn) => {
                     const key = $(btn).data('type') + $(btn).data('amount');
-                    if (!(key in this.activeButtons)) this.activeButtons[key] = true;
-                    if (!this.activeButtons[key]) $(btn).addClass('inactive');
+                    const isActive = this.activeButtons[key] !== false;
+                    $(btn).attr('data-active', isActive);
+                    if (!isActive) {
+                        $(btn).addClass('hidden');
+                    }
                 });
+
+                // Initialize sales button state
+                if (this.salesOpen) {
+                    $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
+                } else {
+                    $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
+                }
 
                 this.updateDisplay();
                 this.bindEvents();
@@ -181,8 +193,11 @@
                 this.transactionButtons.on('click', (e) => {
                     const btn = e.target;
                     if (this.isEditing) {
-                        $(btn).toggleClass('inactive');
-                    } else if (!$(btn).hasClass('inactive') && this.salesOpen) {
+                        const currentActive = $(btn).attr('data-active') === 'true';
+                        const newActive = !currentActive;
+                        $(btn).attr('data-active', newActive);
+                        $(btn).toggleClass('disabled', !newActive);
+                    } else if (this.salesOpen) {
                         const type = $(btn).data('type');
                         const amount = parseFloat($(btn).data('amount'));
                         this.addTransaction(type, amount);
@@ -212,13 +227,27 @@
 
             toggleEditMode() {
                 this.isEditing = !this.isEditing;
-                $('#editLayoutBtn').text(this.isEditing ? 'Save Layout' : 'Edit Layout');
-                if (!this.isEditing) {
+                if (this.isEditing) {
+                    this.transactionButtons.removeClass('hidden');
+                    this.transactionButtons.each((_, btn) => {
+                        if ($(btn).attr('data-active') === 'false') {
+                            $(btn).addClass('disabled');
+                        }
+                    });
+                    $('#editLayoutBtn').text('Save Layout');
+                } else {
                     this.transactionButtons.each((_, btn) => {
                         const key = $(btn).data('type') + $(btn).data('amount');
-                        this.activeButtons[key] = !$(btn).hasClass('inactive');
+                        this.activeButtons[key] = $(btn).attr('data-active') === 'true';
+                        if (!this.activeButtons[key]) {
+                            $(btn).addClass('hidden');
+                        } else {
+                            $(btn).removeClass('hidden');
+                        }
+                        $(btn).removeClass('disabled');
                     });
                     localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+                    $('#editLayoutBtn').text('Edit Layout');
                 }
             }
 
@@ -241,7 +270,7 @@
                     valueInputOption: 'RAW',
                     resource: { values: [['SALES OPEN', this.sessionId, new Date().toISOString()]] }
                 }).then(() => {
-                    $('#toggleSalesBtn').text('Close Sales');
+                    $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
                 }).catch(err => alert('Error starting session: ' + err.message));
             }
 
@@ -258,7 +287,7 @@
                     this.cashTotal = 0;
                     this.doorCount = 0;
                     this.updateDisplay();
-                    $('#toggleSalesBtn').text('Open Sales');
+                    $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
                 }).catch(err => alert('Error closing session: ' + err.message));
             }
 
