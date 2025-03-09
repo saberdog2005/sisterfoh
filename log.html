@@ -5,51 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
-            font-size: 16px;
-        }
-        h2 { margin-bottom: 10px; text-align: center; }
-        .container {
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        select {
-            padding: 8px;
-            font-size: 14px;
-            margin: 5px 0;
-            border-radius: 4px;
-            background: #3c3c3c;
-            border: 1px solid #555;
-            color: #e0e0e0;
-            width: 100%;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .item-cash { color: #2e7d32; }
-        .item-card { color: #d32f2f; }
-        .item-tickets { color: #1a73e8; }
-        .item-comp { color: #ffa500; }
-        .transaction-details {
-            margin-top: 20px;
-        }
-        .transaction-details p { margin: 5px 0; }
+        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;font-size:16px;}
+        h2{margin-bottom:10px;text-align:center;}
+        .container{background:#2d2d2d;padding:15px;border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,0.3);max-height:80vh;overflow-y:auto;}
+        select{padding:8px;font-size:14px;margin:5px 0;border-radius:4px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0;width:100%;}
+        .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+        .item-cash{color:#2e7d32;}
+        .item-card{color:#d32f2f;}
+        .item-tickets{color:#1a73e8;}
+        .item-comp{color:#ffa500;}
+        .graph-container{margin-top:20px;height:300px;}
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Current Transaction</h2>
+        <h2>Live Sales Summary</h2>
         <select id="sessionSelect">
             <option value="">Select a session</option>
         </select>
@@ -61,105 +33,89 @@
             <p>Total Sales: $<span id="totalSales">0.00</span></p>
             <p>Thru Door: <span id="doorCount">0</span></p>
         </div>
-        <div class="transaction-details">
-            <p>Time: <span id="transactionTime"></span></p>
-            <p>Items: <span id="transactionItems"></span></p>
-            <p>Note: <span id="transactionNote"></span></p>
+        <div class="graph-container">
+            <canvas id="salesGraph"></canvas>
         </div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        let db, updateInterval;
+        const API_KEY='AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID='1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        let db,updateInterval,salesChart;
 
-        $(document).ready(() => {
-            const request = indexedDB.open('SalesDB', 2);
-            request.onupgradeneeded = (e) => {
-                db = e.target.result;
-                if (!db.objectStoreNames.contains('sessions')) {
-                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            request.onsuccess = (e) => {
-                db = e.target.result;
-                loadSessions();
-            };
-
-            $('#sessionSelect').on('change', function() {
-                const sessionId = $(this).val();
-                if (sessionId) {
-                    updateLog(sessionId);
-                    clearInterval(updateInterval);
-                    updateInterval = setInterval(() => updateLog(sessionId), 5000);
-                } else {
-                    clearInterval(updateInterval);
-                    resetDisplay();
-                }
-            });
+        $(document).ready(()=>{
+            const request=indexedDB.open('SalesDB',2);
+            request.onupgradeneeded=(e)=>{db=e.target.result;if(!db.objectStoreNames.contains('sessions')){db.createObjectStore('sessions',{keyPath:'id',autoIncrement:true});}};
+            request.onsuccess=(e)=>{db=e.target.result;loadSessions();};
+            $('#sessionSelect').on('change',function(){const sessionId=$(this).val();if(sessionId){updateLog(sessionId);clearInterval(updateInterval);updateInterval=setInterval(()=>updateLog(sessionId),5000);}else{clearInterval(updateInterval);resetDisplay();}});
         });
 
-        function loadSessions() {
-            const tx = db.transaction(['sessions'], 'readonly');
-            const store = tx.objectStore('sessions');
-            store.getAll().onsuccess = (t) => {
-                const sessions = t.target.result;
-                const $select = $('#sessionSelect');
+        function loadSessions(){
+            const tx=db.transaction(['sessions'],'readonly');
+            const store=tx.objectStore('sessions');
+            store.getAll().onsuccess=(t)=>{
+                const sessions=t.target.result;
+                const $select=$('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
-                sessions.forEach(s => {
-                    $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`);
-                });
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (activeSessionId) $select.val(activeSessionId);
+                sessions.forEach(s=>$select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status==='open'?' (Current)':''}</option>`));
+                const activeSessionId=localStorage.getItem('activeSessionId');
+                if(activeSessionId)$select.val(activeSessionId);
             };
         }
 
-        async function fetchTransaction() {
-            const range = 'Sheet1!A2';
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const value = data.values ? data.values[0][0] : null;
-                return value ? JSON.parse(value) : null;
-            } catch (error) {
-                console.error('Error fetching transaction:', error);
-                return null;
-            }
+        async function fetchTransactions(){
+            const range='Sheet1!A2:Z';
+            const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
+            try{
+                const response=await fetch(url);
+                const data=await response.json();
+                const rows=data.values||[];
+                const transactions=rows.map(row=>({
+                    sessionId:row[0],timestamp:row[1],time:row[2],itemList:JSON.parse(row[3]),total:parseFloat(row[4]),note:row[5],doorCount:parseInt(row[6])
+                }));
+                return transactions;
+            }catch(error){console.error('Error fetching transactions:',error);return[];}
         }
 
-        async function updateLog(sessionId) {
-            const transaction = await fetchTransaction();
-            if (!transaction || transaction.sessionId !== sessionId) {
-                resetDisplay();
-                return;
-            }
-
-            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0;
-            transaction.itemList.forEach(item => {
-                const value = item.price * item.quantity;
-                if (item.type === 'CASH') cashSales += value;
-                else if (item.type === 'CARD') cardSales += value;
-                if (item.type === 'COMP') compCount += item.quantity;
-                if (item.type === 'Tickets') ticketCount += item.quantity;
+        async function updateLog(sessionId){
+            const transactions=await fetchTransactions();
+            const sessionTransactions=transactions.filter(tr=>tr.sessionId===sessionId);
+            if(!sessionTransactions.length){resetDisplay();return;}
+            let cashSales=0,cardSales=0,compCount=0,ticketCount=0,totalSales=0,totalDoorCount=0;
+            const graphData={labels:[],cash:[],card:[],comp:[],tickets:[]};
+            sessionTransactions.forEach(tr=>{
+                let transactionCash=0,transactionCard=0,transactionComp=0,transactionTicket=0;
+                tr.itemList.forEach(item=>{
+                    const value=item.price*item.quantity;
+                    if(item.type==='CASH')transactionCash+=value;
+                    else if(item.type==='CARD')transactionCard+=value;
+                    if(item.type==='COMP')transactionComp+=item.quantity;
+                    if(item.type==='Tickets')transactionTicket+=item.quantity;
+                });
+                cashSales+=transactionCash;cardSales+=transactionCard;compCount+=transactionComp;ticketCount+=transactionTicket;totalSales+=tr.total;totalDoorCount+=tr.doorCount;
+                graphData.labels.push(tr.time);graphData.cash.push(cashSales);graphData.card.push(cardSales);graphData.comp.push(compCount);graphData.tickets.push(ticketCount);
             });
-            totalSales = transaction.total;
-
-            $('#cashSales').text(cashSales.toFixed(2));
-            $('#cardSales').text(cardSales.toFixed(2));
-            $('#compCount').text(compCount);
-            $('#ticketCount').text(ticketCount);
-            $('#totalSales').text(totalSales.toFixed(2));
-            $('#doorCount').text(transaction.doorCount);
-            $('#transactionTime').text(transaction.time);
-            $('#transactionItems').html(transaction.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (<b>${i.quantity}</b>)</span>`).join(', '));
-            $('#transactionNote').text(transaction.note || '');
+            $('#cashSales').text(cashSales.toFixed(2));$('#cardSales').text(cardSales.toFixed(2));$('#compCount').text(compCount);$('#ticketCount').text(ticketCount);$('#totalSales').text(totalSales.toFixed(2));$('#doorCount').text(totalDoorCount);
+            updateGraph(graphData);
         }
 
-        function resetDisplay() {
-            $('#cashSales, #cardSales').text('0.00');
-            $('#compCount, #ticketCount, #doorCount').text('0');
-            $('#totalSales').text('0.00');
-            $('#transactionTime, #transactionItems, #transactionNote').text('');
+        function resetDisplay(){$('#cashSales, #cardSales').text('0.00');$('#compCount, #ticketCount, #doorCount').text('0');$('#totalSales').text('0.00');if(salesChart)salesChart.destroy();}
+
+        function updateGraph(data){
+            const ctx=document.getElementById('salesGraph').getContext('2d');
+            if(salesChart)salesChart.destroy();
+            salesChart=new Chart(ctx,{
+                type:'line',
+                data:{
+                    labels:data.labels,
+                    datasets:[
+                        {label:'CASH Sales',data:data.cash,borderColor:'#2e7d32',fill:false},
+                        {label:'CARD Sales',data:data.card,borderColor:'#d32f2f',fill:false},
+                        {label:'COMP Count',data:data.comp,borderColor:'#ffa500',fill:false},
+                        {label:'Ticket Count',data:data.tickets,borderColor:'#1a73e8',fill:false}
+                    ]
+                },
+                options:{scales:{y:{beginAtZero:true}}}
+            });
         }
     </script>
 </body>
