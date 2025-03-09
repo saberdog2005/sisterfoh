@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sister Bar Register</title>
@@ -62,23 +62,21 @@
             min-height: 600px;
         }
         .button-container {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
-            justify-content: center;
             margin-top: 20px;
         }
         .product-item {
-            flex: 1 1 18%;
-            max-width: 18%;
             background: #3c3c3c;
             padding: 10px;
             border-radius: 4px;
             text-align: center;
         }
-        .custom-cash {
-            background: #2e7d32; /* Green background for custom cash */
-        }
+        .cash-item { background: #2e7d32; }
+        .card-item { background: #d32f2f; }
+        .ticket-item { background: #1a73e8; }
+        .comp-item { background: #ffa500; }
         .increment-btn {
             width: 100%;
             height: 60px;
@@ -190,67 +188,52 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
-        <label for="eventDate">Date:</label>
-        <input type="date" id="eventDate">
-        <label for="eventVenue">Venue:</label>
-        <input type="text" id="eventVenue" value="Sister">
-        <label for="eventName">Event Name:</label>
-        <input type="text" id="eventName" value="Open Mic">
-        <label for="cashierName">Cashier Name:</label>
-        <input type="text" id="cashierName" value="dddd">
+        <label for="eventDate">Date:</label><input type="date" id="eventDate">
+        <label for="eventVenue">Venue:</label><input type="text" id="eventVenue" value="Sister">
+        <label for="eventName">Event Name:</label><input type="text" id="eventName" value="Open Mic">
+        <label for="cashierName">Cashier Name:</label><input type="text" id="cashierName" value="dddd">
         <button id="toggleSalesBtn" class="toggle-btn">Open Sales</button>
     </div>
-
-    <!-- Main Container -->
     <div class="container">
         <div class="button-container">
-            <!-- Cash Buttons -->
-            <div class="product-item" data-item="CASH $20" data-price="20">
+            <div class="product-item cash-item" data-item="CASH $20" data-price="20">
                 <button class="increment-btn cash">CASH $20</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <div class="product-item" data-item="CASH $15" data-price="15">
+            <div class="product-item cash-item" data-item="CASH $15" data-price="15">
                 <button class="increment-btn cash">CASH $15</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <div class="product-item" data-item="CASH $12" data-price="12">
+            <div class="product-item cash-item" data-item="CASH $12" data-price="12">
                 <button class="increment-btn cash">CASH $12</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <div class="product-item" data-item="CASH $10" data-price="10">
+            <div class="product-item cash-item" data-item="CASH $10" data-price="10">
                 <button class="increment-btn cash">CASH $10</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <div class="product-item" data-item="CASH $7" data-price="7">
+            <div class="product-item cash-item" data-item="CASH $7" data-price="7">
                 <button class="increment-btn cash">CASH $7</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <div class="product-item" data-item="CASH $5" data-price="5">
+            <div class="product-item cash-item" data-item="CASH $5" data-price="5">
                 <button class="increment-btn cash">CASH $5</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
             </div>
-            <!-- Custom Cash Input with Green Background -->
-            <div class="product-item custom-cash" data-item="CASH (CUSTOM)">
+            <div class="product-item card-item" data-item="CC TRANS" data-price="0">
+                <button class="increment-btn cc">CC TRANS</button>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
+            </div>
+            <div class="product-item ticket-item" data-item="TICKET" data-price="0">
+                <button class="increment-btn ticket">TICKET</button>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
+            </div>
+            <div class="product-item comp-item" data-item="COMP" data-price="0">
+                <button class="increment-btn comp">COMP</button>
+                <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
+            </div>
+            <div class="product-item cash-item" data-item="CASH (CUSTOM)">
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
                     <div class="custom-input">
@@ -259,47 +242,19 @@
                     </div>
                 </div>
             </div>
-            <!-- Other Transaction Types -->
-            <div class="product-item" data-item="CC TRANS" data-price="0">
-                <button class="increment-btn cc">CC TRANS</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
-            </div>
-            <div class="product-item" data-item="TICKET" data-price="0">
-                <button class="increment-btn ticket">TICKET</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
-            </div>
-            <div class="product-item" data-item="COMP" data-price="0">
-                <button class="increment-btn comp">COMP</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="decrement-btn">-</button>
-                </div>
-            </div>
         </div>
-
-        <!-- Totals -->
         <div class="totals-container">
             <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
             <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
         </div>
-
-        <!-- Note and Log Button -->
         <div class="note-section">
             <label for="noteInput">Add a note...</label>
             <textarea id="noteInput" placeholder="Add a note..."></textarea>
         </div>
         <button id="logSaleBtn">Log Sale</button>
     </div>
-
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
-
         class SalesApp {
             constructor() {
                 this.db = null;
@@ -307,129 +262,159 @@
                 this.sessionId = null;
                 this.currentItems = [];
                 this.total = 0;
-                this.doorCount = 0;
+                this.currentSaleDoorCount = 0;
+                this.sessionTotalDoorCount = 0;
             }
-
             init() {
-                const request = indexedDB.open('SalesDB', 2);
-                request.onupgradeneeded = (e) => {
-                    this.db = e.target.result;
-                    if (!this.db.objectStoreNames.contains('sessions')) {
-                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                    }
-                    if (!this.db.objectStoreNames.contains('transactions')) {
-                        this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true })
-                            .createIndex('sessionId', 'sessionId', { unique: false });
-                    }
+                const e = indexedDB.open('SalesDB', 2);
+                e.onupgradeneeded = t => {
+                    this.db = t.target.result;
+                    if (!this.db.objectStoreNames.contains('sessions')) this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                    if (!this.db.objectStoreNames.contains('transactions')) this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId', { unique: false });
                 };
-                request.onsuccess = (e) => {
-                    this.db = e.target.result;
-                    this.bindEvents();
-                };
-                request.onerror = () => alert('Database error');
+                e.onsuccess = t => { this.db = t.target.result; this.checkSessionStatus(); };
+                $('#toggleSalesBtn').on('click', () => this.toggleSales());
+                $(document).on('click', '.increment-btn', t => {
+                    const e = $(t.target).closest('.product-item');
+                    this.incrementItem(e.data('item'), parseFloat(e.data('price')));
+                });
+                $(document).on('click', '.decrement-btn', t => {
+                    const e = $(t.target).closest('.product-item');
+                    this.decrementItem(e.data('item'));
+                });
+                $(document).on('click', '.add-custom', t => {
+                    const e = $(t.target).closest('.product-item');
+                    let i = parseFloat(e.find('input').val());
+                    if (isNaN(i) || i <= 0) { alert('Please enter a valid amount in dollars (e.g., 1.25).'); e.find('input').val(''); }
+                    else { i = Math.round(i / 0.25) * 0.25; this.incrementItem(`CASH (CUSTOM) $${i.toFixed(2)}`, i); e.find('input').val(''); }
+                });
+                $('#logSaleBtn').on('click', () => this.logSale());
+                $('#eventDate').val(new Date().toISOString().split('T')[0]);
             }
-
-            bindEvents() {
-                $('#toggleSalesBtn').click(() => this.toggleSales());
-                $('.increment-btn').click((e) => this.incrementItem($(e.target).parent()));
-                $('.decrement-btn').click((e) => this.decrementItem($(e.target).parent()));
-                $('.add-custom').click(() => this.addCustomCash());
-                $('#logSaleBtn').click(() => this.logSale());
-            }
-
-            toggleSales() {
-                this.sessionStarted = !this.sessionStarted;
-                $('#toggleSalesBtn')
-                    .text(this.sessionStarted ? 'Close Sales' : 'Open Sales')
-                    .css('background', this.sessionStarted ? '#d32f2f' : '#388e3c');
-                if (this.sessionStarted) {
-                    this.sessionId = Date.now();
-                    const session = {
-                        id: this.sessionId,
-                        date: $('#eventDate').val(),
-                        venue: $('#eventVenue').val(),
-                        eventName: $('#eventName').val(),
-                        cashier: $('#cashierName').val(),
-                        status: 'open'
+            checkSessionStatus() {
+                const e = localStorage.getItem('activeSessionId');
+                if (e) {
+                    this.db.transaction(['sessions'], 'readonly').objectStore('sessions').get(Number(e)).onsuccess = t => {
+                        const i = t.target.result;
+                        if (i && i.status === 'open') {
+                            this.sessionStarted = true;
+                            this.sessionId = i.id;
+                            this.sessionTotalDoorCount = i.totalDoorCount || 0;
+                            $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
+                            $('#eventDate,#eventVenue,#eventName,#cashierName').prop('readonly', true).addClass('locked');
+                            this.updateTotals();
+                        }
                     };
-                    const tx = this.db.transaction(['sessions'], 'readwrite');
-                    tx.objectStore('sessions').add(session);
-                    localStorage.setItem('activeSessionId', this.sessionId);
-                } else {
-                    localStorage.removeItem('activeSessionId');
                 }
             }
-
-            incrementItem($item) {
-                if (!this.sessionStarted) return;
-                const item = $item.data('item');
-                const price = parseFloat($item.data('price'));
-                const $count = $item.find('.count');
-                let count = parseInt($count.text()) + 1;
-                $count.text(count);
-                const existing = this.currentItems.find(i => i.item === item);
-                if (existing) {
-                    existing.quantity = count;
+            toggleSales() {
+                if (!this.sessionStarted) {
+                    const e = $('#eventDate').val(), t = $('#eventVenue').val(), i = $('#cashierName').val();
+                    if (!e || !t || !i) return;
+                    const s = { date: e, venue: t, eventName: $('#eventName').val(), cashier: i, status: 'open', totalDoorCount: 0 };
+                    const n = this.db.transaction(['sessions'], 'readwrite').objectStore('sessions');
+                    n.add(s).onsuccess = e => {
+                        this.sessionId = e.target.result;
+                        localStorage.setItem('activeSessionId', this.sessionId);
+                        this.sessionStarted = true;
+                        this.sessionTotalDoorCount = 0;
+                        $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
+                        $('#eventDate,#eventVenue,#eventName,#cashierName').prop('readonly', true).addClass('locked');
+                    };
                 } else {
-                    this.currentItems.push({ item, price, quantity: count, type: this.getItemType(item) });
+                    const e = prompt('Enter PIN to close sales (default: 1234)');
+                    if (e === '1234') {
+                        this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').get(this.sessionId).onsuccess = e => {
+                            const t = e.target.result;
+                            t.status = 'closed';
+                            this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').put(t);
+                            this.resetSession();
+                        };
+                    }
                 }
+            }
+            incrementItem(e, t) {
+                const i = $(`.product-item[data-item="${e}"] .count`);
+                let s = parseInt(i.text()) + 1;
+                i.text(s);
+                const n = this.currentItems.find(t => t.item === e);
+                if (n) n.quantity++;
+                else this.currentItems.push({ item: e, price: t, quantity: 1, type: this.getItemType(e) });
                 this.updateTotals();
             }
-
-            decrementItem($item) {
-                const item = $item.data('item');
-                const $count = $item.find('.count');
-                let count = parseInt($count.text());
-                if (count > 0) {
-                    count--;
-                    $count.text(count);
-                    const existing = this.currentItems.find(i => i.item === item);
-                    if (existing) existing.quantity = count;
-                    if (count === 0) this.currentItems = this.currentItems.filter(i => i.item !== item);
+            decrementItem(e) {
+                const t = $(`.product-item[data-item="${e}"] .count`);
+                let i = parseInt(t.text());
+                if (i > 0) {
+                    i--;
+                    t.text(i);
+                    const n = this.currentItems.find(t => t.item === e);
+                    if (n) {
+                        n.quantity--;
+                        if (n.quantity <= 0) this.currentItems = this.currentItems.filter(t => t.item !== e);
+                    }
                     this.updateTotals();
                 }
             }
-
-            addCustomCash() {
-                if (!this.sessionStarted) return;
-                const amount = parseFloat($('.custom-input input').val());
-                if (!amount || amount <= 0) return;
-                const item = `CASH (CUSTOM) $${amount.toFixed(2)}`;
-                const existing = this.currentItems.find(i => i.item === item);
-                if (existing) {
-                    existing.quantity += 1;
-                } else {
-                    this.currentItems.push({ item, price: amount, quantity: 1, type: 'CASH' });
-                }
-                $('.custom-input input').val('');
-                this.updateTotals();
-            }
-
             updateTotals() {
-                this.total = this.currentItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-                this.doorCount = this.currentItems.reduce((sum, i) => sum + (i.type === 'Tickets' || i.type === 'COMP' ? i.quantity : 0), 0);
+                this.total = this.currentItems.reduce((e, t) => e + t.price * t.quantity, 0);
+                this.currentSaleDoorCount = this.currentItems.filter(item => item.type === 'Tickets' || item.type === 'COMP').reduce((sum, item) => sum + item.quantity, 0);
+                const totalDoorCount = (this.sessionTotalDoorCount || 0) + this.currentSaleDoorCount;
                 $('#cashTotal').text(this.total.toFixed(2));
-                $('#doorCount').text(this.doorCount);
+                $('#doorCount').text(totalDoorCount);
             }
-
             logSale() {
-                if (!this.sessionStarted || !this.currentItems.length) return;
+                if (!this.sessionStarted || this.currentItems.length === 0) return;
                 const transaction = {
                     sessionId: this.sessionId,
                     timestamp: new Date().toISOString(),
                     time: new Date().toLocaleTimeString(),
-                    itemList: this.currentItems.map(item => ({ ...item })),
+                    itemList: this.currentItems.map(item => ({ item: item.item, price: item.price, quantity: item.quantity, type: item.type })),
                     total: this.total,
                     note: $('#noteInput').val(),
-                    doorCount: this.doorCount
+                    doorCount: this.currentSaleDoorCount
                 };
-                const tx = this.db.transaction(['transactions'], 'readwrite');
-                tx.objectStore('transactions').add(transaction).onsuccess = () => {
-                    this.sendToGoogleSheet(transaction);
+                this.db.transaction(['transactions'], 'readwrite').objectStore('transactions').add(transaction).onsuccess = () => {
+                    this.sendToApi(transaction);
+                    this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').get(this.sessionId).onsuccess = (e) => {
+                        const session = e.target.result;
+                        session.totalDoorCount = (session.totalDoorCount || 0) + transaction.doorCount;
+                        this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').put(session).onsuccess = () => {
+                            this.sessionTotalDoorCount = session.totalDoorCount;
+                        };
+                    };
                     this.resetSale();
                 };
             }
-
+            resetSale() {
+                this.currentItems = [];
+                this.total = 0;
+                this.currentSaleDoorCount = 0;
+                $('.count').text('0');
+                $('#cashTotal').text('0.00');
+                $('#doorCount').text(this.sessionTotalDoorCount || 0);
+                $('#noteInput').val('');
+            }
+            sendToApi(transaction) {
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transaction)
+                }).then(response => response.json()).then(data => {
+                    console.log('API Response:', data);
+                }).catch(error => {
+                    console.error('Error sending to API:', error);
+                });
+            }
+            resetSession() {
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.sessionTotalDoorCount = 0;
+                localStorage.removeItem('activeSessionId');
+                $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
+                $('#eventDate,#eventVenue,#eventName,#cashierName').prop('readonly', false).removeClass('locked');
+                this.resetSale();
+            }
             getItemType(itemName) {
                 if (itemName.startsWith('CASH')) return 'CASH';
                 if (itemName.startsWith('CC')) return 'CARD';
@@ -437,29 +422,7 @@
                 if (itemName === 'COMP') return 'COMP';
                 return 'Other';
             }
-
-            sendToGoogleSheet(transaction) {
-                $.ajax({
-                    url: API_URL,
-                    method: 'POST',
-                    data: JSON.stringify(transaction),
-                    contentType: 'application/json',
-                    success: () => console.log('Data sent to Google Sheet'),
-                    error: (xhr, status, error) => console.error('Failed to send data:', error)
-                });
-            }
-
-            resetSale() {
-                this.currentItems = [];
-                this.total = 0;
-                this.doorCount = 0;
-                $('.count').text('0');
-                $('#cashTotal').text('0.00');
-                $('#doorCount').text('0');
-                $('#noteInput').val('');
-            }
         }
-
         const app = new SalesApp();
         app.init();
     </script>
