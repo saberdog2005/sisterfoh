@@ -21,6 +21,7 @@
         .card-item { background: #8B0000; }
         .ticket-item { background: #00008B; }
         .comp-item { background: #CC8400; }
+        .product-item.disabled { background: #555; opacity: 0.5; }
         .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; background: inherit; }
         .increment-btn:hover { filter: brightness(1.1); }
         .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #8B0000; }
@@ -39,7 +40,10 @@
         #logSaleBtn:disabled { background: #555; cursor: not-allowed; }
         .note-section { margin: 20px 0; text-align: center; }
         #noteInput { width: 80%; padding: 10px; background: #444; border: 1px solid #666; color: #e0e0e0; border-radius: 4px; font-size: 1em; }
-        #adminControls { margin-bottom: 10px; }
+        #adminControls { margin-bottom: 10px; display: none; }
+        #editLayoutBtn, #confirmLayoutBtn { padding: 8px 16px; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        #editLayoutBtn:hover, #confirmLayoutBtn:hover { background: #4CAF50; }
+        #confirmLayoutBtn { display: none; }
         .edit-controls { display: none; position: absolute; top: 5px; right: 5px; }
         .edit-btn { padding: 2px 6px; background: #555; color: white; border: none; border-radius: 2px; cursor: pointer; margin-left: 2px; }
         .edit-btn:hover { background: #777; }
@@ -59,9 +63,9 @@
             <button id="toggleSalesBtn" class="toggle-btn">Open Sales</button>
         </div>
     </div>
-    <div id="adminControls" style="display: none;">
-        <label><input type="checkbox" id="changeLayoutToggle"> Change Layout</label>
-        <button id="saveLayoutBtn" style="display: none;">Save Layout</button>
+    <div id="adminControls">
+        <button id="editLayoutBtn">Edit Layout</button>
+        <button id="confirmLayoutBtn">Confirm Layout</button>
     </div>
     <div class="container">
         <div class="button-container" id="buttonContainer"></div>
@@ -76,7 +80,7 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const defaultLayout = [
+        const allButtons = [
             { item: 'CASH $20', enabled: true },
             { item: 'CASH $15', enabled: true },
             { item: 'CASH $12', enabled: true },
@@ -88,7 +92,7 @@
             { item: 'TICKET', enabled: true },
             { item: 'COMP', enabled: true }
         ];
-        let layout = JSON.parse(localStorage.getItem('buttonLayout')) || defaultLayout;
+        let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
 
         const itemConfig = {
             'CASH $20': { class: 'cash-item', price: 20 },
@@ -105,8 +109,9 @@
 
         function createButtonHTML(item, enabled) {
             const config = itemConfig[item] || {};
+            const disabledClass = enabled ? '' : 'disabled';
             const html = item === 'CASH (CUSTOM)' ? `
-                <div class="product-item ${config.class}" data-item="${item}">
+                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}">
                     <div class="custom-input">
                         <input type="number" step="0.01" min="0" placeholder="Amount">
                         <button class="add-custom">Add</button>
@@ -118,7 +123,7 @@
                     </div>
                 </div>
             ` : `
-                <div class="product-item ${config.class}" data-item="${item}" data-price="${config.price}">
+                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}" data-price="${config.price}">
                     <button class="increment-btn">${item}</button>
                     <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
                     <div class="edit-controls">
@@ -130,67 +135,55 @@
             return html;
         }
 
-        function renderButtons() {
+        function renderButtons(editMode = false) {
             const $container = $('#buttonContainer').empty();
-            layout.forEach(config => {
-                if (config.enabled) {
-                    $container.append(createButtonHTML(config.item, config.enabled));
-                }
+            const buttonsToShow = editMode ? allButtons : layout.filter(b => b.enabled);
+            buttonsToShow.forEach(config => {
+                $container.append(createButtonHTML(config.item, config.enabled));
             });
+            if (editMode) {
+                $('.edit-controls').show();
+                new Sortable(document.getElementById('buttonContainer'), {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost'
+                });
+            } else {
+                $('.edit-controls').hide();
+            }
         }
 
-        let sortable;
-        function enterEditMode() {
-            sortable = new Sortable(document.getElementById('buttonContainer'), {
-                animation: 150,
-                ghostClass: 'sortable-ghost'
-            });
-            $('.edit-controls').show();
-            $('#saveLayoutBtn').show();
-        }
-
-        function exitEditMode() {
-            if (sortable) sortable.destroy();
-            $('.edit-controls').hide();
-            $('#saveLayoutBtn').hide();
-        }
-
-        $('#changeLayoutToggle').on('change', function() {
-            if (this.checked) enterEditMode();
-            else exitEditMode();
+        $('#editLayoutBtn').on('click', function() {
+            renderButtons(true);
+            $(this).hide();
+            $('#confirmLayoutBtn').show();
         });
 
-        $('#saveLayoutBtn').on('click', function() {
+        $('#confirmLayoutBtn').on('click', function() {
             const newLayout = [];
             $('#buttonContainer .product-item').each(function() {
                 const item = $(this).data('item');
-                const enabled = layout.find(c => c.item === item).enabled;
+                const enabled = !$(this).hasClass('disabled');
                 newLayout.push({ item, enabled });
             });
-            localStorage.setItem('buttonLayout', JSON.stringify(newLayout.filter(c => c.enabled)));
-            layout = newLayout.filter(c => c.enabled);
-            renderButtons();
-            exitEditMode();
-            $('#changeLayoutToggle').prop('checked', false);
+            layout = newLayout.filter(b => b.enabled);
+            localStorage.setItem('buttonLayout', JSON.stringify(layout));
+            renderButtons(false);
+            $(this).hide();
+            $('#editLayoutBtn').show();
         });
 
         $(document).on('click', '.enable-btn', function() {
-            const $item = $(this).closest('.product-item');
-            const item = $item.data('item');
-            layout.find(c => c.item === item).enabled = true;
+            $(this).closest('.product-item').removeClass('disabled');
         });
 
         $(document).on('click', '.disable-btn', function() {
-            const $item = $(this).closest('.product-item');
-            const item = $item.data('item');
-            layout.find(c => c.item === item).enabled = false;
+            $(this).closest('.product-item').addClass('disabled');
         });
 
         if (localStorage.getItem('adminLoggedIn') === 'true') {
             $('#adminControls').show();
         }
 
-        // Sales logic
         class SalesApp {
             constructor() {
                 this.cashTotal = 0;
@@ -270,7 +263,6 @@
             }
 
             logSale() {
-                // Placeholder for Google Apps Script integration
                 console.log('Sale logged:', { cashTotal: this.cashTotal, doorCount: this.doorCount, items: this.items });
                 this.reset();
             }
