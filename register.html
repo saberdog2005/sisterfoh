@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -21,7 +21,7 @@
         .card-item { background: #8B0000; }
         .ticket-item { background: #00008B; }
         .comp-item { background: #CC8400; }
-        .product-item.inactive { background: #555; opacity: 0.5; pointer-events: none; }
+        .product-item.disabled { background: #555; opacity: 0.5; pointer-events: none; }
         .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; background: inherit; }
         .increment-btn:hover { filter: brightness(1.1); }
         .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #8B0000; }
@@ -29,7 +29,7 @@
         .control-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px; }
         .count { font-size: 1.5em; width: 40px; height: 40px; line-height: 40px; font-weight: bold; background: #000; color: white; border-radius: 50%; text-align: center; }
         .custom-input { display: flex; gap: 10px; justify-content: center; }
-        .custom-input input { width: 100px; padding: 8px; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 1.2em; }
+        .custom-input input { width: 100px; padding: 8px; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 1em; }
         .add-custom { padding: 8px 16px; background: #006400; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
         .add-custom:hover { background: #008000; }
         .totals-container { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; background: #3c3c3c; padding: 10px; border-radius: 4px; }
@@ -80,18 +80,20 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your deployed script URL
+        // Replace with your deployed Google Apps Script web app URL after deploying as "Anyone, even anonymous"
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
+
         const allButtons = [
-            { item: 'CASH $20', enabled: false },
-            { item: 'CASH $15', enabled: false },
-            { item: 'CASH $12', enabled: false },
-            { item: 'CASH $10', enabled: false },
-            { item: 'CASH $7', enabled: false },
-            { item: 'CASH $5', enabled: false },
-            { item: 'CASH (CUSTOM)', enabled: false },
-            { item: 'CC TRANS', enabled: false },
-            { item: 'TICKET', enabled: false },
-            { item: 'COMP', enabled: false }
+            { item: 'CASH $20', enabled: true },
+            { item: 'CASH $15', enabled: true },
+            { item: 'CASH $12', enabled: true },
+            { item: 'CASH $10', enabled: true },
+            { item: 'CASH $7', enabled: true },
+            { item: 'CASH $5', enabled: true },
+            { item: 'CASH (CUSTOM)', enabled: true },
+            { item: 'CC TRANS', enabled: true },
+            { item: 'TICKET', enabled: true },
+            { item: 'COMP', enabled: true }
         ];
         let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
 
@@ -110,9 +112,9 @@
 
         function createButtonHTML(item, enabled) {
             const config = itemConfig[item] || {};
-            const inactiveClass = enabled ? '' : 'inactive';
+            const disabledClass = enabled ? '' : 'disabled';
             const html = item === 'CASH (CUSTOM)' ? `
-                <div class="product-item ${config.class} ${inactiveClass}" data-item="${item}">
+                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}">
                     <div class="custom-input">
                         <input type="number" step="0.01" min="0" placeholder="Amount">
                         <button class="add-custom">Add</button>
@@ -124,7 +126,7 @@
                     </div>
                 </div>
             ` : `
-                <div class="product-item ${config.class} ${inactiveClass}" data-item="${item}" data-price="${config.price}">
+                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}" data-price="${config.price}">
                     <button class="increment-btn">${item}</button>
                     <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
                     <div class="edit-controls">
@@ -163,7 +165,7 @@
             const newLayout = [];
             $('#buttonContainer .product-item').each(function() {
                 const item = $(this).data('item');
-                const enabled = !$(this).hasClass('inactive');
+                const enabled = !$(this).hasClass('disabled');
                 newLayout.push({ item, enabled });
             });
             layout = newLayout.filter(b => b.enabled);
@@ -174,11 +176,11 @@
         });
 
         $(document).on('click', '.enable-btn', function() {
-            $(this).closest('.product-item').removeClass('inactive');
+            $(this).closest('.product-item').removeClass('disabled');
         });
 
         $(document).on('click', '.disable-btn', function() {
-            $(this).closest('.product-item').addClass('inactive');
+            $(this).closest('.product-item').addClass('disabled');
         });
 
         if (localStorage.getItem('adminLoggedIn') === 'true') {
@@ -198,7 +200,7 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('inactive')) return;
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
@@ -207,7 +209,7 @@
                 $(document).on('click', '.decrement-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('inactive')) return;
+                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
@@ -216,7 +218,7 @@
                 $(document).on('click', '.add-custom', () => {
                     if (!this.isSalesActive) return;
                     const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
-                    if ($custom.hasClass('inactive')) return;
+                    if ($custom.hasClass('disabled')) return;
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
@@ -260,7 +262,7 @@
                 $('#logSaleBtn').prop('disabled', this.cashTotal <= 0 && this.doorCount <= 0);
             }
 
-            async toggleSales() {
+            toggleSales() {
                 this.isSalesActive = !this.isSalesActive;
                 $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
                 $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
@@ -268,7 +270,7 @@
                     const sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', sessionId);
                     const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
-                    await this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
+                    this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
                     $('#editLayoutBtn').hide();
                 } else {
                     localStorage.removeItem('activeSessionId');
@@ -296,21 +298,18 @@
                 this.reset();
             }
 
-            async sendPostRequest(data) {
-                try {
-                    const response = await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const result = await response.json();
-                    if (result.status === 'error') throw new Error(result.message);
+            sendPostRequest(data) {
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Bypass CORS; we don't need the response
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).then(() => {
                     $('#message').text('Data sent successfully').css('color', '#4CAF50');
-                } catch (error) {
+                }).catch(error => {
                     console.error('Error sending data:', error);
                     $('#message').text('Failed to send data: ' + error.message).css('color', '#ff6b6b');
-                }
+                });
             }
 
             reset() {
