@@ -7,61 +7,16 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: #121212;
+            color: #e0e0e0;
         }
-        .log-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .graph-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .summary-item {
-            background: #e0f7fa;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        button, select {
-            padding: 8px 16px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            background: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        select {
-            background: #2196F3;
-        }
-        #logoutBtn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        #loginModal {
+        .modal {
             display: none;
             position: fixed;
             top: 0;
@@ -88,15 +43,49 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        .modal-content button {
+        .log-container {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .graph-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .summary-item {
+            background: #2c2c2c;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        button, select {
             padding: 8px 16px;
             margin: 5px;
             border: none;
             border-radius: 4px;
+            background: #4CAF50;
+            color: white;
             cursor: pointer;
         }
-        .forgot-password {
-            color: #3498db;
+        button:hover {
+            background: #45a049;
+        }
+        select {
+            background: #2196F3;
+        }
+        #logoutBtn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
             cursor: pointer;
             margin-top: 10px;
         }
@@ -130,61 +119,29 @@
         <button id="logoutBtn">Logout</button>
     </div>
     <script>
+        // API Constants integrated here
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com'; // Replace with your Google Cloud Console Client ID
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
 
         let salesChart, autoRefreshInterval;
 
         function handleClientLoad() {
-            gapi.load('client:auth2', initClient);
+            gapi.load('client', initClient);
         }
 
         function initClient() {
             gapi.client.init({
                 apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: DISCOVERY_DOCS,
-                scope: SCOPES
+                discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
-                $('#loginModal').show();
-                $('#loginBtn').on('click', () => {
-                    const user = $('#username').val().trim();
-                    const pass = $('#password').val().trim();
-                    if (!user || !pass) return alert('Enter username and password');
-                    if (CryptoJS.SHA256(pass).toString() === CryptoJS.SHA256('password123').toString() && user === 'admin') {
-                        localStorage.setItem('adminLoggedIn', 'true');
-                        $('#loginModal').hide();
-                        $('.log-container').show();
-                        loadSessions();
-                    } else {
-                        alert('Incorrect credentials');
-                    }
-                });
-                $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-                $('.forgot-password').on('click', () => alert('Contact support for password reset'));
-                $('#logoutBtn').on('click', () => {
-                    localStorage.removeItem('adminLoggedIn');
-                    clearInterval(autoRefreshInterval);
-                    location.reload();
-                });
-                $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
-                $('#autoRefresh').on('change', toggleAutoRefresh);
-                $('#sessionSelect').on('change', function() {
-                    const sessionId = $(this).val();
-                    if (sessionId) {
-                        updateLog(sessionId);
-                        if ($('#autoRefresh').is(':checked')) {
-                            clearInterval(autoRefreshInterval);
-                            autoRefreshInterval = setInterval(() => updateLog(sessionId), 10000);
-                        }
-                    } else {
-                        clearInterval(autoRefreshInterval);
-                        resetDisplay();
-                    }
-                });
+                if (localStorage.getItem('adminLoggedIn') === 'true') {
+                    $('.log-container').show();
+                    loadSessions();
+                } else {
+                    $('#loginModal').show();
+                }
             }, error => console.error('Error initializing client:', error));
         }
 
@@ -220,23 +177,23 @@
 
                 transactions.forEach((tr, index) => {
                     const items = JSON.parse(tr[4] || '[]');
-                    const cashItems = items.filter(i => i.type === 'cash');
-                    const cardItems = items.filter(i => i.type === 'card');
-                    const compItems = items.filter(i => i.type === 'comp');
-                    const ticketItems = items.filter(i => i.type === 'ticket');
-
-                    cashSales += cashItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                    cardSales += cardItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                    compCount += compItems.reduce((sum, i) => sum + i.quantity, 0);
-                    ticketCount += ticketItems.reduce((sum, i) => sum + i.quantity, 0);
+                    items.forEach(item => {
+                        if (item.type === 'cash') {
+                            cashSales += item.price * item.quantity;
+                            cumulativeCash += item.quantity;
+                        } else if (item.type === 'card') {
+                            cardSales += item.price * item.quantity;
+                            cumulativeCard += item.quantity;
+                        } else if (item.type === 'comp') {
+                            compCount += item.quantity;
+                            cumulativeComp += item.quantity;
+                        } else if (item.type === 'ticket') {
+                            ticketCount += item.quantity;
+                            cumulativeTickets += item.quantity;
+                        }
+                    });
                     totalSales += parseFloat(tr[5] || 0);
                     totalDoorCount += parseInt(tr[7] || 0);
-
-                    cumulativeCash += cashItems.reduce((sum, i) => sum + i.quantity, 0);
-                    cumulativeCard += cardItems.reduce((sum, i) => sum + i.quantity, 0);
-                    cumulativeComp += compItems.reduce((sum, i) => sum + i.quantity, 0);
-                    cumulativeTickets += ticketItems.reduce((sum, i) => sum + i.quantity, 0);
-
                     doorData.labels.push(`T${index + 1}`);
                     doorData.cash.push(cumulativeCash);
                     doorData.card.push(cumulativeCard);
@@ -245,10 +202,10 @@
                 });
 
                 $('#summaryGrid').html(`
-                    <div class="summary-item"><span class="item-cash">Cash:</span> $${cashSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="item-card">Card:</span> $${cardSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="item-comp">Comp:</span> ${compCount}</div>
-                    <div class="summary-item"><span class="item-tickets">Tickets:</span> ${ticketCount}</div>
+                    <div class="summary-item">Cash: $${cashSales.toFixed(2)}</div>
+                    <div class="summary-item">Card: $${cardSales.toFixed(2)}</div>
+                    <div class="summary-item">Comp: ${compCount}</div>
+                    <div class="summary-item">Tickets: ${ticketCount}</div>
                     <div class="summary-item">Total: $${totalSales.toFixed(2)}</div>
                     <div class="summary-item">Thru Door: ${totalDoorCount}</div>
                 `);
@@ -259,20 +216,15 @@
                     data: {
                         labels: doorData.labels,
                         datasets: [
-                            { label: 'Cash', data: doorData.cash, borderColor: '#2e7d32', backgroundColor: 'rgba(46, 125, 50, 0.2)', fill: true },
-                            { label: 'Card', data: doorData.card, borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.2)', fill: true },
-                            { label: 'Comp', data: doorData.comp, borderColor: '#ffa500', backgroundColor: 'rgba(255, 165, 0, 0.2)', fill: true },
-                            { label: 'Tickets', data: doorData.tickets, borderColor: '#1a73e8', backgroundColor: 'rgba(26, 115, 232, 0.2)', fill: true }
+                            { label: 'Cash', data: doorData.cash, borderColor: '#2e7d32', fill: true },
+                            { label: 'Card', data: doorData.card, borderColor: '#d32f2f', fill: true },
+                            { label: 'Comp', data: doorData.comp, borderColor: '#ffa500', fill: true },
+                            { label: 'Tickets', data: doorData.tickets, borderColor: '#1a73e8', fill: true }
                         ]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Cumulative Door Count' } },
-                            x: { title: { display: true, text: 'Transactions' } }
-                        },
-                        plugins: { legend: { position: 'top' } }
+                        scales: { y: { beginAtZero: true, title: { display: true, text: 'Cumulative Door Count' } } }
                     }
                 });
             }, error => console.error('Error updating log:', error));
@@ -296,9 +248,32 @@
         $(document).ready(() => {
             handleClientLoad();
             if (localStorage.getItem('adminLoggedIn') === 'true') {
-                $('#loginModal').hide();
                 $('.log-container').show();
             }
+            $('#loginBtn').on('click', () => {
+                const user = $('#username').val().trim();
+                const pass = $('#password').val().trim();
+                if (user === 'admin' && pass === 'password123') {
+                    localStorage.setItem('adminLoggedIn', 'true');
+                    $('#loginModal').hide();
+                    $('.log-container').show();
+                    loadSessions();
+                } else {
+                    alert('Incorrect credentials');
+                }
+            });
+            $('#cancelBtn').on('click', () => $('#username, #password').val(''));
+            $('#logoutBtn').on('click', () => {
+                localStorage.removeItem('adminLoggedIn');
+                clearInterval(autoRefreshInterval);
+                location.reload();
+            });
+            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
+            $('#autoRefresh').on('change', toggleAutoRefresh);
+            $('#sessionSelect').on('change', function() {
+                const sessionId = $(this).val();
+                if (sessionId) updateLog(sessionId);
+            });
         });
     </script>
 </body>
