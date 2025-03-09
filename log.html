@@ -7,34 +7,67 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: #121212;
+            color: #e0e0e0;
         }
-        .log-container {
-            background: white;
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #2c3e50;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            width: 300px;
+            text-align: center;
         }
-        .graph-container {
-            max-width: 800px;
+        .modal-content input {
+            width: 80%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #34495e;
+            color: #e0e0e0;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
         }
+        .log-container {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            flex: 1;
+        }
+        .graph-container { flex: 2; }
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 10px;
             margin-top: 20px;
         }
         .summary-item {
-            background: #e0f7fa;
+            background: #34495e;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 4px;
             text-align: center;
         }
         button, select {
@@ -46,46 +79,67 @@
             color: white;
             cursor: pointer;
         }
-        button:hover {
-            background: #45a049;
-        }
-        select {
-            background: #2196F3;
+        #logoutBtn { background: #e74c3c; }
+        #saveToPdfBtn { background: #2196F3; }
+        .cash-total { color: #2e7d32; }
+        .card-total { color: #d32f2f; }
+        .comp-total { color: #ffa500; }
+        .ticket-total { color: #1a73e8; }
+        .total-sales { color: #ffffff; }
+        .door-count-total { color: #800080; }
+        #drawerStatus { margin-top: 10px; font-weight: bold; }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-    <div class="log-container graph-container">
-        <h2>Sales Over Time</h2>
-        <canvas id="salesGraph"></canvas>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="loginBtn">Login</button>
+            <p id="loginError" style="color: red; display: none;">Invalid credentials</p>
+        </div>
     </div>
-    <div class="log-container">
-        <h2>Live Sales Summary</h2>
-        <select id="sessionSelect"><option value="">Select a session</option></select>
-        <button id="refreshBtn">Refresh</button>
-        <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 10s)</label>
-        <div class="summary-grid" id="summaryGrid"></div>
+    <div class="container" style="display: none;">
+        <div class="log-container graph-container">
+            <h2>Sales Over Time</h2>
+            <canvas id="salesGraph"></canvas>
+        </div>
+        <div class="log-container">
+            <h2>Sales Summary</h2>
+            <select id="sessionSelect"><option value="">Select a session</option></select>
+            <button id="refreshBtn">Refresh</button>
+            <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
+            <button id="logoutBtn">Logout</button>
+            <div id="drawerStatus" style="display: none;"></div>
+            <div class="summary-grid" id="summaryGrid"></div>
+        </div>
     </div>
-
     <script>
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Google Spreadsheet ID
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Google API Key
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"]; // Discovery Docs
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         let salesChart;
 
         function handleClientLoad() {
-            gapi.load('client', initClient);
-        }
-
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: DISCOVERY_DOCS
-            }).then(() => {
-                loadSessions();
-                document.getElementById('refreshBtn').addEventListener('click', () => updateLog($('#sessionSelect').val()));
-                document.getElementById('autoRefresh').addEventListener('change', toggleAutoRefresh);
+            gapi.load('client', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    clientId: CLIENT_ID,
+                    discoveryDocs: DISCOVERY_DOCS
+                }).then(() => {
+                    if (localStorage.getItem('adminLoggedIn') === 'true') {
+                        $('.container').show();
+                        loadSessions();
+                    } else {
+                        $('#loginModal').show();
+                    }
+                }).catch(err => alert('API init failed: ' + err.message));
             });
         }
 
@@ -94,62 +148,129 @@
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!B2:B'
             }).then(response => {
-                const sessionIds = [...new Set(response.result.values.flat())];
-                const select = $('#sessionSelect');
-                sessionIds.forEach(id => select.append(`<option value="${id}">${id}</option>`));
-                if (sessionIds.length > 0) updateLog(sessionIds[0]);
-            });
+                const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
+                $('#sessionSelect').html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
+                const lastSession = localStorage.getItem('sessionId');
+                if (lastSession && sessionIds.includes(lastSession)) {
+                    $('#sessionSelect').val(lastSession);
+                    updateLog(lastSession);
+                }
+            }).catch(err => alert('Error loading sessions: ' + err.message));
         }
 
         function updateLog(sessionId) {
-            if (!sessionId) return;
+            if (!sessionId) {
+                resetDisplay();
+                return;
+            }
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!A2:H'
             }).then(response => {
                 const rows = response.result.values || [];
-                const transactions = rows.filter(tr => tr[1] === sessionId && tr[0] === 'TRANSACTION');
+                const sessionRows = rows.filter(row => row[1] === sessionId);
+                const salesOpen = sessionRows.find(row => row[0] === 'SALES OPEN');
+                const closed = sessionRows.find(row => row[0] === 'CLOSED');
+                const transactions = sessionRows.filter(row => row[0] === 'TRANSACTION');
 
-                // Update summary
-                const totalCash = transactions.reduce((sum, tr) => sum + (parseFloat(tr[5]) || 0), 0);
-                const totalDoors = transactions.reduce((sum, tr) => sum + (parseInt(tr[7]) || 0), 0);
+                if (!transactions.length && !salesOpen) {
+                    resetDisplay();
+                    return;
+                }
+
+                const [date, venue, event, cashier] = sessionId.split('_');
+                $('#drawerStatus').text(closed ? 'Drawer Closed' : `Drawer Open by ${cashier}`).css('color', closed ? '#e74c3c' : '#4CAF50').show();
+
+                let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, doorCount = 0;
+                const graphData = { labels: [], cash: [], total: [] };
+                let cumulativeCash = 0, cumulativeTotal = 0;
+
+                transactions.forEach((row, i) => {
+                    const items = JSON.parse(row[4] || '[]');
+                    items.forEach(item => {
+                        if (item.type === 'cash') cashSales += item.amount;
+                        else if (item.type === 'card') cardSales += item.amount;
+                        else if (item.type === 'comp') compCount++;
+                        else if (item.type === 'ticket') ticketCount++;
+                    });
+                    totalSales += parseFloat(row[5] || 0);
+                    doorCount = parseInt(row[7] || 0);
+                    cumulativeCash += parseFloat(row[5] || 0);
+                    cumulativeTotal += doorCount;
+                    graphData.labels.push(`T${i + 1}`);
+                    graphData.cash.push(cumulativeCash);
+                    graphData.total.push(totalSales);
+                });
+
                 $('#summaryGrid').html(`
-                    <div class="summary-item"><strong>Total Cash:</strong> $${totalCash.toFixed(2)}</div>
-                    <div class="summary-item"><strong>Total Doors:</strong> ${totalDoors}</div>
-                    <div class="summary-item"><strong>Transactions:</strong> ${transactions.length}</div>
+                    <div class="summary-item"><span class="cash-total">Cash:</span> $${cashSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="card-total">Card:</span> $${cardSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="comp-total">Comp:</span> ${compCount}</div>
+                    <div class="summary-item"><span class="ticket-total">Tickets:</span> ${ticketCount}</div>
+                    <div class="summary-item"><span class="total-sales">Total:</span> $${totalSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="door-count-total">Thru Door:</span> ${doorCount}</div>
                 `);
 
-                // Update graph
-                const labels = transactions.map((_, i) => `T${i + 1}`);
-                const cashData = transactions.map(tr => parseFloat(tr[5]) || 0);
-                const doorData = transactions.map(tr => parseInt(tr[7]) || 0);
-
                 if (salesChart) salesChart.destroy();
-                salesChart = new Chart(document.getElementById('salesGraph').getContext('2d'), {
+                salesChart = new Chart($('#salesGraph'), {
                     type: 'line',
                     data: {
-                        labels: labels,
+                        labels: graphData.labels,
                         datasets: [
-                            { label: 'Cash Total', data: cashData, borderColor: '#2e7d32', fill: false },
-                            { label: 'Door Count', data: doorData, borderColor: '#ffa500', fill: false }
+                            { label: 'Cumulative Cash', data: graphData.cash, borderColor: '#2e7d32', fill: false },
+                            { label: 'Total Sales', data: graphData.total, borderColor: '#ffffff', fill: false }
                         ]
                     },
                     options: { responsive: true, scales: { y: { beginAtZero: true } } }
                 });
-            });
+
+                $('#saveToPdfBtn').toggle(!!closed);
+            }).catch(err => alert('Error updating log: ' + err.message));
         }
 
-        let refreshInterval;
-        function toggleAutoRefresh() {
-            if ($('#autoRefresh').is(':checked')) {
-                refreshInterval = setInterval(() => updateLog($('#sessionSelect').val()), 10000);
-            } else {
-                clearInterval(refreshInterval);
-            }
+        function resetDisplay() {
+            $('#summaryGrid').html('<div class="summary-item">No data available</div>');
+            if (salesChart) salesChart.destroy();
+            salesChart = null;
+            $('#saveToPdfBtn, #drawerStatus').hide();
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const sessionId = $('#sessionSelect').val();
+            const [date, venue, event, cashier] = sessionId.split('_');
+            doc.text(`Session: ${sessionId}`, 10, 10);
+            doc.text(`Date: ${date}`, 10, 20);
+            doc.text(`Venue: ${venue}`, 10, 30);
+            doc.text(`Event: ${event}`, 10, 40);
+            doc.text(`Cashier: ${cashier}`, 10, 50);
+            const imgData = $('#salesGraph')[0].toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 10, 60, 180, 100);
+            doc.save(`${sessionId}_report.pdf`);
         }
 
         $(document).ready(() => {
             handleClientLoad();
+            $('#loginBtn').on('click', () => {
+                const user = $('#username').val();
+                const pass = $('#password').val();
+                if (user === 'admin' && pass === 'password123') {
+                    localStorage.setItem('adminLoggedIn', 'true');
+                    $('#loginModal').hide();
+                    $('.container').show();
+                    loadSessions();
+                } else {
+                    $('#loginError').show();
+                }
+            });
+            $('#logoutBtn').on('click', () => {
+                localStorage.removeItem('adminLoggedIn');
+                location.reload();
+            });
+            $('#sessionSelect').on('change', () => updateLog($('#sessionSelect').val()));
+            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
+            $('#saveToPdfBtn').on('click', generatePDF);
         });
     </script>
 </body>
