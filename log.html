@@ -197,7 +197,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Login</h2>
@@ -209,10 +208,7 @@
             <div class="forgot-password">Forgot Password?</div>
         </div>
     </div>
-
-    <!-- Main Grid Layout -->
     <div class="grid-container">
-        <!-- Session Selection -->
         <div class="log-container" id="session-selection">
             <h2>Select Session</h2>
             <select id="sessionSelect">
@@ -220,30 +216,24 @@
             </select>
             <button id="printPdfBtn">Print PDF Report</button>
         </div>
-
-        <!-- Sales Summary -->
         <div class="log-container" id="sales-summary">
             <h2>Sales Summary</h2>
             <div class="summary-grid">
-                <p>CASH Transactions: <span id="cashTransactions">0</span></p>
-                <p>CARD Transactions: <span id="cardTransactions">0</span></p>
-                <p>COMP Count: <span id="compCount">0</span></p>
-                <p>Ticket Count: <span id="ticketCount">0</span></p>
-                <p>Total Door Count: <span id="doorCount">0</span></p>
+                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
+                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
+                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
+                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
                 <p>Total Sales: $<span id="totalSales">0.00</span></p>
+                <p>Thru Door: <span id="doorCount">0</span></p>
             </div>
         </div>
-
-        <!-- Graph -->
         <div class="log-container" id="customer-graph">
-            <h2>People Over Time</h2>
+            <h2>Transactions Over Time</h2>
             <div class="graph-container">
                 <canvas id="transactionGraph"></canvas>
             </div>
             <button id="resetZoomBtn">Reset Zoom</button>
         </div>
-
-        <!-- Transaction Log -->
         <div class="log-container" id="transaction-log">
             <h2>Transaction Log</h2>
             <div class="table-wrapper">
@@ -262,16 +252,14 @@
             <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
-
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = 'your_spreadsheet_id_here'; // Replace with your actual Google Sheet ID
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Replace with your API key
+        const SPREADSHEET_ID = 'your_spreadsheet_id_here'; // Replace with your Spreadsheet ID
         let db, transactionChart, updateInterval;
         const username = 'brad';
         const passwordHash = CryptoJS.SHA256('password123').toString();
 
         $(document).ready(() => {
-            // Login Handling
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
                 const pass = $('#password').val().trim();
@@ -299,18 +287,16 @@
             });
 
             $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-            $('.forgot-password').on('click', () => alert('Forgot Password functionality not implemented.'));
+            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
 
-            // Graph Zoom Reset
             $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
 
-            // Session Selection with Real-Time Updates
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) {
                     updateLog(sessionId);
                     clearInterval(updateInterval);
-                    updateInterval = setInterval(() => updateLog(sessionId), 5000); // Update every 5 seconds
+                    updateInterval = setInterval(() => updateLog(sessionId), 5000);
                 } else {
                     clearInterval(updateInterval);
                     resetDisplay();
@@ -320,7 +306,6 @@
             $('#printPdfBtn').on('click', () => printPDF());
         });
 
-        // Initialize IndexedDB for Sessions
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = (e) => {
             db = e.target.result;
@@ -334,7 +319,6 @@
         };
         request.onerror = () => alert('Failed to open database.');
 
-        // Load Sessions into Dropdown
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
@@ -350,9 +334,8 @@
             };
         }
 
-        // Fetch Transactions from Google Sheets
         async function fetchTransactions(sessionId) {
-            const range = 'Sheet1!A2:G'; // Adjust range based on your sheet structure
+            const range = 'Sheet1!A2:G';
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
             try {
                 const response = await fetch(url);
@@ -374,7 +357,6 @@
             }
         }
 
-        // Update Log Display with Real-Time Data
         async function updateLog(sessionId) {
             if (!sessionId) {
                 resetDisplay();
@@ -386,39 +368,35 @@
                 return;
             }
 
-            let cashTransactions = 0, cardTransactions = 0, compQuantity = 0, ticketQuantity = 0, totalDoorCount = 0, totalSales = 0;
+            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
             const cashData = [], cardData = [], compData = [], ticketData = [];
 
             transactions.forEach(tr => {
-                let hasCash = tr.itemList.some(item => item.type === 'CASH');
-                let hasCard = tr.itemList.some(item => item.type === 'CARD');
-                if (hasCash) cashTransactions += 1;
-                if (hasCard) cardTransactions += 1;
                 tr.itemList.forEach(item => {
-                    if (item.type === 'COMP') compQuantity += item.quantity;
-                    if (item.type === 'Tickets') ticketQuantity += item.quantity;
+                    const value = item.price * item.quantity;
+                    if (item.type === 'CASH') cashSales += value;
+                    else if (item.type === 'CARD') cardSales += value;
+                    if (item.type === 'COMP') compCount += item.quantity;
+                    if (item.type === 'Tickets') ticketCount += item.quantity;
                 });
-                totalDoorCount += tr.doorCount;
                 totalSales += tr.total;
+                totalDoorCount += tr.doorCount;
 
-                cashData.push({ x: new Date(tr.timestamp), y: cashTransactions });
-                cardData.push({ x: new Date(tr.timestamp), y: cardTransactions });
-                compData.push({ x: new Date(tr.timestamp), y: compQuantity });
-                ticketData.push({ x: new Date(tr.timestamp), y: ticketQuantity });
+                cashData.push({ x: new Date(tr.timestamp), y: cashSales });
+                cardData.push({ x: new Date(tr.timestamp), y: cardSales });
+                compData.push({ x: new Date(tr.timestamp), y: compCount });
+                ticketData.push({ x: new Date(tr.timestamp), y: ticketCount });
             });
 
-            // Update Summary
-            $('#cashTransactions').text(cashTransactions);
-            $('#cardTransactions').text(cardTransactions);
-            $('#compCount').text(compQuantity);
-            $('#ticketCount').text(ticketQuantity);
-            $('#doorCount').text(totalDoorCount);
+            $('#cashSales').text(cashSales.toFixed(2));
+            $('#cardSales').text(cardSales.toFixed(2));
+            $('#compCount').text(compCount);
+            $('#ticketCount').text(ticketCount);
             $('#totalSales').text(totalSales.toFixed(2));
+            $('#doorCount').text(totalDoorCount);
 
-            // Update Graph
             updateGraph(cashData, cardData, compData, ticketData);
 
-            // Update Transaction Table
             const $tbody = $('#transactionTable tbody').empty();
             transactions.reverse().forEach(tr => {
                 const itemsHtml = tr.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (<b>${i.quantity}</b>)</span>`).join(', ');
@@ -427,9 +405,9 @@
             $('#grandTotal').html(`Total Sales: $<span class="summary-value">${totalSales.toFixed(2)}</span>`);
         }
 
-        // Reset Display When No Session is Selected
         function resetDisplay() {
-            $('#cashTransactions, #cardTransactions, #compCount, #ticketCount, #doorCount').text('0');
+            $('#cashSales, #cardSales').text('0.00');
+            $('#compCount, #ticketCount, #doorCount').text('0');
             $('#totalSales').text('0.00');
             if (transactionChart) {
                 transactionChart.data.datasets.forEach(d => d.data = []);
@@ -439,7 +417,6 @@
             $('#grandTotal').html('Total Sales: $0.00');
         }
 
-        // Update Graph with Cumulative Data
         function updateGraph(cashData, cardData, compData, ticketData) {
             const ctx = document.getElementById('transactionGraph').getContext('2d');
             if (!transactionChart) {
@@ -447,8 +424,8 @@
                     type: 'line',
                     data: {
                         datasets: [
-                            { label: 'CASH Transactions', data: cashData, borderColor: '#2e7d32', fill: false },
-                            { label: 'CARD Transactions', data: cardData, borderColor: '#d32f2f', fill: false },
+                            { label: 'CASH Sales', data: cashData, borderColor: '#2e7d32', fill: false },
+                            { label: 'CARD Sales', data: cardData, borderColor: '#d32f2f', fill: false },
                             { label: 'COMP Count', data: compData, borderColor: '#ffa500', fill: false },
                             { label: 'Ticket Count', data: ticketData, borderColor: '#1a73e8', fill: false }
                         ]
@@ -456,7 +433,7 @@
                     options: {
                         scales: {
                             x: { type: 'time', time: { unit: 'minute' } },
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } } // Integer y-axis
+                            y: { beginAtZero: true }
                         },
                         plugins: { zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }, pan: { enabled: true, mode: 'xy' } } }
                     }
@@ -470,7 +447,6 @@
             }
         }
 
-        // Print PDF Report
         function printPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -480,25 +456,22 @@
                 return;
             }
 
-            // Header
             const session = $('#sessionSelect option:selected').text();
             doc.setFontSize(16);
             doc.text('Sales Report', 105, 10, { align: 'center' });
             doc.setFontSize(12);
             doc.text(session, 105, 20, { align: 'center' });
 
-            // Summary
             doc.setFontSize(14);
             doc.text('Summary', 10, 40);
             doc.setFontSize(12);
-            doc.text(`CASH Transactions: ${$('#cashTransactions').text()}`, 10, 50);
-            doc.text(`CARD Transactions: ${$('#cardTransactions').text()}`, 10, 60);
+            doc.text(`CASH Sales: $${$('#cashSales').text()}`, 10, 50);
+            doc.text(`CARD Sales: $${$('#cardSales').text()}`, 10, 60);
             doc.text(`COMP Count: ${$('#compCount').text()}`, 10, 70);
             doc.text(`Ticket Count: ${$('#ticketCount').text()}`, 10, 80);
-            doc.text(`Total Door Count: ${$('#doorCount').text()}`, 10, 90);
-            doc.text(`Total Sales: $${$('#totalSales').text()}`, 10, 100);
+            doc.text(`Total Sales: $${$('#totalSales').text()}`, 10, 90);
+            doc.text(`Thru Door: ${$('#doorCount').text()}`, 10, 100);
 
-            // Transactions
             doc.setFontSize(14);
             doc.text('Transactions', 10, 120);
             let y = 130;
