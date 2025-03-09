@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,7 +35,8 @@
             flex-grow: 1;
             width: 100%;
             max-height: calc(100vh - 60px);
-            display: none;
+            display: none; /* Hidden until login */
+            transition: opacity 0.3s ease-in-out;
         }
         .log-container {
             background: #2d2d2d;
@@ -42,6 +44,7 @@
             border-radius: 5px;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
         .table-wrapper {
             overflow-y: auto;
@@ -51,6 +54,14 @@
             padding: 8px;
             font-size: 14px;
             margin: 5px 0;
+            border-radius: 4px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+        select:focus, button:focus {
+            outline: none;
+            border-color: #66bb6a;
         }
         .graph-container {
             flex-grow: 1;
@@ -74,6 +85,7 @@
         }
         th {
             background: #3d3d3d;
+            font-weight: bold;
         }
         #transactionTable td:nth-child(1) { width: 15%; }
         #transactionTable td:nth-child(2) { width: 50%; word-wrap: break-word; }
@@ -97,10 +109,11 @@
             font-size: 18px;
             font-weight: bold;
             margin-top: 10px;
+            color: #e0e0e0;
         }
         .count-value, .summary-value { font-weight: bold; }
         .modal {
-            display: block;
+            display: block; /* Shown by default */
             position: fixed;
             z-index: 1;
             left: 0;
@@ -108,6 +121,8 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
         }
         .modal-content {
             background: #2d2d2d;
@@ -118,8 +133,10 @@
             border-radius: 5px;
             text-align: center;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transform: translateY(0);
+            transition: transform 0.3s ease-in-out;
         }
-        .modal-content h2 { color: #e0e0e0; }
+        .modal-content h2 { color: #e0e0e0; margin-bottom: 15px; }
         .modal-content input {
             width: 80%;
             padding: 10px;
@@ -132,25 +149,61 @@
         }
         .modal-content button {
             padding: 10px 20px;
-            background: #388e3c;
-            color: white;
+            margin: 5px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1em;
+            color: white;
+            transition: background 0.3s ease;
         }
-        .modal-content button:hover { background: #66bb6a; }
+        .modal-content #loginBtn { background: #388e3c; }
+        .modal-content #loginBtn:hover { background: #66bb6a; }
+        .modal-content #cancelBtn { background: #666; }
+        .modal-content #cancelBtn:hover { background: #888; }
+        .modal-content .forgot-password {
+            color: #66bb6a;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .modal.hide, .modal-content.hide {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+        .loading {
+            display: none;
+            color: #e0e0e0;
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+            .modal-content {
+                width: 80%;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Login Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Login</h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <div class="loading">Logging in...</div>
             <button id="loginBtn">Login</button>
+            <button id="cancelBtn">Cancel</button>
+            <div class="forgot-password">Forgot Password?</div>
         </div>
     </div>
+
+    <!-- Main Content (Hidden until login) -->
     <div class="grid-container">
         <div class="log-container" id="session-selection">
             <h2>Select Session</h2>
@@ -196,26 +249,53 @@
             <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
+
     <script>
-        // Same JavaScript as Version 1
         let db;
         let transactionChart;
         let updateInterval;
         const username = 'brad';
-        const password = 'password123';
+        const passwordHash = CryptoJS.SHA256('password123').toString(); // Pre-hashed password
 
         $(document).ready(() => {
+            // Handle login
             $('#loginBtn').on('click', () => {
-                if ($('#username').val() === username && $('#password').val() === password) {
-                    $('#loginModal').hide();
-                    $('.grid-container').show();
-                    loadSessions();
-                } else {
-                    alert('Incorrect username or password');
+                const inputUsername = $('#username').val().trim();
+                const inputPassword = $('#password').val().trim();
+                if (!inputUsername || !inputPassword) {
+                    alert('Please enter both username and password.');
+                    return;
                 }
+                $('.modal-content button, .modal-content input').prop('disabled', true);
+                $('.loading').show();
+                setTimeout(() => {
+                    const inputPasswordHash = CryptoJS.SHA256(inputPassword).toString();
+                    if (inputUsername === username && inputPasswordHash === passwordHash) {
+                        $('#loginModal').addClass('hide');
+                        setTimeout(() => {
+                            $('#loginModal').hide();
+                            $('.grid-container').show().css('opacity', 1);
+                            loadSessions();
+                        }, 300);
+                    } else {
+                        alert('Incorrect username or password');
+                        $('.modal-content button, .modal-content input').prop('disabled', false);
+                        $('.loading').hide();
+                    }
+                }, 500); // Simulate server delay
+            });
+
+            $('#cancelBtn').on('click', () => {
+                $('#username, #password').val(''); // Clear inputs
+            });
+
+            // Placeholder for Forgot Password
+            $('.forgot-password').on('click', () => {
+                alert('Forgot Password functionality is not implemented yet.');
             });
         });
 
+        // IndexedDB Setup
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -234,6 +314,7 @@
             alert('Failed to open database.');
         };
 
+        // Load session options
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
@@ -254,6 +335,7 @@
             };
         }
 
+        // Debounce utility for graph updates
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -262,6 +344,7 @@
             };
         }
 
+        // Item styling classes
         function getItemClass(itemName) {
             if (itemName.startsWith('CASH')) return 'item-cash';
             if (itemName.startsWith('CC')) return 'item-cc';
@@ -270,6 +353,7 @@
             return '';
         }
 
+        // Update log data
         function updateLog(sessionId) {
             if (!sessionId) {
                 resetDisplay();
@@ -303,7 +387,7 @@
                         } else if (item.item.startsWith('CC')) {
                             cardTotal += item.price * item.quantity;
                         } else if (item.item === 'TICKET') {
-                            doorCount += item.quantity;
+                            doorCount += item.quantity; // Accumulate "Thru Door" from tickets
                         }
                         categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
                     });
@@ -317,7 +401,7 @@
                 $('#totalSales').text(totalSales.toFixed(2));
                 $('#totalCashCustomers').text(cashCumulative);
                 $('#totalCardCustomers').text(cardCumulative);
-                $('#doorCount').text(doorCount);
+                $('#doorCount').text(doorCount); // Reflects total ticket entries
                 $('#grandTotal').html(`Total Sales: $<span class="summary-value">${grandTotal.toFixed(2)}</span>`);
 
                 const $categoryCounts = $('#categoryCounts').empty();
@@ -339,6 +423,7 @@
             };
         }
 
+        // Reset display when no session is selected
         function resetDisplay() {
             $('#cashSales').text('0.00');
             $('#cardSales').text('0.00');
@@ -355,6 +440,7 @@
             $('#transactionTable tbody').empty();
         }
 
+        // Debounced graph update
         const updateGraphDebounced = debounce((cashCustomers, cardCustomers) => {
             const ctx = document.getElementById('transactionGraph').getContext('2d');
             if (transactionChart) {
@@ -389,17 +475,20 @@
 
         $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
 
+        // Start periodic updates
         function startUpdating(sessionId) {
             clearInterval(updateInterval);
             updateLog(sessionId);
             updateInterval = setInterval(() => updateLog(sessionId), 5000);
         }
 
+        // Stop updates
         function stopUpdating() {
             clearInterval(updateInterval);
             updateInterval = null;
         }
 
+        // Session selection handler
         $('#sessionSelect').on('change', function() {
             const sessionId = $(this).val();
             if (sessionId) startUpdating(sessionId);
@@ -411,6 +500,7 @@
 
         window.addEventListener('beforeunload', stopUpdating);
 
+        // PDF report generation
         $('#printPdfBtn').on('click', function() {
             const sessionId = $('#sessionSelect').val();
             if (!sessionId) {
