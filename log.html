@@ -3,214 +3,482 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        #buttonList li { margin: 5px 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow: hidden;
+            font-size: 16px; /* Improved readability */
+        }
+        h2 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+            width: 100%;
+            max-height: calc(100vh - 60px);
+        }
+        .log-container {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        .table-wrapper {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        select, button {
+            padding: 8px;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .graph-container {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background: #3d3d3d;
+        }
+        #transactionTable td:nth-child(1) { width: 15%; }
+        #transactionTable td:nth-child(2) { width: 50%; word-wrap: break-word; }
+        #transactionTable td:nth-child(3) { width: 15%; }
+        #transactionTable td:nth-child(4) { width: 20%; word-wrap: break-word; }
+        .item-cash { color: #2e7d32; }
+        .item-cc { color: #d32f2f; }
+        .item-ticket { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            flex-grow: 1;
+        }
+        .summary-grid p {
+            overflow-wrap: break-word; /* Prevent text overflow */
+        }
+        .category-count {
+            margin: 5px 0;
+        }
+        #categoryCounts {
+            max-height: 200px; /* Limit height, enable scrolling */
+            overflow-y: auto;
+        }
+        #grandTotal {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        /* Make changing numbers bold */
+        .count-value, .summary-value {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="loginForm">
-            <h1 class="my-4">Admin Login</h1>
-            <input type="text" id="username" class="form-control my-2" placeholder="Username">
-            <input type="password" id="password" class="form-control my-2" placeholder="Password">
-            <button id="loginBtn" class="btn btn-primary">Log In</button>
-            <p id="loginError" style="color: red; display: none;">Failed log in, try again!</p>
+    <div class="grid-container">
+        <div class="log-container" id="session-selection">
+            <h2>Select Session</h2>
+            <select id="sessionSelect">
+                <option value="">Select a session</option>
+            </select>
+            <button id="printPdfBtn">Print PDF Report</button>
         </div>
-        <div id="mainContent" style="display: none;">
-            <h1 class="my-4">Sales Log</h1>
-            <button id="logoutBtn" class="btn btn-danger mb-3">Log Out</button>
-            <select id="sessionSelect" class="form-select mb-3"></select>
-            <div id="salesSummary" class="mb-3">
-                <p>Total Sales: $<span id="totalSales">0</span></p>
-                <p>Thru Door: <span id="doorCount">0</span></p>
+        <div class="log-container" id="sales-summary">
+            <h2>Sales Summary</h2>
+            <div class="summary-grid">
+                <p>Cash Sales: $<span class="summary-value" id="cashSales">0.00</span></p>
+                <p>Card Sales: $<span class="summary-value" id="cardSales">0.00</span></p>
+                <p>Total Sales: $<span class="summary-value" id="totalSales">0.00</span></p>
+                <p>Total Cash Customers: <span class="summary-value" id="totalCashCustomers">0</span></p>
+                <p>Total Card Customers: <span class="summary-value" id="totalCardCustomers">0</span></p>
+                <p>Thru Door: <span class="summary-value" id="doorCount">0</span></p>
             </div>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Items</th>
-                        <th>Total</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody id="transactionLog"></tbody>
-            </table>
-            <div id="buttonVisibilitySection">
-                <h2>Button Visibility</h2>
-                <ul id="buttonList" class="list-unstyled"></ul>
+            <div id="categoryCounts"></div>
+        </div>
+        <div class="log-container" id="customer-graph">
+            <h2>Customer Count Over Time</h2>
+            <div class="graph-container">
+                <canvas id="transactionGraph"></canvas>
             </div>
+            <button id="resetZoomBtn">Reset Zoom</button>
+        </div>
+        <div class="log-container" id="transaction-log">
+            <h2>Transaction Log</h2>
+            <div class="table-wrapper">
+                <table id="transactionTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let db;
+        let transactionChart;
+        let updateInterval;
 
-        $(document).ready(() => {
-            const request = indexedDB.open('SalesDB', 2);
-            request.onupgradeneeded = (event) => {
-                db = event.target.result;
-                if (!db.objectStoreNames.contains('sessions')) {
-                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                }
-                if (!db.objectStoreNames.contains('transactions')) {
-                    const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                    transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('permissions')) {
-                    db.createObjectStore('permissions', { keyPath: 'username' });
-                }
-                if (!db.objectStoreNames.contains('buttonVisibility')) {
-                    db.createObjectStore('buttonVisibility', { keyPath: 'item' });
-                }
-            };
-
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                initializeData();
-                checkLoginStatus();
-            };
-
-            request.onerror = () => alert('Failed to open database.');
-
-            $('#loginBtn').on('click', () => {
-                const username = $('#username').val().trim();
-                const password = $('#password').val().trim();
-                const tx = db.transaction(['permissions'], 'readonly');
-                const store = tx.objectStore('permissions');
-                const request = store.get(username);
-                request.onsuccess = (event) => {
-                    const user = event.target.result;
-                    if (user && user.password === password) {
-                        localStorage.setItem('isAdminLoggedIn', 'true');
-                        $('#loginForm').hide();
-                        $('#mainContent').show();
-                        loadSessions();
-                        loadButtonVisibility();
-                    } else {
-                        $('#loginError').show();
-                    }
-                };
-            });
-
-            $('#logoutBtn').on('click', () => {
-                localStorage.setItem('isAdminLoggedIn', 'false');
-                $('#mainContent').hide();
-                $('#loginForm').show();
-            });
-
-            $('#sessionSelect').on('change', () => updateLog());
-        });
-
-        function initializeData() {
-            const tx = db.transaction(['permissions', 'buttonVisibility'], 'readwrite');
-            const permissionsStore = tx.objectStore('permissions');
-            permissionsStore.count().onsuccess = (event) => {
-                if (event.target.result === 0) {
-                    permissionsStore.add({ username: 'brad', password: '12345678' });
-                }
-            };
-            const defaultButtons = [
-                'CASH $20', 'CASH $15', 'CASH $12', 'CASH $10',
-                'CC TRANS', 'TICKET', 'COMP', 'CASH (CUSTOM)'
-            ];
-            const visibilityStore = tx.objectStore('buttonVisibility');
-            visibilityStore.count().onsuccess = (event) => {
-                if (event.target.result === 0) {
-                    defaultButtons.forEach(item => {
-                        visibilityStore.add({ item: item, visible: true });
-                    });
-                }
-            };
-        }
-
-        function checkLoginStatus() {
-            if (localStorage.getItem('isAdminLoggedIn') === 'true') {
-                $('#loginForm').hide();
-                $('#mainContent').show();
-                loadSessions();
-                loadButtonVisibility();
-            } else {
-                $('#loginForm').show();
+        const request = indexedDB.open('SalesDB', 2);
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('sessions')) {
+                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
             }
-        }
+            if (!db.objectStoreNames.contains('transactions')) {
+                const transactionStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+            }
+        };
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            loadSessions();
+        };
+        request.onerror = function() {
+            alert('Failed to open database.');
+        };
 
         function loadSessions() {
-            const tx = db.transaction('sessions', 'readonly');
+            const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
             const request = store.getAll();
-            request.onsuccess = (event) => {
+            request.onsuccess = function(event) {
                 const sessions = event.target.result;
-                const $select = $('#sessionSelect').empty();
-                $select.append('<option value="">Select a session</option>');
+                const $select = $('#sessionSelect');
+                $select.empty().append('<option value="">Select a session</option>');
                 sessions.forEach(session => {
-                    const status = session.endTime ? 'Closed' : 'Open';
-                    $select.append(`<option value="${session.id}">${session.cashier} - ${status}</option>`);
+                    const label = `${session.date} - ${session.venue} - ${session.eventName} - ${session.cashier}${session.status === 'open' ? ' (Current)' : ''}`;
+                    $select.append(`<option value="${session.id}">${label}</option>`);
                 });
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) {
+                    $select.val(activeSessionId);
+                    startUpdating(activeSessionId);
+                }
             };
         }
 
-        function updateLog() {
-            const sessionId = parseInt($('#sessionSelect').val());
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function getItemClass(itemName) {
+            if (itemName.startsWith('CASH')) return 'item-cash';
+            if (itemName.startsWith('CC')) return 'item-cc';
+            if (itemName === 'TICKET') return 'item-ticket';
+            if (itemName === 'COMP') return 'item-comp';
+            return '';
+        }
+
+        function updateLog(sessionId) {
             if (!sessionId) {
-                $('#salesSummary').hide();
-                $('#transactionLog').empty();
+                resetDisplay();
                 return;
             }
-            const tx = db.transaction('transactions', 'readonly');
+            const tx = db.transaction(['transactions'], 'readonly');
             const store = tx.objectStore('transactions');
             const index = store.index('sessionId');
-            const request = index.getAll(sessionId);
-            request.onsuccess = (event) => {
-                const transactions = event.target.result;
-                let totalSales = 0;
-                let doorCount = 0;
-                const $tbody = $('#transactionLog').empty();
-                transactions.forEach(tx => {
-                    totalSales += tx.total;
-                    tx.items.forEach(item => {
-                        if (item.item === 'TICKET') doorCount += 1;
+            const request = index.getAll(Number(sessionId));
+            request.onsuccess = function(event) {
+                const transactions = event.target.result.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                let cashTotal = 0, cardTotal = 0, doorCount = 0;
+                let cashCumulative = 0, cardCumulative = 0;
+                const cashCustomers = [], cardCustomers = [];
+                const categoryCounts = {};
+
+                transactions.forEach(t => {
+                    let hasCash = t.itemList.some(item => item.item.startsWith('CASH'));
+                    let hasCard = t.itemList.some(item => item.item.startsWith('CC'));
+                    if (hasCash) {
+                        cashCumulative += 1;
+                        cashCustomers.push({ x: new Date(t.timestamp), y: cashCumulative });
+                    }
+                    if (hasCard) {
+                        cardCumulative += 1;
+                        cardCustomers.push({ x: new Date(t.timestamp), y: cardCumulative });
+                    }
+                    t.itemList.forEach(item => {
+                        if (item.item.startsWith('CASH')) {
+                            cashTotal += item.price * item.quantity;
+                        } else if (item.item.startsWith('CC')) {
+                            cardTotal += item.price * item.quantity;
+                        } else if (item.item === 'TICKET') {
+                            doorCount += item.quantity;
+                        }
+                        categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
                     });
-                    const items = tx.items.map(i => `${i.item}: $${i.amount.toFixed(2)}`).join(', ');
-                    $tbody.append(`
-                        <tr>
-                            <td>${tx.id}</td>
-                            <td>${items}</td>
-                            <td>$${tx.total.toFixed(2)}</td>
-                            <td>${new Date(tx.timestamp).toLocaleString()}</td>
-                        </tr>
-                    `);
                 });
+
+                const totalSales = cashTotal + cardTotal;
+                const grandTotal = transactions.reduce((sum, t) => sum + t.total, 0);
+
+                $('#cashSales').text(cashTotal.toFixed(2));
+                $('#cardSales').text(cardTotal.toFixed(2));
                 $('#totalSales').text(totalSales.toFixed(2));
+                $('#totalCashCustomers').text(cashCumulative);
+                $('#totalCardCustomers').text(cardCumulative);
                 $('#doorCount').text(doorCount);
-                $('#salesSummary').show();
+                $('#grandTotal').html(`Total Sales: $<span class="summary-value">${grandTotal.toFixed(2)}</span>`);
+
+                const $categoryCounts = $('#categoryCounts').empty();
+                Object.entries(categoryCounts).forEach(([item, count]) => {
+                    $categoryCounts.append(`<p class="category-count ${getItemClass(item)}">${item}: <span class="count-value">${count}</span></p>`);
+                });
+
+                updateGraphDebounced(cashCustomers, cardCustomers);
+
+                const $tbody = $('#transactionTable tbody').empty();
+                transactions.reverse().forEach(t => {
+                    const itemsHtml = t.itemList.map(i => {
+                        const className = getItemClass(i.item);
+                        return `<span class="${className}">${i.item} (<b>${i.quantity}</b>)</span>`;
+                    }).join(', ');
+                    const note = t.note || '';
+                    $tbody.append(`<tr><td>${t.time}</td><td>${itemsHtml}</td><td>$<span class="summary-value">${t.total.toFixed(2)}</span></td><td>${note}</td></tr>`);
+                });
             };
         }
 
-        function loadButtonVisibility() {
-            const tx = db.transaction(['buttonVisibility'], 'readonly');
-            const store = tx.objectStore('buttonVisibility');
-            const request = store.getAll();
-            request.onsuccess = (event) => {
-                const buttons = event.target.result;
-                const $list = $('#buttonList').empty();
-                buttons.forEach(button => {
-                    const $li = $('<li>');
-                    const $checkbox = $('<input type="checkbox">').prop('checked', button.visible);
-                    $checkbox.on('change', () => {
-                        button.visible = $checkbox.prop('checked');
-                        const updateTx = db.transaction(['buttonVisibility'], 'readwrite');
-                        const updateStore = updateTx.objectStore('buttonVisibility');
-                        updateStore.put(button);
-                    });
-                    $li.append($checkbox).append(` ${button.item}`);
-                    $list.append($li);
-                });
-            };
+        function resetDisplay() {
+            $('#cashSales').text('0.00');
+            $('#cardSales').text('0.00');
+            $('#totalSales').text('0.00');
+            $('#totalCashCustomers').text('0');
+            $('#totalCardCustomers').text('0');
+            $('#doorCount').text('0');
+            $('#categoryCounts').empty();
+            $('#grandTotal').html('Total Sales: $0.00');
+            if (transactionChart) {
+                transactionChart.data.datasets.forEach(dataset => dataset.data = []);
+                transactionChart.update('none');
+            }
+            $('#transactionTable tbody').empty();
         }
+
+        const updateGraphDebounced = debounce((cashCustomers, cardCustomers) => {
+            const ctx = document.getElementById('transactionGraph').getContext('2d');
+            if (transactionChart) {
+                transactionChart.data.datasets[0].data = cashCustomers;
+                transactionChart.data.datasets[1].data = cardCustomers;
+                transactionChart.update('none');
+            } else {
+                transactionChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: 'Cash Customers', data: cashCustomers, borderColor: '#2e7d32', fill: false, tension: 0.1 },
+                            { label: 'Card Customers', data: cardCustomers, borderColor: '#d32f2f', fill: false, tension: 0.1 }
+                        ]
+                    },
+                    options: {
+                        animation: false,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                            y: { 
+                                beginAtZero: true, 
+                                title: { display: true, text: 'Number of Customers' },
+                                ticks: { stepSize: 1 }
+                            }
+                        },
+                        plugins: {
+                            zoom: {
+                                zoom: {
+                                    wheel: { enabled: true },
+                                    pinch: { enabled: true },
+                                    mode: 'xy'
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'xy'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }, 500);
+
+        $('#resetZoomBtn').on('click', function() {
+            if (transactionChart) {
+                transactionChart.resetZoom();
+            }
+        });
+
+        function startUpdating(sessionId) {
+            clearInterval(updateInterval);
+            updateLog(sessionId);
+            updateInterval = setInterval(() => updateLog(sessionId), 5000);
+        }
+
+        function stopUpdating() {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+
+        $('#sessionSelect').on('change', function() {
+            const sessionId = $(this).val();
+            if (sessionId) {
+                startUpdating(sessionId);
+            } else {
+                stopUpdating();
+                resetDisplay();
+            }
+        });
+
+        window.addEventListener('beforeunload', stopUpdating);
+
+        $('#printPdfBtn').on('click', function() {
+            const sessionId = $('#sessionSelect').val();
+            if (!sessionId) {
+                alert('Please select a session first.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const tx = db.transaction(['sessions', 'transactions'], 'readonly');
+            const sessionStore = tx.objectStore('sessions');
+            const transactionStore = tx.objectStore('transactions');
+            const sessionRequest = sessionStore.get(Number(sessionId));
+            const transactionRequest = transactionStore.index('sessionId').getAll(Number(sessionId));
+
+            tx.oncomplete = function() {
+                const session = sessionRequest.result;
+                const transactions = transactionRequest.result;
+
+                let cashTotal = 0, cardTotal = 0, doorCount = 0;
+                let totalCashCustomers = 0, totalCardCustomers = 0;
+                const categoryCounts = {};
+
+                transactions.forEach(t => {
+                    let hasCash = t.itemList.some(item => item.item.startsWith('CASH'));
+                    let hasCard = t.itemList.some(item => item.item.startsWith('CC'));
+                    if (hasCash) totalCashCustomers++;
+                    if (hasCard) totalCardCustomers++;
+                    t.itemList.forEach(item => {
+                        if (item.item.startsWith('CASH')) {
+                            cashTotal += item.price * item.quantity;
+                        } else if (item.item.startsWith('CC')) {
+                            cardTotal += item.price * item.quantity;
+                        } else if (item.item === 'TICKET') {
+                            doorCount += item.quantity;
+                        }
+                        categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
+                    });
+                });
+
+                doc.setFontSize(16);
+                doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
+                doc.setFontSize(12);
+                doc.text(`Date: ${session.date}`, 10, 20);
+                doc.text(`Venue: ${session.venue}`, 10, 30);
+                doc.text(`Event Name: ${session.eventName}`, 10, 40);
+                doc.text(`Cashier: ${session.cashier}`, 10, 50);
+                doc.text(`Start Time: ${new Date(session.startTime).toLocaleString()}`, 10, 60);
+                if (session.endTime) {
+                    doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 70);
+                }
+
+                doc.text('Sales Summary', 10, 90);
+                doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 100);
+                doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 110);
+                doc.text(`Total Sales: $${(cashTotal + cardTotal).toFixed(2)}`, 10, 120);
+                doc.text(`Total Cash Customers: ${totalCashCustomers}`, 10, 130);
+                doc.text(`Total Card Customers: ${totalCardCustomers}`, 10, 140);
+                doc.text(`Thru Door: ${doorCount}`, 10, 150);
+
+                let y = 160;
+                doc.text('Category Counts', 10, y);
+                y += 10;
+                for (const [item, count] of Object.entries(categoryCounts)) {
+                    doc.text(`${item}: ${count}`, 10, y);
+                    y += 10;
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 10;
+                    }
+                }
+
+                const chartImage = transactionChart.toBase64Image();
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Customer Count Over Time', 10, 10);
+                doc.addImage(chartImage, 'PNG', 10, 20, 190, 100);
+
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Transaction Log', 10, 10);
+                y = 20;
+                transactions.forEach((t, index) => {
+                    const time = t.time;
+                    const items = t.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
+                    const total = t.total.toFixed(2);
+                    const note = t.note || '';
+                    doc.text(`${index + 1}. ${time}: ${items} - $${total} - Note: ${note}`, 10, y);
+                    y += 10;
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 10;
+                    }
+                });
+
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            };
+
+            tx.onerror = function() {
+                alert('Failed to retrieve data for PDF generation.');
+            };
+        });
     </script>
 </body>
 </html>
