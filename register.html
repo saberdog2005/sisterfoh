@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -260,6 +260,26 @@
                 this.isSalesActive = !this.isSalesActive;
                 $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
                 $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
+                if (this.isSalesActive) {
+                    $('#adminControls').hide();
+                    this.postSessionStart();
+                } else {
+                    if (localStorage.getItem('adminLoggedIn') === 'true') {
+                        $('#adminControls').show();
+                    }
+                }
+            }
+
+            postSessionStart() {
+                const sessionData = {
+                    type: 'SESSION_START',
+                    date: $('#eventDate').val(),
+                    venue: $('#eventVenue').val(),
+                    event: $('#eventName').val(),
+                    cashier: $('#cashierName').val()
+                };
+                // Placeholder for Google Sheets API call
+                console.log('Posting session start to Google Sheet:', sessionData);
             }
 
             logSale() {
