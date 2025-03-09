@@ -79,7 +79,13 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your deployed script URL
+        // API Constants (included for reference; not directly used in this file)
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+
+        // Replace with your actual Google Apps Script Web App URL
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec';
 
         const allButtons = [
             { item: 'CASH $20', enabled: true },
@@ -198,7 +204,6 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
@@ -207,7 +212,6 @@
                 $(document).on('click', '.decrement-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
@@ -216,7 +220,6 @@
                 $(document).on('click', '.add-custom', () => {
                     if (!this.isSalesActive) return;
                     const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
-                    if ($custom.hasClass('disabled')) return;
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
@@ -236,7 +239,7 @@
             increment(item, price) {
                 this.items[item] = (this.items[item] || 0) + 1;
                 if (price > 0) this.cashTotal += price;
-                this.doorCount++; // Increment door count for any button press
+                this.doorCount++;
                 this.updateDisplay();
             }
 
@@ -244,7 +247,7 @@
                 if (this.items[item] > 0) {
                     this.items[item]--;
                     if (price > 0) this.cashTotal -= price;
-                    this.doorCount--; // Decrement door count for any button press
+                    this.doorCount--;
                     this.updateDisplay();
                 }
             }
@@ -300,7 +303,7 @@
                 try {
                     const response = await fetch(WEB_APP_URL, {
                         method: 'POST',
-                        mode: 'no-cors', // Bypass CORS restrictions
+                        mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
                     });
