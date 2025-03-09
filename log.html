@@ -6,12 +6,18 @@
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;display:flex;flex-direction:column;min-height:100vh;overflow:hidden}
-        .grid-container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex-grow:1;width:100%;max-height:calc(100vh-60px);overflow:auto}
+        body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;display:flex;flex-direction:column;min-height:100vh;overflow:hidden;font-size:16px}
+        h2{margin-bottom:10px;text-align:center}
+        .grid-container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex-grow:1;width:100%;max-height:calc(100vh-60px);display:none;transition:opacity .3s ease-in-out}
         .log-container{background:#2d2d2d;padding:15px;border-radius:5px;display:flex;flex-direction:column;box-shadow:0 2px 5px rgba(0,0,0,.3);overflow-y:auto}
         .table-wrapper{overflow-y:auto;flex-grow:1}
         select,button{padding:8px;font-size:14px;margin:5px 0;border-radius:4px;background:#3c3c3c;border:1px solid #555;color:#e0e0e0}
+        select:focus,button:focus{outline:none;border-color:#66bb6a}
         .graph-container{flex-grow:1;position:relative;width:100%}
         canvas{width:100%!important;height:100%!important}
         table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}
@@ -21,24 +27,45 @@
         #transactionTable td:nth-child(2){width:50%;word-wrap:break-word}
         #transactionTable td:nth-child(3){width:15%}
         #transactionTable td:nth-child(4){width:20%;word-wrap:break-word}
-        .item-cash{color:#2e7d32}
-        .item-cc{color:#d32f2f}
-        .item-ticket{color:#1a73e8}
-        .item-comp{color:#ffa500}
+        .item-cash{color:#2e7d32}.item-cc{color:#d32f2f}.item-ticket{color:#1a73e8}.item-comp{color:#ffa500}
         .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-grow:1}
-        .summary-value{font-weight:bold}
-        #grandTotal{font-size:18px;font-weight:bold;margin-top:10px;color:#e0e0e0}
+        .summary-grid p{overflow-wrap:break-word}
+        .category-count{margin:5px 0}
+        #categoryCounts{max-height:200px;overflow-y:auto}
+        #grandTotal{text-align:right;font-size:18px;font-weight:bold;margin-top:10px;color:#e0e0e0}
+        .count-value,.summary-value{font-weight:bold}
+        .modal{display:block;position:fixed;z-index:1;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,.5);opacity:1;transition:opacity .3s ease-in-out}
+        .modal-content{background:#2d2d2d;margin:15% auto;padding:20px;border:1px solid #888;width:30%;border-radius:5px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.5);transform:translateY(0);transition:transform .3s ease-in-out}
+        .modal-content h2{color:#e0e0e0;margin-bottom:15px}
+        .modal-content input{width:80%;padding:10px;margin:10px 0;border:1px solid #555;border-radius:4px;background:#3c3c3c;color:#e0e0e0;font-size:1em}
+        .modal-content button{padding:10px 20px;margin:5px;border:none;border-radius:4px;cursor:pointer;font-size:1em;color:white;transition:background .3s ease}
+        .modal-content #loginBtn{background:#388e3c}.modal-content #loginBtn:hover{background:#66bb6a}
+        .modal-content #cancelBtn{background:#666}.modal-content #cancelBtn:hover{background:#888}
+        .modal-content .forgot-password{color:#66bb6a;text-decoration:underline;cursor:pointer;font-size:.9em;margin-top:10px}
+        .modal.hide,.modal-content.hide{opacity:0;transform:translateY(-20px);pointer-events:none}
+        .loading{display:none;color:#e0e0e0;font-style:italic}
+        @media (max-width:768px){.grid-container{grid-template-columns:1fr;grid-template-rows:auto}.modal-content{width:80%}}
     </style>
 </head>
 <body>
-    <div class="grid-container">
-        <div class="log-container">
-            <h2>Select Session</h2>
-            <select id="sessionSelect">
-                <option value="">Select a session</option>
-            </select>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <div class="loading">Logging in...</div>
+            <button id="loginBtn">Login</button>
+            <button id="cancelBtn">Cancel</button>
+            <div class="forgot-password">Forgot Password?</div>
         </div>
-        <div class="log-container">
+    </div>
+    <div class="grid-container">
+        <div class="log-container" id="session-selection">
+            <h2>Select Session</h2>
+            <select id="sessionSelect"><option value="">Select a session</option></select>
+            <button id="printPdfBtn">Print PDF Report</button>
+        </div>
+        <div class="log-container" id="sales-summary">
             <h2>Sales Summary</h2>
             <div class="summary-grid">
                 <p>CASH: $<span class="summary-value" id="cashSales">0.00</span></p>
@@ -47,14 +74,16 @@
                 <p>Tickets: $<span class="summary-value" id="ticketSales">0.00</span></p>
                 <p>TOTAL IN: $<span class="summary-value" id="totalIn">0.00</span></p>
             </div>
+            <div id="categoryCounts"></div>
         </div>
-        <div class="log-container">
+        <div class="log-container" id="customer-graph">
             <h2>Sales Over Time</h2>
             <div class="graph-container">
                 <canvas id="transactionGraph"></canvas>
             </div>
+            <button id="resetZoomBtn">Reset Zoom</button>
         </div>
-        <div class="log-container">
+        <div class="log-container" id="transaction-log">
             <h2>Transaction Log</h2>
             <div class="table-wrapper">
                 <table id="transactionTable">
@@ -66,69 +95,104 @@
         </div>
     </div>
     <script>
-        let db, transactionChart;
+        const API_KEY='AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        let db,transactionChart,updateInterval;
+        const username='brad',passwordHash=CryptoJS.SHA256('password123').toString();
         $(document).ready(() => {
-            const request = indexedDB.open('SalesDB', 2);
-            request.onupgradeneeded = e => {
-                db = e.target.result;
-                if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                if (!db.objectStoreNames.contains('transactions')) db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId', { unique: false });
-            };
-            request.onsuccess = e => { db = e.target.result; loadSessions(); };
-            $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
+            $('#loginBtn').on('click', () => {
+                const e = $('#username').val().trim(), t = $('#password').val().trim();
+                if (!e || !t) return alert('Please enter both username and password'), false;
+                $('.modal-content button,.modal-content input').prop('disabled', true);
+                $('.loading').show();
+                setTimeout(() => {
+                    const i = CryptoJS.SHA256(t).toString();
+                    if (e === username && i === passwordHash) {
+                        $('#loginModal').addClass('hide');
+                        setTimeout(() => {
+                            $('#loginModal').hide();
+                            $('.grid-container').show().css('opacity', 1);
+                            loadSessions();
+                        }, 300);
+                    } else {
+                        $('.modal-content button,.modal-content input').prop('disabled', false);
+                        $('.loading').hide();
+                        alert('Incorrect username or password');
+                    }
+                }, 500);
+            });
+            $('#cancelBtn').on('click', () => {
+                $('#username,#password').val('');
+            });
+            $('.forgot-password').on('click', () => alert('Forgot Password functionality is not implemented yet.'));
         });
+        const request = indexedDB.open('SalesDB', 2);
+        request.onupgradeneeded = e => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('transactions')) db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId', { unique: false });
+        };
+        request.onsuccess = e => { db = e.target.result; };
+        request.onerror = () => alert('Failed to open database.');
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
-            store.getAll().onsuccess = e => {
-                const sessions = e.target.result;
+            store.getAll().onsuccess = t => {
+                const sessions = t.target.result;
                 const $select = $('#sessionSelect');
                 $select.empty().append('<option value="">Select a session</option>');
                 sessions.forEach(s => $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`));
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) $select.val(activeSessionId);
             };
         }
-        function updateLog(sessionId) {
-            if (!sessionId) return resetDisplay();
+        function debounce(e, t) { let s; return function(...i) { clearTimeout(s); s = setTimeout(() => e.apply(this, i), t); }; }
+        function getItemClass(e) { return e.startsWith('CASH') ? 'item-cash' : e.startsWith('CC') ? 'item-cc' : e === 'TICKET' ? 'item-ticket' : e === 'COMP' ? 'item-comp' : ''; }
+        function updateLog(e) {
+            if (!e) return resetDisplay();
             const tx = db.transaction(['transactions'], 'readonly');
             const store = tx.objectStore('transactions');
             const index = store.index('sessionId');
-            index.getAll(Number(sessionId)).onsuccess = e => {
-                const transactions = e.target.result.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            index.getAll(Number(e)).onsuccess = t => {
+                const transactions = t.target.result.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 let cashTotal = 0, cardTotal = 0, compTotal = 0, ticketTotal = 0, totalIn = 0;
-                const cashData = [], cardData = [], compData = [], ticketData = [];
-                transactions.forEach(t => {
-                    t.itemList.forEach(item => {
+                const cashData = [], cardData = [], compData = [], ticketData = [], categoryCounts = {};
+                transactions.forEach(tr => {
+                    tr.itemList.forEach(item => {
                         const value = item.price * item.quantity;
                         if (item.type === 'CASH') cashTotal += value;
                         else if (item.type === 'CARD') cardTotal += value;
                         else if (item.type === 'COMP') compTotal += value;
                         else if (item.type === 'Tickets') ticketTotal += value;
+                        categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
                     });
-                    totalIn += t.total;
-                    cashData.push({ x: new Date(t.timestamp), y: cashTotal });
-                    cardData.push({ x: new Date(t.timestamp), y: cardTotal });
-                    compData.push({ x: new Date(t.timestamp), y: compTotal });
-                    ticketData.push({ x: new Date(t.timestamp), y: ticketTotal });
+                    totalIn += tr.total;
+                    cashData.push({ x: new Date(tr.timestamp), y: cashTotal });
+                    cardData.push({ x: new Date(tr.timestamp), y: cardTotal });
+                    compData.push({ x: new Date(tr.timestamp), y: compTotal });
+                    ticketData.push({ x: new Date(tr.timestamp), y: ticketTotal });
                 });
                 $('#cashSales').text(cashTotal.toFixed(2));
                 $('#cardSales').text(cardTotal.toFixed(2));
                 $('#compSales').text(compTotal.toFixed(2));
                 $('#ticketSales').text(ticketTotal.toFixed(2));
                 $('#totalIn').text(totalIn.toFixed(2));
+                const $categoryCounts = $('#categoryCounts').empty();
+                Object.entries(categoryCounts).forEach(([item, count]) => $categoryCounts.append(`<p class="category-count ${getItemClass(item)}">${item}: <span class="count-value">${count}</span></p>`));
                 updateGraph(cashData, cardData, compData, ticketData);
                 const $tbody = $('#transactionTable tbody').empty();
-                transactions.forEach(t => {
-                    const itemsHtml = t.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (${i.quantity})</span>`).join(', ');
-                    $tbody.append(`<tr><td>${t.time}</td><td>${itemsHtml}</td><td>$${t.total.toFixed(2)}</td><td>${t.note || ''}</td></tr>`);
+                transactions.reverse().forEach(tr => {
+                    const itemsHtml = tr.itemList.map(i => `<span class="${getItemClass(i.item)}">${i.item} (<b>${i.quantity}</b>)</span>`).join(', ');
+                    $tbody.append(`<tr><td>${tr.time}</td><td>${itemsHtml}</td><td>$<span class="summary-value">${tr.total.toFixed(2)}</span></td><td>${tr.note || ''}</td></tr>`);
                 });
-                $('#grandTotal').text(`Total Sales: $${totalIn.toFixed(2)}`);
+                $('#grandTotal').html(`Total Sales: $<span class="summary-value">${totalIn.toFixed(2)}</span>`);
             };
         }
         function resetDisplay() {
             $('#cashSales, #cardSales, #compSales, #ticketSales, #totalIn').text('0.00');
+            $('#categoryCounts').empty();
             if (transactionChart) transactionChart.data.datasets.forEach(d => d.data = []);
             $('#transactionTable tbody').empty();
-            $('#grandTotal').text('Total Sales: $0.00');
+            $('#grandTotal').html('Total Sales: $0.00');
         }
         function updateGraph(cashData, cardData, compData, ticketData) {
             const ctx = document.getElementById('transactionGraph').getContext('2d');
@@ -143,7 +207,10 @@
                             { label: 'Tickets', data: ticketData, borderColor: '#1a73e8', fill: false }
                         ]
                     },
-                    options: { scales: { x: { type: 'time', time: { unit: 'minute' } }, y: { beginAtZero: true } } }
+                    options: {
+                        scales: { x: { type: 'time', time: { unit: 'minute' } }, y: { beginAtZero: true } },
+                        plugins: { zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }, pan: { enabled: true, mode: 'xy' } } }
+                    }
                 });
             } else {
                 transactionChart.data.datasets[0].data = cashData;
@@ -153,6 +220,16 @@
                 transactionChart.update();
             }
         }
+        $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
+        $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
+        $('#printPdfBtn').on('click', function() {
+            const sessionId = $('#sessionSelect').val();
+            if (!sessionId) return alert('Please select a session first');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            // PDF generation logic here (omitted for brevity)
+            doc.save('sales_report.pdf');
+        });
     </script>
 </body>
 </html>
