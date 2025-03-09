@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log</title>
@@ -17,6 +17,8 @@
             padding: 20px;
             background-color: #121212;
             color: #e0e0e0;
+            display: flex;
+            flex-direction: row;
         }
         .modal {
             display: none;
@@ -50,11 +52,11 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
+            margin: 10px;
         }
         .graph-container {
-            max-width: 800px;
-            margin: 0 auto;
+            max-width: 400px;
+            width: 30%;
         }
         .summary-grid {
             display: grid;
@@ -62,13 +64,8 @@
             gap: 10px;
             margin-top: 20px;
         }
-        .summary-item.cash { background: #2e7d32; color: white; }
-        .summary-item.card { background: #d32f2f; color: white; }
-        .summary-item.comp { background: #ffa500; color: white; }
-        .summary-item.tickets { background: #1a73e8; color: white; }
-        .summary-item.total { background: #9c27b0; color: white; }
-        .summary-item.door { background: #00bcd4; color: white; }
         .summary-item {
+            background: #3c3c3c;
             padding: 10px;
             border-radius: 5px;
             text-align: center;
@@ -96,6 +93,28 @@
             cursor: pointer;
             margin-top: 10px;
         }
+        .cash-total { color: #2e7d32; }
+        .card-total { color: #d32f2f; }
+        .comp-total { color: #ffa500; }
+        .ticket-total { color: #1a73e8; }
+        .total-sales { color: #ffffff; }
+        .door-count-total { color: #00bcd4; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background: #2c3e50;
+        }
+        td {
+            background: #1e1e1e;
+        }
     </style>
 </head>
 <body>
@@ -110,25 +129,37 @@
         </div>
     </div>
     <div class="log-container graph-container" style="display: none;">
-        <h2>People In Over Time</h2>
+        <h2>Sales Over Time</h2>
         <canvas id="salesGraph"></canvas>
     </div>
-    <div class="log-container" style="display: none;">
+    <div class="log-container" style="display: none; flex-grow: 1;">
         <h2>Live Sales Summary</h2>
         <select id="sessionSelect"><option value="">Select a session</option></select>
         <button id="refreshBtn">Refresh</button>
-        <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 10s)</label>
-        <button id="generatePdfBtn" style="display: none;">Generate PDF</button>
+        <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 3s)</label>
+        <button id="generatePdfBtn" style="display: none;">Save to PDF</button>
         <div class="summary-grid" id="summaryGrid"></div>
-    </div>
-    <div class="log-container" style="display: none;">
         <h2>Transaction Log</h2>
-        <div id="transactionLog"></div>
+        <div style="overflow: auto; max-height: 300px;">
+            <table id="transactionTable">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Note</th>
+                        <th>Door Count</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
         <button id="logoutBtn">Logout</button>
     </div>
     <script>
+        // Persistent values
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.google.com';
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
@@ -136,24 +167,30 @@
         let currentSessionId, sessionDate, sessionVenue, sessionEvent, sessionCashier, salesOpenTimestamp, closedTimestamp, transactions;
 
         function handleClientLoad() {
-            gapi.load('client', initClient);
+            gapi.load('client:auth2', initClient);
         }
 
         function initClient() {
             gapi.client.init({
                 apiKey: API_KEY,
+                clientId: CLIENT_ID,
                 discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
                 if (localStorage.getItem('adminLoggedIn') === 'true') {
                     $('.log-container').show();
-                    loadSessions();
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    if (activeSessionId) {
+                        loadSessions(activeSessionId);
+                    } else {
+                        loadSessions();
+                    }
                 } else {
                     $('#loginModal').show();
                 }
             }, error => console.error('Error initializing client:', error));
         }
 
-        function loadSessions() {
+        function loadSessions(selectedSessionId = null) {
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!B2:B'
@@ -161,7 +198,13 @@
                 const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
                 const select = $('#sessionSelect');
                 select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                if (sessionIds.length > 0) updateLog(sessionIds[0]);
+                if (selectedSessionId && sessionIds.includes(selectedSessionId)) {
+                    select.val(selectedSessionId);
+                    updateLog(selectedSessionId);
+                } else if (sessionIds.length > 0) {
+                    select.val(sessionIds[0]);
+                    updateLog(sessionIds[0]);
+                }
             }, error => console.error('Error loading sessions:', error));
         }
 
@@ -188,8 +231,8 @@
                 closedTimestamp = closedRow ? closedRow[2] : 'N/A';
 
                 let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-                const doorData = { labels: [], cash: [], card: [], comp: [], tickets: [] };
-                let cumulativeCash = 0, cumulativeCard = 0, cumulativeComp = 0, cumulativeTickets = 0;
+                const doorData = { labels: [], cash: [], card: [], comp: [], tickets: [], door: [] };
+                let cumulativeCash = 0, cumulativeCard = 0, cumulativeComp = 0, cumulativeTickets = 0, cumulativeDoor = 0;
 
                 transactions.forEach((tr, index) => {
                     const items = JSON.parse(tr[4] || '[]');
@@ -209,22 +252,29 @@
                         }
                     });
                     totalSales += parseFloat(tr[5] || 0);
-                    totalDoorCount += parseInt(tr[7] || 0);
+                    cumulativeDoor += parseInt(tr[7] || 0);
                     doorData.labels.push(`T${index + 1}`);
                     doorData.cash.push(cumulativeCash);
                     doorData.card.push(cumulativeCard);
                     doorData.comp.push(cumulativeComp);
                     doorData.tickets.push(cumulativeTickets);
+                    doorData.door.push(cumulativeDoor);
                 });
 
                 $('#summaryGrid').html(`
-                    <div class="summary-item cash">Cash: $${cashSales.toFixed(2)}</div>
-                    <div class="summary-item card">Card: $${cardSales.toFixed(2)}</div>
-                    <div class="summary-item comp">Comp: ${compCount}</div>
-                    <div class="summary-item tickets">Tickets: ${ticketCount}</div>
-                    <div class="summary-item total">Total: $${totalSales.toFixed(2)}</div>
-                    <div class="summary-item door">Thru Door: ${totalDoorCount}</div>
+                    <div class="summary-item"><span class="cash-total">Cash:</span> $${cashSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="card-total">Card:</span> $${cardSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="comp-total">Comp:</span> ${compCount}</div>
+                    <div class="summary-item"><span class="ticket-total">Tickets:</span> ${ticketCount}</div>
+                    <div class="summary-item"><span class="total-sales">Total:</span> $${totalSales.toFixed(2)}</div>
+                    <div class="summary-item"><span class="door-count-total">Thru Door:</span> ${cumulativeDoor}</div>
                 `);
+
+                const tableBody = $('#transactionTable tbody').empty();
+                transactions.forEach(tr => {
+                    const items = JSON.parse(tr[4] || '[]').map(item => `${item.item} x${item.quantity}`).join(', ');
+                    tableBody.append(`<tr><td>${tr[3]}</td><td>${items}</td><td>${tr[5]}</td><td>${tr[6]}</td><td>${tr[7]}</td></tr>`);
+                });
 
                 if (salesChart) salesChart.destroy();
                 salesChart = new Chart(document.getElementById('salesGraph').getContext('2d'), {
@@ -235,12 +285,15 @@
                             { label: 'Cash', data: doorData.cash, borderColor: '#2e7d32', fill: true },
                             { label: 'Card', data: doorData.card, borderColor: '#d32f2f', fill: true },
                             { label: 'Comp', data: doorData.comp, borderColor: '#ffa500', fill: true },
-                            { label: 'Tickets', data: doorData.tickets, borderColor: '#1a73e8', fill: true }
+                            { label: 'Tickets', data: doorData.tickets, borderColor: '#1a73e8', fill: true },
+                            { label: 'Thru Door', data: doorData.door, borderColor: '#9c27b0', fill: false }
                         ]
                     },
                     options: {
                         responsive: true,
-                        scales: { y: { beginAtZero: true, title: { display: true, text: 'People In' } } }
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count' } }
+                        }
                     }
                 });
 
@@ -254,6 +307,7 @@
 
         function resetDisplay() {
             $('#summaryGrid').empty().html('<div class="summary-item">No data available</div>');
+            $('#transactionTable tbody').empty();
             if (salesChart) salesChart.destroy();
             salesChart = null;
             $('#generatePdfBtn').hide();
@@ -262,7 +316,7 @@
         function toggleAutoRefresh() {
             const sessionId = $('#sessionSelect').val();
             if ($('#autoRefresh').is(':checked') && sessionId) {
-                autoRefreshInterval = setInterval(() => updateLog(sessionId), 10000);
+                autoRefreshInterval = setInterval(() => updateLog(sessionId), 3000);
             } else {
                 clearInterval(autoRefreshInterval);
             }
@@ -282,7 +336,7 @@
 
             const transactionData = transactions.map(tr => {
                 const items = JSON.parse(tr[4] || '[]').map(item => `${item.item} x${item.quantity}`).join(', ');
-                return [tr[3], items, tr[5], tr[6], tr[7]]; // Time, Items, Total, Note, DoorCount
+                return [tr[3], items, tr[5], tr[6], tr[7]];
             });
 
             doc.autoTable({
@@ -306,7 +360,12 @@
                     localStorage.setItem('adminLoggedIn', 'true');
                     $('#loginModal').hide();
                     $('.log-container').show();
-                    loadSessions();
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    if (activeSessionId) {
+                        loadSessions(activeSessionId);
+                    } else {
+                        loadSessions();
+                    }
                 } else {
                     alert('Incorrect credentials');
                 }
@@ -317,13 +376,25 @@
                 clearInterval(autoRefreshInterval);
                 location.reload();
             });
-            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
+            $('#refreshBtn').on('click', () => {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) {
+                    $('#sessionSelect').val(activeSessionId);
+                }
+                updateLog($('#sessionSelect').val());
+            });
             $('#autoRefresh').on('change', toggleAutoRefresh);
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) updateLog(sessionId);
             });
             $('#generatePdfBtn').on('click', generatePDF);
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'doorCount') {
+                    const doorCount = parseInt(e.newValue) || 0;
+                    $('#summaryGrid .door-count-total').parent().text(`Thru Door: ${doorCount}`);
+                }
+            });
         });
     </script>
 </body>
