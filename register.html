@@ -7,13 +7,14 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; overflow-x: hidden; }
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         #sessionInfo { display: flex; flex-wrap: wrap; align-items: center; }
         .header label { margin-right: 5px; font-weight: bold; }
         .header input { padding: 8px; background: #3c3c3c; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; font-size: 1em; width: 18%; margin: 0 5px; }
         .header input.locked { background: #555; color: #888; }
-        .toggle-btn { padding: 8px 16px; font-size: 1em; border: none; border-radius: 4px; cursor: pointer; color: white; width: 36%; background: #388e3c; }
+        .toggle-section { display: flex; align-items: center; gap: 10px; }
+        .toggle-btn { padding: 8px 16px; font-size: 1em; border: none; border-radius: 4px; cursor: pointer; color: white; width: 150px; background: #388e3c; }
         .container { max-width: 85%; margin: 0 auto; background: #2d2d2d; padding: 20px; border-radius: 8px; min-height: 600px; }
         .button-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
         .product-item { background: #3c3c3c; padding: 10px; border-radius: 4px; text-align: center; }
@@ -46,9 +47,11 @@
             <label for="eventDate">Date:</label><input type="date" id="eventDate">
             <label for="eventVenue">Venue:</label><input type="text" id="eventVenue" value="Sister">
             <label for="eventName">Event Name:</label><input type="text" id="eventName" value="Open Mic">
-            <label for="cashierName">Cashier Name:</label><input type="text" id="cashierName" value="dddd">
         </div>
-        <button id="toggleSalesBtn" class="toggle-btn">Open Sales</button>
+        <div class="toggle-section">
+            <label for="cashierName">Cashier Name:</label><input type="text" id="cashierName" value="Default">
+            <button id="toggleSalesBtn" class="toggle-btn">Open Sales</button>
+        </div>
     </div>
     <div class="container">
         <div class="button-container">
@@ -109,15 +112,14 @@
         <button id="logSaleBtn">Log Sale</button>
     </div>
     <script>
-        const CLIENT_ID = ' 251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com'; // Replace with your Google Client ID
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';     // Replace with your Google API Key
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
         class SalesApp {
             constructor() {
-                this.db = null;
                 this.sessionStarted = false;
                 this.sessionId = null;
                 this.currentItems = [];
@@ -134,21 +136,16 @@
                         discoveryDocs: DISCOVERY_DOCS,
                         scope: SCOPES
                     }).then(() => {
-                        gapi.auth2.getAuthInstance().signIn();
+                        if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                            gapi.auth2.getAuthInstance().signIn().then(() => {
+                                console.log('User signed in.');
+                                this.checkSessionStatus();
+                            });
+                        } else {
+                            this.checkSessionStatus();
+                        }
                     }).catch(error => console.error('Error initializing GAPI:', error));
                 });
-
-                const request = indexedDB.open('SalesDB', 2);
-                request.onupgradeneeded = (e) => {
-                    this.db = e.target.result;
-                    if (!this.db.objectStoreNames.contains('sessions')) {
-                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                    }
-                };
-                request.onsuccess = (e) => {
-                    this.db = e.target.result;
-                    this.checkSessionStatus();
-                };
 
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
                 $(document).on('click', '.increment-btn', (e) => {
@@ -178,18 +175,12 @@
             checkSessionStatus() {
                 const sessionId = localStorage.getItem('activeSessionId');
                 if (sessionId) {
-                    this.db.transaction(['sessions'], 'readonly').objectStore('sessions').get(Number(sessionId)).onsuccess = (e) => {
-                        const session = e.target.result;
-                        if (session && session.status === 'open') {
-                            this.sessionStarted = true;
-                            this.sessionId = session.id;
-                            this.doorCount = session.doorCount || 0;
-                            this.sessionTotal = session.sessionTotal || 0;
-                            $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
-                            $('#sessionInfo').hide();
-                            this.updateTotals();
-                        }
-                    };
+                    this.sessionStarted = true;
+                    this.sessionId = sessionId;
+                    this.doorCount = parseInt(localStorage.getItem('doorCount') || '0');
+                    this.sessionTotal = parseFloat(localStorage.getItem('sessionTotal') || '0');
+                    $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
+                    $('#sessionInfo').hide();
                 }
             }
 
@@ -200,29 +191,22 @@
                     const eventName = $('#eventName').val();
                     const cashier = $('#cashierName').val();
                     if (!date || !venue || !cashier) return alert('Please fill in all fields');
-                    const session = { date, venue, eventName, cashier, status: 'open', doorCount: 0, sessionTotal: 0 };
-                    const tx = this.db.transaction(['sessions'], 'readwrite').objectStore('sessions');
-                    tx.add(session).onsuccess = async (e) => {
-                        this.sessionId = e.target.result;
-                        localStorage.setItem('activeSessionId', this.sessionId);
-                        this.sessionStarted = true;
-                        this.doorCount = 0;
-                        this.sessionTotal = 0;
-                        $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
-                        $('#sessionInfo').hide();
-                        await this.appendHeaderToSheet(['Date:', 'Venue:', 'Event Name:', 'Cashier Name:']);
-                        await this.appendHeaderToSheet([date, venue, eventName, cashier]);
-                    };
+                    this.sessionId = Date.now().toString();
+                    localStorage.setItem('activeSessionId', this.sessionId);
+                    this.sessionStarted = true;
+                    this.doorCount = 0;
+                    this.sessionTotal = 0;
+                    localStorage.setItem('doorCount', this.doorCount);
+                    localStorage.setItem('sessionTotal', this.sessionTotal);
+                    $('#toggleSalesBtn').text('Close Sales').css('background', '#d32f2f');
+                    $('#sessionInfo').hide();
+                    await this.appendToSheet(['Date:', 'Venue:', 'Event Name:', 'Cashier Name:']);
+                    await this.appendToSheet([date, venue, eventName, cashier]);
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
                     if (pin === '1234') {
-                        await this.appendClosedRow();
-                        this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').get(this.sessionId).onsuccess = (e) => {
-                            const session = e.target.result;
-                            session.status = 'closed';
-                            this.db.transaction(['sessions'], 'readwrite').objectStore('sessions').put(session);
-                            this.resetSession();
-                        };
+                        await this.appendToSheet(['CLOSED', this.sessionTotal.toFixed(2)]);
+                        this.resetSession();
                     }
                 }
             }
@@ -233,7 +217,7 @@
                 countEl.text(count);
                 const item = this.currentItems.find(i => i.item === itemName);
                 if (item) item.quantity++;
-                else this.currentItems.push({ item: itemName, price, quantity: 1, type: this.getItemType(itemName) });
+                else this.currentItems.push({ item: itemName, price, quantity: 1 });
                 this.updateTotals();
             }
 
@@ -243,7 +227,7 @@
                 if (count > 0) {
                     count--;
                     countEl.text(count);
-                    const item = this.currentItems.find(i => i.item === itemName);
+                    const item = this.currentItems.find(i => i.item !== itemName);
                     if (item) {
                         item.quantity--;
                         if (item.quantity <= 0) this.currentItems = this.currentItems.filter(i => i.item !== itemName);
@@ -255,7 +239,7 @@
             updateTotals() {
                 this.total = this.currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
                 const currentDoorCount = this.currentItems.reduce((sum, item) => sum + item.quantity, 0);
-                const totalDoorCount = (this.doorCount || 0) + currentDoorCount;
+                const totalDoorCount = this.doorCount + currentDoorCount;
                 $('#cashTotal').text(this.total.toFixed(2));
                 $('#doorCount').text(totalDoorCount);
             }
@@ -263,95 +247,33 @@
             async logSale() {
                 if (!this.sessionStarted || this.currentItems.length === 0) return;
                 const transaction = {
-                    sessionId: this.sessionId.toString(),
+                    sessionId: this.sessionId,
                     timestamp: new Date().toISOString(),
                     time: new Date().toLocaleTimeString(),
-                    itemList: this.currentItems.map(item => ({ item: item.item, price: item.price, quantity: item.quantity, type: item.type })),
+                    items: this.currentItems.map(item => `${item.item} (${item.quantity})`).join(', '),
                     total: this.total,
                     note: $('#noteInput').val(),
                     doorCount: this.currentItems.reduce((sum, item) => sum + item.quantity, 0)
                 };
-                await this.sendToGoogleSheet(transaction);
+                await this.appendToSheet([transaction.sessionId, transaction.timestamp, transaction.time, transaction.items, transaction.total, transaction.note, transaction.doorCount]);
                 this.sessionTotal += transaction.total;
                 this.doorCount += transaction.doorCount;
-                const tx = this.db.transaction(['sessions'], 'readwrite');
-                tx.objectStore('sessions').get(this.sessionId).onsuccess = (e) => {
-                    const session = e.target.result;
-                    session.doorCount = this.doorCount;
-                    session.sessionTotal = this.sessionTotal;
-                    tx.objectStore('sessions').put(session);
-                };
+                localStorage.setItem('sessionTotal', this.sessionTotal);
+                localStorage.setItem('doorCount', this.doorCount);
                 this.resetSale();
             }
 
-            async sendToGoogleSheet(transaction) {
+            async appendToSheet(values) {
                 try {
                     await gapi.client.sheets.spreadsheets.values.append({
                         spreadsheetId: SPREADSHEET_ID,
                         range: 'Sheet1!A1',
                         valueInputOption: 'RAW',
-                        resource: { values: [[transaction.sessionId, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total, transaction.note, transaction.doorCount]] }
+                        resource: { values: [values] }
                     });
-                    console.log('Sale logged successfully');
+                    console.log('Data appended to Google Sheet');
                 } catch (error) {
-                    console.error('Error sending to Google Sheet:', error);
-                }
-            }
-
-            async appendHeaderToSheet(header) {
-                try {
-                    await gapi.client.sheets.spreadsheets.values.append({
-                        spreadsheetId: SPREADSHEET_ID,
-                        range: 'Sheet1!A1',
-                        valueInputOption: 'RAW',
-                        resource: { values: [header] }
-                    });
-                    const sheetId = 0;
-                    const sheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-                    const rowIndex = sheet.result.sheets[0].properties.gridProperties.rowCount - 1;
-                    await gapi.client.sheets.spreadsheets.batchUpdate({
-                        spreadsheetId: SPREADSHEET_ID,
-                        resource: {
-                            requests: [{
-                                repeatCell: {
-                                    range: { sheetId, startRowIndex: rowIndex, endRowIndex: rowIndex + 1, startColumnIndex: 0, endColumnIndex: 4 },
-                                    cell: { userEnteredFormat: { textFormat: { bold: true } } },
-                                    fields: 'userEnteredFormat.textFormat.bold'
-                                }
-                            }]
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error appending header:', error);
-                }
-            }
-
-            async appendClosedRow() {
-                try {
-                    const closedRow = ["CLOSED", this.sessionTotal.toFixed(2)];
-                    await gapi.client.sheets.spreadsheets.values.append({
-                        spreadsheetId: SPREADSHEET_ID,
-                        range: 'Sheet1!A1',
-                        valueInputOption: 'RAW',
-                        resource: { values: [closedRow] }
-                    });
-                    const sheetId = 0;
-                    const sheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-                    const rowIndex = sheet.result.sheets[0].properties.gridProperties.rowCount - 1;
-                    await gapi.client.sheets.spreadsheets.batchUpdate({
-                        spreadsheetId: SPREADSHEET_ID,
-                        resource: {
-                            requests: [{
-                                repeatCell: {
-                                    range: { sheetId, startRowIndex: rowIndex, endRowIndex: rowIndex + 1, startColumnIndex: 0, endColumnIndex: 2 },
-                                    cell: { userEnteredFormat: { textFormat: { bold: true } } },
-                                    fields: 'userEnteredFormat.textFormat.bold'
-                                }
-                            }]
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error appending closed row:', error);
+                    console.error('Error appending to Google Sheet:', error);
                 }
             }
 
@@ -369,17 +291,11 @@
                 this.doorCount = 0;
                 this.sessionTotal = 0;
                 localStorage.removeItem('activeSessionId');
+                localStorage.removeItem('doorCount');
+                localStorage.removeItem('sessionTotal');
                 $('#toggleSalesBtn').text('Open Sales').css('background', '#388e3c');
                 $('#sessionInfo').show();
                 this.resetSale();
-            }
-
-            getItemType(itemName) {
-                if (itemName.startsWith('CASH')) return 'CASH';
-                if (itemName.startsWith('CC')) return 'CARD';
-                if (itemName === 'TICKET') return 'Tickets';
-                if (itemName === 'COMP') return 'COMP';
-                return 'Other';
             }
         }
 
