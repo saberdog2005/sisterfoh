@@ -259,6 +259,7 @@
                         <input type="number" step="0.25" min="0.25" placeholder="Amount">
                         <button class="add-custom">Add</button>
                     </div>
+                    <div class="custom-items" style="margin-top: 10px;"></div>
                 </div>
             </div>
         </div>
@@ -293,8 +294,8 @@
                     this.incrementItem(item.data('item'), parseFloat(item.data('price')));
                 });
                 $(document).on('click', '.decrement-btn', (e) => {
-                    const item = $(e.target).closest('.product-item');
-                    this.decrementItem(item.data('item'));
+                    const itemName = $(e.target).closest('.product-item').data('item');
+                    this.decrementItem(itemName);
                 });
                 $(document).on('click', '.add-custom', (e) => {
                     const item = $(e.target).closest('.product-item');
@@ -304,7 +305,8 @@
                         item.find('input').val('');
                     } else {
                         price = Math.round(price / 0.25) * 0.25;
-                        this.incrementItem(`CASH (CUSTOM) $${price.toFixed(2)}`, price);
+                        const itemName = `CASH (CUSTOM) $${price.toFixed(2)}`;
+                        this.incrementItem(itemName, price);
                         item.find('input').val('');
                     }
                 });
@@ -342,7 +344,7 @@
                     $('#eventDate, #eventVenue, #eventName, #cashierName').prop('readonly', true);
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
-                    if (pin === '1234') {
+                    if (pin === '1234') { // For production, replace with a secure PIN mechanism
                         this.sendSessionClose();
                         localStorage.removeItem('activeSessionId');
                         localStorage.removeItem('doorCount');
@@ -354,27 +356,51 @@
             }
 
             incrementItem(itemName, price) {
-                const countEl = $(`.product-item[data-item="${itemName}"] .count`);
-                let count = parseInt(countEl.text()) + 1;
-                countEl.text(count);
-                const item = this.currentItems.find(i => i.item === itemName);
-                if (item) item.quantity++;
-                else this.currentItems.push({ item: itemName, price, quantity: 1, type: this.getItemType(itemName) });
+                let item = this.currentItems.find(i => i.item === itemName);
+                if (item) {
+                    item.quantity++;
+                } else {
+                    item = { item: itemName, price, quantity: 1, type: this.getItemType(itemName) };
+                    this.currentItems.push(item);
+                }
+                this.updateCustomItemUI(itemName);
                 this.updateTotals();
             }
 
             decrementItem(itemName) {
-                const countEl = $(`.product-item[data-item="${itemName}"] .count`);
-                let count = parseInt(countEl.text());
-                if (count > 0) {
-                    count--;
-                    countEl.text(count);
-                    const item = this.currentItems.find(i => i.item === itemName);
-                    if (item) {
-                        item.quantity--;
-                        if (item.quantity <= 0) this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                const item = this.currentItems.find(i => i.item === itemName);
+                if (item && item.quantity > 0) {
+                    item.quantity--;
+                    if (item.quantity <= 0) {
+                        this.currentItems = this.currentItems.filter(i => i.item !== itemName);
                     }
+                    this.updateCustomItemUI(itemName);
                     this.updateTotals();
+                }
+            }
+
+            updateCustomItemUI(itemName) {
+                if (itemName.startsWith('CASH (CUSTOM)')) {
+                    const item = this.currentItems.find(i => i.item === itemName);
+                    const count = item ? item.quantity : 0;
+                    const customItemsContainer = $('.custom-items');
+                    let itemEl = customItemsContainer.find(`[data-item="${itemName}"]`);
+                    if (count > 0) {
+                        if (itemEl.length === 0) {
+                            itemEl = $(`
+                                <div data-item="${itemName}" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px;">
+                                    <span>${itemName}</span>
+                                    <span class="count">${count}</span>
+                                    <button class="decrement-btn" onclick="app.decrementItem('${itemName}')">-</button>
+                                </div>
+                            `);
+                            customItemsContainer.append(itemEl);
+                        } else {
+                            itemEl.find('.count').text(count);
+                        }
+                    } else {
+                        itemEl.remove();
+                    }
                 }
             }
 
@@ -423,26 +449,30 @@
             }
 
             async sendPostRequest(data) {
-                try {
-                    const response = await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const result = await response.json();
-                    if (result.status === 'error') throw new Error(result.message);
-                    console.log('Data sent successfully:', data.type);
-                } catch (error) {
-                    console.error('Error sending data:', error);
-                    alert('Failed to send data. Retry or check connection.');
-                }
+                // For static sites, log the data instead of sending a request
+                console.log('Data to be sent:', data);
+                // In a real deployment, replace with actual fetch request
+                // try {
+                //     const response = await fetch(WEB_APP_URL, {
+                //         method: 'POST',
+                //         headers: { 'Content-Type': 'application/json' },
+                //         body: JSON.stringify(data)
+                //     });
+                //     if (!response.ok) throw new Error('Network response was not ok');
+                //     const result = await response.json();
+                //     if (result.status === 'error') throw new Error(result.message);
+                //     console.log('Data sent successfully:', data.type);
+                // } catch (error) {
+                //     console.error('Error sending data:', error);
+                //     alert('Failed to send data. Retry or check connection.');
+                // }
             }
 
             resetSale() {
                 this.currentItems = [];
                 this.total = 0;
                 $('.count').text('0');
+                $('.custom-items').empty();
                 $('#cashTotal').text('0.00');
                 $('#noteInput').val('');
                 $('#logSaleBtn').prop('disabled', true);
