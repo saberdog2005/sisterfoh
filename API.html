@@ -1,36 +1,49 @@
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const spreadsheetId = '1IUqkPTg87Xujvxv_efLFtX7kpji0UdPOLAX5N_97IaY'; // Your Spreadsheet ID
-  const sheetName = 'LIVE REGISTER';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>API Control</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <button id="fetchData">Fetch Data</button>
+    <button id="sendTestData">Send Test Data</button>
+    <div id="result"></div>
+    <script>
+        const BOT_API_KEY = 'xai-bot-12345'; // Replace with actual bot API key
+        const apiUrl = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your URL
 
-  // Open the spreadsheet and get or create the sheet
-  const ss = SpreadsheetApp.openById(spreadsheetId);
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(['Session ID', 'Timestamp', 'Time', 'Items', 'Total', 'Note', 'Door Count']);
-  }
+        $('#fetchData').on('click', () => {
+            fetch(apiUrl, {
+                headers: { 'Authorization': `Bearer ${BOT_API_KEY}` }
+            })
+            .then(response => response.json())
+            .then(data => $('#result').text(JSON.stringify(data)))
+            .catch(error => $('#result').text('Error: ' + error));
+        });
 
-  // Format items as a string
-  const itemsString = data.itemList.map(item => `${item.item} (x${item.quantity})`).join(', ');
-
-  // Append the transaction to the sheet, including doorCount
-  sheet.appendRow([
-    data.sessionId,
-    data.timestamp,
-    data.time,
-    itemsString,
-    data.total,
-    data.note || '',
-    data.doorCount || 0
-  ]);
-
-  return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doGet() {
-  // For testing purposes
-  return ContentService.createTextOutput(JSON.stringify({ message: 'API is live' }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+        $('#sendTestData').on('click', () => {
+            const testData = {
+                sessionId: 1,
+                timestamp: new Date().toISOString(),
+                time: new Date().toLocaleTimeString(),
+                itemList: [{ item: 'CASH $20', price: 20, quantity: 1 }],
+                total: 20,
+                note: 'Test',
+                doorCount: 1
+            };
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${BOT_API_KEY}`
+                },
+                body: JSON.stringify(testData)
+            })
+            .then(response => response.json())
+            .then(data => $('#result').text(JSON.stringify(data)))
+            .catch(error => $('#result').text('Error: ' + error));
+        });
+    </script>
+</body>
+</html>
