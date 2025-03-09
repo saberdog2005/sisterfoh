@@ -33,7 +33,7 @@
         h2 { margin-top: 0; }
         #transactionLog { overflow-y: auto; max-height: 200px; }
         #transactionLog p { margin: 5px 0; }
-        #salesGraph { background: #3c3c3c; }
+        #salesGraph { background: #3c3c3c; height: 400px; }
     </style>
 </head>
 <body>
@@ -72,15 +72,32 @@
         </div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Provided API Key
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Provided Spreadsheet ID
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         const username = 'admin';
         const passwordHash = CryptoJS.SHA256('password123').toString();
         let salesChart;
+        let graphData = {
+            labels: [],
+            cash: [],
+            card: [],
+            comp: [],
+            ticket: []
+        };
 
         $(document).ready(() => {
-            gapi.load('client', () => gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }));
+            gapi.load('client', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: DISCOVERY_DOCS
+                }).then(() => {
+                    console.log('Google API client initialized');
+                    loadSessions();
+                }).catch(err => {
+                    console.error('Error initializing Google API client:', err);
+                });
+            });
 
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
@@ -90,7 +107,6 @@
                     localStorage.setItem('adminLoggedIn', 'true');
                     $('#loginModal').hide();
                     $('.grid-container').show();
-                    loadSessions();
                 } else {
                     alert('Incorrect credentials');
                 }
@@ -117,19 +133,132 @@
         });
 
         function loadSessions() {
-            console.log('Loading sessions...');
-            $('#sessionSelect').html('<option value="">Select a session</option><option value="test">Test Session</option>');
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Sheet1!A2:B'
+            }).then(response => {
+                const rows = response.result.values || [];
+                const sessions = [...new Set(rows.map(row => row[1]))].filter(id => id);
+                $('#sessionSelect').html('<option value="">Select a session</option>' + sessions.map(id => `<option value="${id}">${id}</option>`).join(''));
+                updateGraph(); // Initialize graph
+            }).catch(err => {
+                console.error('Error loading sessions:', err);
+            });
         }
 
         function updateLog(sessionId) {
-            console.log('Updating log for session:', sessionId);
-            $('#cashSales').text('100.00');
-            $('#cardSales').text('50.00');
-            $('#compCount').text('5');
-            $('#ticketCount').text('10');
-            $('#totalSales').text('150.00');
-            $('#doorCount').text('15');
-            $('#transactionLog').html('<p>Test transaction</p>');
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `Sheet1!A:H`
+            }).then(response => {
+                const rows = response.result.values || [];
+                const sessionTransactions = rows.filter(row => row[1] === sessionId && row[0] === 'TRANSACTION');
+                if (!sessionTransactions.length) {
+                    resetDisplay();
+                    return;
+                }
+
+                let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
+                const timestamp = new Date().toLocaleTimeString();
+                graphData.labels.push(timestamp);
+
+                sessionTransactions.forEach(tr => {
+                    const items = JSON.parse(tr[4] || '[]');
+                    items.forEach(item => {
+                        if (item.type === 'CASH') cashSales += item.price * item.quantity;
+                        if (item.type === 'CARD') cardSales += item.price * item.quantity;
+                        if (item.type === 'COMP') compCount += item.quantity;
+                        if (item.type === 'Tickets') ticketCount += item.quantity;
+                    });
+                    totalSales += parseFloat(tr[5] || 0);
+                    totalDoorCount += parseInt(tr[7] || 0);
+                });
+
+                graphData.cash.push(cashSales);
+                graphData.card.push(cardSales);
+                graphData.comp.push(compCount);
+                graphData.ticket.push(ticketCount);
+
+                $('#cashSales').text(cashSales.toFixed(2));
+                $('#cardSales').text(cardSales.toFixed(2));
+                $('#compCount').text(compCount);
+                $('#ticketCount').text(ticketCount);
+                $('#totalSales').text(totalSales.toFixed(2));
+                $('#doorCount').text(totalDoorCount);
+                $('#transactionLog').html(sessionTransactions.map(tr => `<p>${tr[3]} - $${tr[5]} - Thru Door: ${tr[7] || 0}</p>`).join(''));
+
+                updateGraph();
+            }).catch(err => {
+                console.error('Error updating log:', err);
+                resetDisplay();
+            });
+        }
+
+        function resetDisplay() {
+            $('#cashSales, #cardSales, #totalSales').text('0.00');
+            $('#compCount, #ticketCount, #doorCount').text('0');
+            $('#transactionLog').empty();
+            if (salesChart) salesChart.destroy();
+        }
+
+        function updateGraph() {
+            const ctx = document.getElementById('salesGraph').getContext('2d');
+            if (salesChart) salesChart.destroy();
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: graphData.labels,
+                    datasets: [
+                        {
+                            label: 'CASH',
+                            data: graphData.cash,
+                            borderColor: '#2e7d32',
+                            backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'CARD',
+                            data: graphData.card,
+                            borderColor: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'COMP',
+                            data: graphData.comp,
+                            borderColor: '#ffa500',
+                            backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'TICKET',
+                            data: graphData.ticket,
+                            borderColor: '#1a73e8',
+                            backgroundColor: 'rgba(26, 115, 232, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            suggestedMax: Math.max(...graphData.cash.concat(graphData.card, graphData.comp, graphData.ticket)) + 5
+                        },
+                        x: { ticks: { autoSkip: true, maxRotation: 0 } }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e0e0e0' } }
+                    }
+                }
+            });
         }
     </script>
 </body>
