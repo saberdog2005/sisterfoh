@@ -9,121 +9,31 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
-            font-size: 16px;
-        }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            width: 300px;
-        }
-        .modal-content input {
-            margin: 10px 0;
-            padding: 8px;
-            width: 80%;
-            background: #333;
-            color: #e0e0e0;
-            border: 1px solid #666;
-            border-radius: 4px;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-        }
-        #loginBtn {
-            background: #388e3c;
-        }
-        #loginBtn:hover {
-            background: #66bb6a;
-        }
-        #cancelBtn {
-            background: #555;
-        }
-        #cancelBtn:hover {
-            background: #777;
-        }
-        .forgot-password {
-            color: #ffa500;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 20px;
-            max-width: 1024px;
-            margin: 0 auto;
-        }
-        .log-container {
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .graph-container {
-            grid-row: span 2;
-            height: 100%;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 20px; font-size: 16px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; width: 300px; }
+        .modal-content input { margin: 10px 0; padding: 8px; width: 80%; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; }
+        .modal-content button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; color: white; }
+        #loginBtn { background: #388e3c; }
+        #loginBtn:hover { background: #66bb6a; }
+        #cancelBtn { background: #555; }
+        #cancelBtn:hover { background: #777; }
+        .forgot-password { color: #ffa500; cursor: pointer; margin-top: 10px; }
+        .grid-container { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; max-width: 1024px; margin: 0 auto; }
+        .log-container { background: #2d2d2d; padding: 15px; border-radius: 5px; }
+        .graph-container { grid-row: span 2; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .item-cash { color: #2e7d32; }
         .item-card { color: #d32f2f; }
         .item-tickets { color: #1a73e8; }
         .item-comp { color: #ffa500; }
-        select, button {
-            padding: 5px;
-            font-size: 16px;
-            background: #333;
-            color: #e0e0e0;
-            border: none;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-        #refreshBtn {
-            background: #388e3c;
-        }
-        #refreshBtn:hover {
-            background: #66bb6a;
-        }
-        h2 {
-            margin-top: 0;
-        }
-        #transactionLog {
-            overflow-y: auto;
-            max-height: 200px;
-        }
-        #transactionLog p {
-            margin: 5px 0;
-        }
-        #salesGraph {
-            background: #3c3c3c;
-        }
+        select, button { padding: 5px; font-size: 16px; background: #333; color: #e0e0e0; border: none; border-radius: 4px; margin-right: 10px; }
+        #refreshBtn, #logoutBtn { background: #388e3c; }
+        #refreshBtn:hover, #logoutBtn:hover { background: #66bb6a; }
+        h2 { margin-top: 0; }
+        #transactionLog { overflow-y: auto; max-height: 200px; }
+        #transactionLog p { margin: 5px 0; }
+        #salesGraph { background: #3c3c3c; }
     </style>
 </head>
 <body>
@@ -139,7 +49,7 @@
     </div>
     <div class="grid-container" style="display:none;">
         <div class="log-container graph-container">
-            <h2>Sales and Counts Over Time</h2>
+            <h2>Sales Over Time</h2>
             <canvas id="salesGraph"></canvas>
         </div>
         <div class="log-container">
@@ -147,57 +57,58 @@
             <select id="sessionSelect"><option value="">Select a session</option></select>
             <button id="refreshBtn">Refresh</button>
             <div class="summary-grid">
-                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
-                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
-                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
-                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
-                <p>Total Sales: $<span id="totalSales">0.00</span></p>
+                <p><span class="item-cash">CASH</span>: $<span id="cashSales">0.00</span></p>
+                <p><span class="item-card">CARD</span>: $<span id="cardSales">0.00</span></p>
+                <p><span class="item-comp">COMP</span>: <span id="compCount">0</span></p>
+                <p><span class="item-tickets">Tickets</span>: <span id="ticketCount">0</span></p>
+                <p>Total: $<span id="totalSales">0.00</span></p>
                 <p>Thru Door: <span id="doorCount">0</span></p>
             </div>
         </div>
         <div class="log-container">
             <h2>Transaction Log</h2>
             <div id="transactionLog"></div>
+            <button id="logoutBtn">Logout</button>
         </div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Provided API Key
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Provided Spreadsheet ID
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        let salesChart;
         const username = 'admin';
         const passwordHash = CryptoJS.SHA256('password123').toString();
+        let salesChart;
 
         $(document).ready(() => {
+            gapi.load('client', () => gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }));
+
             $('#loginBtn').on('click', () => {
                 const user = $('#username').val().trim();
                 const pass = $('#password').val().trim();
-                if (!user || !pass) {
-                    alert('Please enter both username and password');
-                    return;
-                }
-                const inputHash = CryptoJS.SHA256(pass).toString();
-                if (user === username && inputHash === passwordHash) {
+                if (!user || !pass) return alert('Enter username and password');
+                if (CryptoJS.SHA256(pass).toString() === passwordHash && user === username) {
+                    localStorage.setItem('adminLoggedIn', 'true');
                     $('#loginModal').hide();
                     $('.grid-container').show();
                     loadSessions();
                 } else {
-                    alert('Incorrect username or password');
+                    alert('Incorrect credentials');
                 }
             });
+
             $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
-            gapi.load('client', () => {
-                gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: DISCOVERY_DOCS
-                }).catch(error => console.error('Error initializing GAPI:', error));
+            $('.forgot-password').on('click', () => alert('Contact support for password reset'));
+
+            $('#logoutBtn').on('click', () => {
+                localStorage.removeItem('adminLoggedIn');
+                location.reload();
             });
+
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) updateLog(sessionId);
-                else resetDisplay();
             });
+
             $('#refreshBtn').on('click', () => {
                 const sessionId = $('#sessionSelect').val();
                 if (sessionId) updateLog(sessionId);
@@ -205,144 +116,22 @@
             });
         });
 
-        async function loadSessions() {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A2:H'
-                });
-                const rows = response.result.values || [];
-                const sessions = {};
-                rows.forEach(row => {
-                    if (row[1]) sessions[row[1]] = true;
-                });
-                const $select = $('#sessionSelect');
-                $select.empty().append('<option value="">Select a session</option>');
-                Object.keys(sessions).forEach(id => $select.append(`<option value="${id}">${id}</option>`));
-            } catch (error) {
-                console.error('Error loading sessions:', error);
-                loadFromIndexedDB();
-            }
+        function loadSessions() {
+            // Placeholder for Google Sheets session loading
+            console.log('Loading sessions...');
+            $('#sessionSelect').html('<option value="">Select a session</option><option value="test">Test Session</option>');
         }
 
-        async function updateLog(sessionId) {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A2:H'
-                });
-                const rows = response.result.values || [];
-                const sessionTransactions = rows.filter(tr => tr[1] === sessionId && tr[0] === 'TRANSACTION');
-                if (!sessionTransactions.length) {
-                    resetDisplay();
-                    return;
-                }
-                let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-                const graphData = { labels: [], sales: [] };
-                sessionTransactions.forEach(tr => {
-                    const items = JSON.parse(tr[4]);
-                    items.forEach(item => {
-                        if (item.type === 'CASH') cashSales += item.price * item.quantity;
-                        if (item.type === 'CARD') cardSales += item.price * item.quantity;
-                        if (item.type === 'COMP') compCount += item.quantity;
-                        if (item.type === 'Tickets') ticketCount += item.quantity;
-                    });
-                    totalSales += parseFloat(tr[5]);
-                    totalDoorCount += parseInt(tr[7] || 0);
-                    graphData.labels.push(tr[3]);
-                    graphData.sales.push(totalSales);
-                });
-                $('#cashSales').text(cashSales.toFixed(2));
-                $('#cardSales').text(cardSales.toFixed(2));
-                $('#compCount').text(compCount);
-                $('#ticketCount').text(ticketCount);
-                $('#totalSales').text(totalSales.toFixed(2));
-                $('#doorCount').text(totalDoorCount);
-                updateGraph(graphData);
-                updateTransactionLog(sessionTransactions);
-            } catch (error) {
-                console.error('Error updating log:', error);
-                loadFromIndexedDB(sessionId);
-            }
-        }
-
-        function loadFromIndexedDB(sessionId = null) {
-            const request = indexedDB.open("SisterBarDB", 1);
-            request.onsuccess = (event) => {
-                const db = event.target.result;
-                const transaction = db.transaction(["transactions"], "readonly");
-                const store = transaction.objectStore("transactions");
-                const getAll = store.getAll();
-                getAll.onsuccess = () => {
-                    const data = getAll.result.filter(d => !sessionId || d.sessionId === sessionId);
-                    if (data.length === 0) return;
-                    let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-                    const graphData = { labels: [], sales: [] };
-                    const transactions = data.filter(d => d.type === 'TRANSACTION');
-                    transactions.forEach(tr => {
-                        tr.itemList.forEach(item => {
-                            if (item.type === 'CASH') cashSales += item.price * item.quantity;
-                            if (item.type === 'CARD') cardSales += item.price * item.quantity;
-                            if (item.type === 'COMP') compCount += item.quantity;
-                            if (item.type === 'Tickets') ticketCount += item.quantity;
-                        });
-                        totalSales += parseFloat(tr.total);
-                        totalDoorCount += parseInt(tr.doorCount || 0);
-                        graphData.labels.push(tr.time);
-                        graphData.sales.push(totalSales);
-                    });
-                    $('#cashSales').text(cashSales.toFixed(2));
-                    $('#cardSales').text(cardSales.toFixed(2));
-                    $('#compCount').text(compCount);
-                    $('#ticketCount').text(ticketCount);
-                    $('#totalSales').text(totalSales.toFixed(2));
-                    $('#doorCount').text(totalDoorCount);
-                    updateGraph(graphData);
-                    updateTransactionLog(transactions.map(tr => [tr.type, tr.sessionId, tr.timestamp, tr.time, JSON.stringify(tr.itemList), tr.total, tr.note, tr.doorCount]));
-                };
-            };
-        }
-
-        function updateTransactionLog(transactions) {
-            const $log = $('#transactionLog').empty();
-            transactions.forEach(tr => {
-                $log.append(`<p>${tr[3]} - ${tr[4]} - $${tr[5]} - Thru Door: ${tr[7] || 0} ${tr[6] ? '(' + tr[6] + ')' : ''}</p>`);
-            });
-        }
-
-        function resetDisplay() {
-            $('#cashSales, #cardSales').text('0.00');
-            $('#compCount, #ticketCount, #doorCount').text('0');
-            $('#totalSales').text('0.00');
-            if (salesChart) salesChart.destroy();
-            $('#transactionLog').empty();
-        }
-
-        function updateGraph(data) {
-            const ctx = document.getElementById('salesGraph').getContext('2d');
-            if (salesChart) salesChart.destroy();
-            salesChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: 'Total Sales',
-                        data: data.sales,
-                        borderColor: '#e0e0e0',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, ticks: { color: '#e0e0e0' } },
-                        x: { ticks: { color: '#e0e0e0' } }
-                    },
-                    plugins: {
-                        legend: { labels: { color: '#e0e0e0' } }
-                    }
-                }
-            });
+        function updateLog(sessionId) {
+            // Placeholder for log update
+            console.log('Updating log for session:', sessionId);
+            $('#cashSales').text('100.00');
+            $('#cardSales').text('50.00');
+            $('#compCount').text('5');
+            $('#ticketCount').text('10');
+            $('#totalSales').text('150.00');
+            $('#doorCount').text('15');
+            $('#transactionLog').html('<p>Test transaction</p>');
         }
     </script>
 </body>
