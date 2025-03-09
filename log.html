@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,13 +17,77 @@
             padding: 20px;
             font-size: 16px;
         }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+        }
+        .modal-content input {
+            margin: 10px 0;
+            padding: 8px;
+            width: 80%;
+            background: #424242;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .modal-content button:hover {
+            background: #66bb6a;
+        }
+        .forgot-password {
+            color: #ffa500;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            max-width: 1024px;
+            margin: 0 auto;
+        }
         .log-container {
             background: #2d2d2d;
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
         }
+        .graph-container {
+            grid-row: span 2;
+            height: 100%;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .item-cash { color: #2e7d32; }
+        .item-card { color: #d32f2f; }
+        .item-tickets { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
         select, button {
             padding: 5px;
             font-size: 16px;
@@ -34,134 +100,231 @@
         h2 {
             margin-top: 0;
         }
-        .message {
-            color: #ff6b6b;
-            margin-top: 10px;
+        #transactionLog {
+            overflow-y: auto;
+            max-height: 200px;
         }
-        #transactions p {
+        #transactionLog p {
             margin: 5px 0;
+        }
+        @media (max-width: 1024px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+            .graph-container {
+                grid-row: auto;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="log-container">
-        <h2>Select Session</h2>
-        <select id="sessionSelect"><option value="">Select a session</option></select>
-        <button id="refreshBtn">Refresh</button>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="loginBtn">Login</button>
+            <button id="cancelBtn">Cancel</button>
+            <div class="forgot-password">Forgot Password?</div>
+        </div>
     </div>
-    <div class="log-container" id="sessionDetails">
-        <h2>Session Details</h2>
-        <p>Date: <span id="sessionDate"></span></p>
-        <p>Venue: <span id="sessionVenue"></span></p>
-        <p>Event Name: <span id="sessionEventName"></span></p>
-        <p>Cashier: <span id="sessionCashier"></span></p>
+
+    <!-- Main Content -->
+    <div class="grid-container" style="display:none;">
+        <!-- Sales Graph -->
+        <div class="log-container graph-container">
+            <h2>Sales and Counts Over Time</h2>
+            <canvas id="salesGraph"></canvas>
+        </div>
+        <!-- Live Sales Summary -->
+        <div class="log-container">
+            <h2>Live Sales Summary</h2>
+            <select id="sessionSelect"><option value="">Select a session</option></select>
+            <button id="refreshBtn">Refresh</button>
+            <div class="summary-grid">
+                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
+                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
+                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
+                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
+                <p>Total Sales: $<span id="totalSales">0.00</span></p>
+                <p>Thru Door: <span id="doorCount">0</span></p>
+            </div>
+        </div>
+        <!-- Transaction Log -->
+        <div class="log-container">
+            <h2>Transaction Log</h2>
+            <div id="transactionLog"></div>
+        </div>
     </div>
-    <div class="log-container" id="transactionLog">
-        <h2>Transaction Log</h2>
-        <div id="transactions"></div>
-    </div>
-    <div class="log-container" id="grandTotal">
-        <h2>Grand Total</h2>
-        <p>$<span id="sessionGrandTotal">0.00</span></p>
-    </div>
-    <div id="message" class="message"></div>
+
     <script>
+        // Configuration
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        let salesChart;
+        const username = 'admin'; // Example username
+        const passwordHash = CryptoJS.SHA256('password123').toString(); // Example hashed password
 
-        async function loadSessions() {
-            try {
-                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A:F'
-                });
-                const rows = response.result.values || [];
-                const sessions = rows.filter(row => row[0] === 'SESSION_START').map(row => row[1]);
-                const uniqueSessions = [...new Set(sessions)];
-                const $select = $('#sessionSelect');
-                $select.empty().append('<option value="">Select a session</option>');
-                uniqueSessions.forEach(id => $select.append(`<option value="${id}">${id}</option>`));
-            } catch (error) {
-                console.error('Error loading sessions:', error);
-                $('#message').text('Failed to load sessions. Check console.');
-            }
-        }
-
-        async function updateLog(sessionId) {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A:I'
-                });
-                const rows = response.result.values || [];
-                let sessionInfo = { transactions: [], grandTotal: null };
-                rows.forEach(row => {
-                    if (row[1] === sessionId) {
-                        if (row[0] === 'SESSION_START') {
-                            sessionInfo.date = row[2];
-                            sessionInfo.venue = row[3];
-                            sessionInfo.eventName = row[4];
-                            sessionInfo.cashier = row[5];
-                        } else if (row[0] === 'TRANSACTION') {
-                            try {
-                                const itemList = JSON.parse(row[4]);
-                                sessionInfo.transactions.push({
-                                    time: row[3],
-                                    items: itemList,
-                                    total: row[5],
-                                    note: row[6],
-                                    doorCount: row[7]
-                                });
-                            } catch (e) {
-                                console.error('Error parsing item list:', e);
-                            }
-                        } else if (row[0] === 'SESSION_CLOSE') {
-                            sessionInfo.grandTotal = row[2];
-                        }
-                    }
-                });
-
-                $('#sessionDate').text(sessionInfo.date || '');
-                $('#sessionVenue').text(sessionInfo.venue || '');
-                $('#sessionEventName').text(sessionInfo.eventName || '');
-                $('#sessionCashier').text(sessionInfo.cashier || '');
-
-                const $transactions = $('#transactions').empty();
-                if (sessionInfo.transactions.length === 0) {
-                    $transactions.append('<p>No transactions found.</p>');
-                } else {
-                    sessionInfo.transactions.forEach(tr => {
-                        const items = tr.items.map(item => `${item.item} (${item.quantity})`).join(', ');
-                        $transactions.append(`<p>${tr.time} - ${items} - $${tr.total} - Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
-                    });
-                }
-
-                $('#sessionGrandTotal').text(sessionInfo.grandTotal ? sessionInfo.grandTotal : 'Not closed');
-            } catch (error) {
-                console.error('Error updating log:', error);
-                $('#message').text('Failed to update log. Check console.');
-            }
-        }
-
+        // Document Ready
         $(document).ready(() => {
-            gapi.load('client', loadSessions);
+            // Login Button Handler
+            $('#loginBtn').on('click', () => {
+                const user = $('#username').val().trim();
+                const pass = $('#password').val().trim();
+                if (!user || !pass) {
+                    alert('Please enter both username and password');
+                    return;
+                }
+                const inputHash = CryptoJS.SHA256(pass).toString();
+                if (user === username && inputHash === passwordHash) {
+                    $('#loginModal').hide();
+                    $('.grid-container').show();
+                    loadSessions();
+                } else {
+                    alert('Incorrect username or password');
+                }
+            });
+
+            // Cancel Button Handler
+            $('#cancelBtn').on('click', () => $('#username, #password').val(''));
+
+            // Forgot Password Handler (Placeholder)
+            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
+
+            // Initialize Google API Client
+            gapi.load('client', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: DISCOVERY_DOCS
+                }).catch(error => console.error('Error initializing GAPI:', error));
+            });
+
+            // Session Select Handler
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
                 if (sessionId) updateLog(sessionId);
-                else {
-                    $('#sessionDate, #sessionVenue, #sessionEventName, #sessionCashier').text('');
-                    $('#transactions').empty();
-                    $('#sessionGrandTotal').text('0.00');
-                }
+                else resetDisplay();
             });
+
+            // Refresh Button Handler
             $('#refreshBtn').on('click', () => {
                 const sessionId = $('#sessionSelect').val();
                 if (sessionId) updateLog(sessionId);
                 else loadSessions();
             });
         });
+
+        // Load Sessions from Google Sheet
+        async function loadSessions() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Sheet1!A2:G'
+                });
+                const rows = response.result.values || [];
+                const sessions = {};
+                rows.forEach(row => {
+                    if (row[0] && row[0] !== 'CLOSED') {
+                        sessions[row[0]] = true;
+                    }
+                });
+                const $select = $('#sessionSelect');
+                $select.empty().append('<option value="">Select a session</option>');
+                Object.keys(sessions).forEach(id => $select.append(`<option value="${id}">${id}</option>`));
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+            }
+        }
+
+        // Fetch Transactions from Google Sheet
+        async function fetchTransactions() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: 'Sheet1!A2:G'
+                });
+                const rows = response.result.values || [];
+                return rows.map(row => ({
+                    sessionId: row[0],
+                    timestamp: row[1],
+                    time: row[2],
+                    items: row[3],
+                    total: parseFloat(row[4] || 0),
+                    note: row[5],
+                    doorCount: parseInt(row[6] || 0)
+                }));
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                return [];
+            }
+        }
+
+        // Update Display for Selected Session
+        async function updateLog(sessionId) {
+            const transactions = await fetchTransactions();
+            const sessionTransactions = transactions.filter(tr => tr.sessionId === sessionId);
+            if (!sessionTransactions.length) {
+                resetDisplay();
+                return;
+            }
+            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
+            const graphData = { labels: [], sales: [] };
+
+            sessionTransactions.forEach(tr => {
+                if (tr.items.includes('CASH')) cashSales += tr.total;
+                if (tr.items.includes('CC')) cardSales += tr.total;
+                if (tr.items.includes('COMP')) compCount += tr.doorCount;
+                if (tr.items.includes('TICKET')) ticketCount += tr.doorCount;
+                totalSales += tr.total;
+                totalDoorCount += tr.doorCount;
+
+                graphData.labels.push(tr.time);
+                graphData.sales.push(totalSales);
+            });
+
+            $('#cashSales').text(cashSales.toFixed(2));
+            $('#cardSales').text(cardSales.toFixed(2));
+            $('#compCount').text(compCount);
+            $('#ticketCount').text(ticketCount);
+            $('#totalSales').text(totalSales.toFixed(2));
+            $('#doorCount').text(totalDoorCount);
+            updateGraph(graphData);
+            updateTransactionLog(sessionTransactions);
+        }
+
+        // Update Transaction Log Display
+        function updateTransactionLog(transactions) {
+            const $log = $('#transactionLog').empty();
+            transactions.forEach(tr => {
+                $log.append(`<p>${tr.time} - ${tr.items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
+            });
+        }
+
+        // Reset Display to Default
+        function resetDisplay() {
+            $('#cashSales, #cardSales').text('0.00');
+            $('#compCount, #ticketCount, #doorCount').text('0');
+            $('#totalSales').text('0.00');
+            if (salesChart) salesChart.destroy();
+            $('#transactionLog').empty();
+        }
+
+        // Update Sales Graph
+        function updateGraph(data) {
+            const ctx = document.getElementById('salesGraph').getContext('2d');
+            if (salesChart) salesChart.destroy();
+            salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{ label: 'Total Sales', data: data.sales, borderColor: '#388e3c', fill: false }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        }
     </script>
 </body>
 </html>
