@@ -3,53 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log</title>
+    <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: #2c3e50;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            width: 300px;
-        }
-        .modal-content input {
-            width: 80%;
-            padding: 8px;
-            margin: 5px 0;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
+            background-color: #f4f4f4;
         }
         .log-container {
-            background: #1e1e1e;
+            background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+        }
+        .graph-container {
+            max-width: 800px;
+            margin: 0 auto;
         }
         .summary-grid {
             display: grid;
@@ -58,7 +32,7 @@
             margin-top: 20px;
         }
         .summary-item {
-            background: #3c3c3c;
+            background: #e0f7fa;
             padding: 10px;
             border-radius: 5px;
             text-align: center;
@@ -78,64 +52,27 @@
         select {
             background: #2196F3;
         }
-        #logoutBtn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .cash-total { color: #2e7d32; }
-        .card-total { color: #d32f2f; }
-        .comp-total { color: #ffa500; }
-        .ticket-total { color: #1a73e8; }
-        .total-sales { color: #ffffff; }
-        .door-count-total { color: #800080; }
-        #drawerStatus {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button id="loginBtn">Login</button>
-            <p id="loginError" style="color: red; display: none;">Invalid credentials</p>
-        </div>
+    <div class="log-container graph-container">
+        <h2>Sales Over Time</h2>
+        <canvas id="salesGraph"></canvas>
     </div>
-    <div class="main-content">
-        <div class="log-container graph-container" style="display: none;">
-            <h2>Sales Over Time</h2>
-            <canvas id="salesGraph"></canvas>
-        </div>
-        <div class="log-container" style="display: none;">
-            <h2>Live Sales Summary</h2>
-            <select id="sessionSelect"><option value="">Select a session</option></select>
-            <div id="drawerStatus" style="display: none;"></div>
-            <button id="saveToPdfBtn" style="display: none;">Save to PDF</button>
-            <button id="refreshBtn">Refresh</button>
-            <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 3s)</label>
-            <div class="summary-grid" id="summaryGrid"></div>
-        </div>
-        <div class="log-container" style="display: none;">
-            <h2>Transaction Log</h2>
-            <div id="transactionLog"></div>
-            <button id="logoutBtn">Logout</button>
-        </div>
+    <div class="log-container">
+        <h2>Live Sales Summary</h2>
+        <select id="sessionSelect"><option value="">Select a session</option></select>
+        <button id="refreshBtn">Refresh</button>
+        <label><input type="checkbox" id="autoRefresh"> Auto-Refresh (every 10s)</label>
+        <div class="summary-grid" id="summaryGrid"></div>
     </div>
-    <script>
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
-        let salesChart, autoRefreshInterval;
+    <script>
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Google Spreadsheet ID
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Google API Key
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"]; // Discovery Docs
+
+        let salesChart;
 
         function handleClientLoad() {
             gapi.load('client', initClient);
@@ -144,16 +81,12 @@
         function initClient() {
             gapi.client.init({
                 apiKey: API_KEY,
-                clientId: CLIENT_ID,
                 discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
-                if (localStorage.getItem('adminLoggedIn') === 'true') {
-                    $('.log-container').show();
-                    loadSessions();
-                } else {
-                    $('#loginModal').show();
-                }
-            }, error => console.error('Error initializing client:', error));
+                loadSessions();
+                document.getElementById('refreshBtn').addEventListener('click', () => updateLog($('#sessionSelect').val()));
+                document.getElementById('autoRefresh').addEventListener('change', toggleAutoRefresh);
+            });
         }
 
         function loadSessions() {
@@ -161,15 +94,11 @@
                 spreadsheetId: SPREADSHEET_ID,
                 range: 'Sheet1!B2:B'
             }).then(response => {
-                const sessionIds = [...new Set((response.result.values || []).flat())].filter(id => id);
+                const sessionIds = [...new Set(response.result.values.flat())];
                 const select = $('#sessionSelect');
-                select.html('<option value="">Select a session</option>' + sessionIds.map(id => `<option value="${id}">${id}</option>`).join(''));
-                const activeSessionId = localStorage.getItem('sessionId');
-                if (activeSessionId && sessionIds.includes(activeSessionId)) {
-                    select.val(activeSessionId);
-                    updateLog(activeSessionId);
-                }
-            }, error => console.error('Error loading sessions:', error));
+                sessionIds.forEach(id => select.append(`<option value="${id}">${id}</option>`));
+                if (sessionIds.length > 0) updateLog(sessionIds[0]);
+            });
         }
 
         function updateLog(sessionId) {
@@ -179,156 +108,48 @@
                 range: 'Sheet1!A2:H'
             }).then(response => {
                 const rows = response.result.values || [];
-                const sessionRows = rows.filter(tr => tr[1] === sessionId);
-                const salesOpenRow = sessionRows.find(tr => tr[0] === 'SALES OPEN');
-                const closedRow = sessionRows.find(tr => tr[0] === 'CLOSED');
-                const transactions = sessionRows.filter(tr => tr[0] === 'TRANSACTION');
+                const transactions = rows.filter(tr => tr[1] === sessionId && tr[0] === 'TRANSACTION');
 
-                if (!transactions.length && !salesOpenRow && !closedRow) {
-                    resetDisplay();
-                    return;
-                }
-
-                const [sessionDate, sessionVenue, sessionEvent, sessionCashier] = sessionId.split('_');
-                const salesOpenTimestamp = salesOpenRow ? salesOpenRow[2] : 'N/A';
-                const closedTimestamp = closedRow ? closedRow[2] : 'N/A';
-
-                if (!closedRow) {
-                    $('#drawerStatus').text(`Drawer open by ${sessionCashier}`).show();
-                } else {
-                    $('#drawerStatus').hide();
-                }
-
-                let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-                const doorData = { labels: [], cash: [], card: [], comp: [], tickets: [], total: [] };
-                let cumulativeCash = 0, cumulativeCard = 0, cumulativeComp = 0, cumulativeTickets = 0, cumulativeTotal = 0;
-
-                transactions.forEach((tr, index) => {
-                    const items = JSON.parse(tr[4] || '[]');
-                    items.forEach(item => {
-                        if (item.type === 'cash') {
-                            cashSales += item.amount || 0;
-                            cumulativeCash += 1;
-                        } else if (item.type === 'card') {
-                            cardSales += item.amount || 0;
-                            cumulativeCard += 1;
-                        } else if (item.type === 'comp') {
-                            compCount += 1;
-                            cumulativeComp += 1;
-                        } else if (item.type === 'ticket') {
-                            ticketCount += 1;
-                            cumulativeTickets += 1;
-                        }
-                    });
-                    totalSales += parseFloat(tr[5] || 0);
-                    cumulativeTotal += parseFloat(tr[5] || 0);
-                    totalDoorCount += parseInt(tr[7] || 0);
-                    doorData.labels.push(`T${index + 1}`);
-                    doorData.cash.push(cumulativeCash);
-                    doorData.card.push(cumulativeCard);
-                    doorData.comp.push(cumulativeComp);
-                    doorData.tickets.push(cumulativeTickets);
-                    doorData.total.push(cumulativeTotal);
-                });
-
+                // Update summary
+                const totalCash = transactions.reduce((sum, tr) => sum + (parseFloat(tr[5]) || 0), 0);
+                const totalDoors = transactions.reduce((sum, tr) => sum + (parseInt(tr[7]) || 0), 0);
                 $('#summaryGrid').html(`
-                    <div class="summary-item"><span class="cash-total">Cash:</span> $${cashSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="card-total">Card:</span> $${cardSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="comp-total">Comp:</span> ${compCount}</div>
-                    <div class="summary-item"><span class="ticket-total">Tickets:</span> ${ticketCount}</div>
-                    <div class="summary-item"><span class="total-sales">Total:</span> $${totalSales.toFixed(2)}</div>
-                    <div class="summary-item"><span class="door-count-total">Thru Door:</span> ${totalDoorCount}</div>
+                    <div class="summary-item"><strong>Total Cash:</strong> $${totalCash.toFixed(2)}</div>
+                    <div class="summary-item"><strong>Total Doors:</strong> ${totalDoors}</div>
+                    <div class="summary-item"><strong>Transactions:</strong> ${transactions.length}</div>
                 `);
+
+                // Update graph
+                const labels = transactions.map((_, i) => `T${i + 1}`);
+                const cashData = transactions.map(tr => parseFloat(tr[5]) || 0);
+                const doorData = transactions.map(tr => parseInt(tr[7]) || 0);
 
                 if (salesChart) salesChart.destroy();
                 salesChart = new Chart(document.getElementById('salesGraph').getContext('2d'), {
                     type: 'line',
                     data: {
-                        labels: doorData.labels,
+                        labels: labels,
                         datasets: [
-                            { label: 'Cash', data: doorData.cash, borderColor: '#2e7d32', fill: true },
-                            { label: 'Card', data: doorData.card, borderColor: '#d32f2f', fill: true },
-                            { label: 'Comp', data: doorData.comp, borderColor: '#ffa500', fill: true },
-                            { label: 'Tickets', data: doorData.tickets, borderColor: '#1a73e8', fill: true },
-                            { label: 'Total Sales', data: doorData.total, borderColor: '#ffffff', fill: false, borderWidth: 2 }
+                            { label: 'Cash Total', data: cashData, borderColor: '#2e7d32', fill: false },
+                            { label: 'Door Count', data: doorData, borderColor: '#ffa500', fill: false }
                         ]
                     },
-                    options: {
-                        responsive: true,
-                        scales: { y: { beginAtZero: true, type: 'linear', title: { display: true, text: 'Cumulative Count / Total Sales ($)' } } }
-                    }
+                    options: { responsive: true, scales: { y: { beginAtZero: true } } }
                 });
-
-                if (closedRow) {
-                    $('#saveToPdfBtn').show();
-                } else {
-                    $('#saveToPdfBtn').hide();
-                }
-            }, error => console.error('Error updating log:', error));
+            });
         }
 
-        function resetDisplay() {
-            $('#summaryGrid').empty().html('<div class="summary-item">No data available</div>');
-            if (salesChart) salesChart.destroy();
-            salesChart = null;
-            $('#saveToPdfBtn').hide();
-            $('#drawerStatus').hide();
-        }
-
+        let refreshInterval;
         function toggleAutoRefresh() {
-            const sessionId = $('#sessionSelect').val();
-            if ($('#autoRefresh').is(':checked') && sessionId) {
-                autoRefreshInterval = setInterval(() => updateLog(sessionId), 3000);
+            if ($('#autoRefresh').is(':checked')) {
+                refreshInterval = setInterval(() => updateLog($('#sessionSelect').val()), 10000);
             } else {
-                clearInterval(autoRefreshInterval);
+                clearInterval(refreshInterval);
             }
-        }
-
-        function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            const [sessionDate, sessionVenue, sessionEvent, sessionCashier] = $('#sessionSelect').val().split('_');
-            doc.text(`Session: ${$('#sessionSelect').val()}`, 10, 10);
-            doc.text(`Date: ${sessionDate}`, 10, 20);
-            doc.text(`Venue: ${sessionVenue}`, 10, 30);
-            doc.text(`Event: ${sessionEvent}`, 10, 40);
-            doc.text(`Cashier: ${sessionCashier}`, 10, 50);
-
-            const graphImage = document.getElementById('salesGraph').toDataURL('image/png');
-            doc.addImage(graphImage, 'PNG', 10, 60, 180, 100);
-
-            doc.output('dataurlnewwindow');
         }
 
         $(document).ready(() => {
             handleClientLoad();
-            if (localStorage.getItem('adminLoggedIn') === 'true') {
-                $('.log-container').show();
-            } else {
-                $('#loginModal').show();
-            }
-            $('#loginBtn').on('click', () => {
-                const user = $('#username').val().trim();
-                const pass = $('#password').val().trim();
-                if (user === 'admin' && pass === 'password123') {
-                    localStorage.setItem('adminLoggedIn', 'true');
-                    $('#loginModal').hide();
-                    $('.log-container').show();
-                    loadSessions();
-                } else {
-                    $('#loginError').show();
-                }
-            });
-            $('#logoutBtn').on('click', () => {
-                localStorage.removeItem('adminLoggedIn');
-                clearInterval(autoRefreshInterval);
-                location.reload();
-            });
-            $('#refreshBtn').on('click', () => updateLog($('#sessionSelect').val()));
-            $('#autoRefresh').on('change', toggleAutoRefresh);
-            $('#sessionSelect').on('change', function() { updateLog($(this).val()); });
-            $('#saveToPdfBtn').on('click', generatePDF);
         });
     </script>
 </body>
