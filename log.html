@@ -20,7 +20,7 @@
             flex-direction: column;
             min-height: 100vh;
             overflow: hidden;
-            font-size: 16px; /* Improved readability */
+            font-size: 16px;
         }
         h2 {
             margin-bottom: 10px;
@@ -34,6 +34,7 @@
             flex-grow: 1;
             width: 100%;
             max-height: calc(100vh - 60px);
+            display: none;
         }
         .log-container {
             background: #2d2d2d;
@@ -88,29 +89,68 @@
             gap: 10px;
             flex-grow: 1;
         }
-        .summary-grid p {
-            overflow-wrap: break-word; /* Prevent text overflow */
-        }
-        .category-count {
-            margin: 5px 0;
-        }
-        #categoryCounts {
-            max-height: 200px; /* Limit height, enable scrolling */
-            overflow-y: auto;
-        }
+        .summary-grid p { overflow-wrap: break-word; }
+        .category-count { margin: 5px 0; }
+        #categoryCounts { max-height: 200px; overflow-y: auto; }
         #grandTotal {
             text-align: right;
             font-size: 18px;
             font-weight: bold;
             margin-top: 10px;
         }
-        /* Make changing numbers bold */
-        .count-value, .summary-value {
-            font-weight: bold;
+        .count-value, .summary-value { font-weight: bold; }
+        .modal {
+            display: block;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
         }
+        .modal-content {
+            background: #2d2d2d;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 30%;
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .modal-content h2 { color: #e0e0e0; }
+        .modal-content input {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #3c3c3c;
+            color: #e0e0e0;
+            font-size: 1em;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .modal-content button:hover { background: #66bb6a; }
     </style>
 </head>
 <body>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginBtn">Login</button>
+        </div>
+    </div>
     <div class="grid-container">
         <div class="log-container" id="session-selection">
             <h2>Select Session</h2>
@@ -156,11 +196,25 @@
             <div id="grandTotal">Total Sales: $0.00</div>
         </div>
     </div>
-
     <script>
+        // Same JavaScript as Version 1
         let db;
         let transactionChart;
         let updateInterval;
+        const username = 'brad';
+        const password = 'password123';
+
+        $(document).ready(() => {
+            $('#loginBtn').on('click', () => {
+                if ($('#username').val() === username && $('#password').val() === password) {
+                    $('#loginModal').hide();
+                    $('.grid-container').show();
+                    loadSessions();
+                } else {
+                    alert('Incorrect username or password');
+                }
+            });
+        });
 
         const request = indexedDB.open('SalesDB', 2);
         request.onupgradeneeded = function(event) {
@@ -175,7 +229,6 @@
         };
         request.onsuccess = function(event) {
             db = event.target.result;
-            loadSessions();
         };
         request.onerror = function() {
             alert('Failed to open database.');
@@ -321,23 +374,12 @@
                         animation: false,
                         scales: {
                             x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                            y: { 
-                                beginAtZero: true, 
-                                title: { display: true, text: 'Number of Customers' },
-                                ticks: { stepSize: 1 }
-                            }
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Customers' }, ticks: { stepSize: 1 } }
                         },
                         plugins: {
                             zoom: {
-                                zoom: {
-                                    wheel: { enabled: true },
-                                    pinch: { enabled: true },
-                                    mode: 'xy'
-                                },
-                                pan: {
-                                    enabled: true,
-                                    mode: 'xy'
-                                }
+                                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' },
+                                pan: { enabled: true, mode: 'xy' }
                             }
                         }
                     }
@@ -345,11 +387,7 @@
             }
         }, 500);
 
-        $('#resetZoomBtn').on('click', function() {
-            if (transactionChart) {
-                transactionChart.resetZoom();
-            }
-        });
+        $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
 
         function startUpdating(sessionId) {
             clearInterval(updateInterval);
@@ -364,9 +402,8 @@
 
         $('#sessionSelect').on('change', function() {
             const sessionId = $(this).val();
-            if (sessionId) {
-                startUpdating(sessionId);
-            } else {
+            if (sessionId) startUpdating(sessionId);
+            else {
                 stopUpdating();
                 resetDisplay();
             }
@@ -380,41 +417,31 @@
                 alert('Please select a session first.');
                 return;
             }
-
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
             const tx = db.transaction(['sessions', 'transactions'], 'readonly');
             const sessionStore = tx.objectStore('sessions');
             const transactionStore = tx.objectStore('transactions');
             const sessionRequest = sessionStore.get(Number(sessionId));
             const transactionRequest = transactionStore.index('sessionId').getAll(Number(sessionId));
-
             tx.oncomplete = function() {
                 const session = sessionRequest.result;
                 const transactions = transactionRequest.result;
-
                 let cashTotal = 0, cardTotal = 0, doorCount = 0;
                 let totalCashCustomers = 0, totalCardCustomers = 0;
                 const categoryCounts = {};
-
                 transactions.forEach(t => {
                     let hasCash = t.itemList.some(item => item.item.startsWith('CASH'));
                     let hasCard = t.itemList.some(item => item.item.startsWith('CC'));
                     if (hasCash) totalCashCustomers++;
                     if (hasCard) totalCardCustomers++;
                     t.itemList.forEach(item => {
-                        if (item.item.startsWith('CASH')) {
-                            cashTotal += item.price * item.quantity;
-                        } else if (item.item.startsWith('CC')) {
-                            cardTotal += item.price * item.quantity;
-                        } else if (item.item === 'TICKET') {
-                            doorCount += item.quantity;
-                        }
+                        if (item.item.startsWith('CASH')) cashTotal += item.price * item.quantity;
+                        else if (item.item.startsWith('CC')) cardTotal += item.price * item.quantity;
+                        else if (item.item === 'TICKET') doorCount += item.quantity;
                         categoryCounts[item.item] = (categoryCounts[item.item] || 0) + item.quantity;
                     });
                 });
-
                 doc.setFontSize(16);
                 doc.text(`Sales Report - Session ${sessionId}`, 10, 10);
                 doc.setFontSize(12);
@@ -423,10 +450,7 @@
                 doc.text(`Event Name: ${session.eventName}`, 10, 40);
                 doc.text(`Cashier: ${session.cashier}`, 10, 50);
                 doc.text(`Start Time: ${new Date(session.startTime).toLocaleString()}`, 10, 60);
-                if (session.endTime) {
-                    doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 70);
-                }
-
+                if (session.endTime) doc.text(`End Time: ${new Date(session.endTime).toLocaleString()}`, 10, 70);
                 doc.text('Sales Summary', 10, 90);
                 doc.text(`Cash Sales: $${cashTotal.toFixed(2)}`, 10, 100);
                 doc.text(`Card Sales: $${cardTotal.toFixed(2)}`, 10, 110);
@@ -434,25 +458,19 @@
                 doc.text(`Total Cash Customers: ${totalCashCustomers}`, 10, 130);
                 doc.text(`Total Card Customers: ${totalCardCustomers}`, 10, 140);
                 doc.text(`Thru Door: ${doorCount}`, 10, 150);
-
                 let y = 160;
                 doc.text('Category Counts', 10, y);
                 y += 10;
                 for (const [item, count] of Object.entries(categoryCounts)) {
                     doc.text(`${item}: ${count}`, 10, y);
                     y += 10;
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 10;
-                    }
+                    if (y > 270) { doc.addPage(); y = 10; }
                 }
-
                 const chartImage = transactionChart.toBase64Image();
                 doc.addPage();
                 doc.setFontSize(14);
                 doc.text('Customer Count Over Time', 10, 10);
                 doc.addImage(chartImage, 'PNG', 10, 20, 190, 100);
-
                 doc.addPage();
                 doc.setFontSize(14);
                 doc.text('Transaction Log', 10, 10);
@@ -464,19 +482,10 @@
                     const note = t.note || '';
                     doc.text(`${index + 1}. ${time}: ${items} - $${total} - Note: ${note}`, 10, y);
                     y += 10;
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 10;
-                    }
+                    if (y > 270) { doc.addPage(); y = 10; }
                 });
-
                 const blob = doc.output('blob');
-                const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
-            };
-
-            tx.onerror = function() {
-                alert('Failed to retrieve data for PDF generation.');
+                window.open(URL.createObjectURL(blob), '_blank');
             };
         });
     </script>
