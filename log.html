@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,41 +12,16 @@
             color: #e0e0e0;
             margin: 0;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            overflow: hidden;
             font-size: 16px;
         }
-        h2 {
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 20px;
-            flex-grow: 1;
-            width: 100%;
-            max-height: calc(100vh - 60px);
-            display: none;
-            transition: opacity 0.3s ease-in-out;
-        }
-        .log-container {
+        h2 { margin-bottom: 10px; text-align: center; }
+        .container {
             background: #2d2d2d;
             padding: 15px;
             border-radius: 5px;
-            display: flex;
-            flex-direction: column;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            overflow-y: auto;
         }
-        .table-wrapper {
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-        select, button {
+        select {
             padding: 8px;
             font-size: 14px;
             margin: 5px 0;
@@ -59,237 +29,61 @@
             background: #3c3c3c;
             border: 1px solid #555;
             color: #e0e0e0;
-        }
-        select:focus, button:focus {
-            outline: none;
-            border-color: #66bb6a;
-        }
-        .graph-container {
-            flex-grow: 1;
-            position: relative;
             width: 100%;
         }
-        canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            table-layout: fixed;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background: #3d3d3d;
-            font-weight: bold;
-        }
-        #transactionTable td:nth-child(1) { width: 15%; }
-        #transactionTable td:nth-child(2) { width: 50%; word-wrap: break-word; }
-        #transactionTable td:nth-child(3) { width: 15%; }
-        #transactionTable td:nth-child(4) { width: 20%; word-wrap: break-word; }
-        .item-cash { color: #2e7d32; }
-        .item-card { color: #d32f2f; }
-        .item-tickets { color: #1a73e8; }
-        .item-comp { color: #ffa500; }
         .summary-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-        }
-        #grandTotal {
-            text-align: right;
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 10px;
-            color: #e0e0e0;
-        }
-        .modal {
-            display: block;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            opacity: 1;
-            transition: opacity 0.3s ease-in-out;
-        }
-        .modal-content {
-            background: #2d2d2d;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 30%;
-            border-radius: 5px;
-            text-align: center;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transform: translateY(0);
-            transition: transform 0.3s ease-in-out;
-        }
-        .modal-content h2 {
-            color: #e0e0e0;
-            margin-bottom: 15px;
-        }
-        .modal-content input {
-            width: 80%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background: #3c3c3c;
-            color: #e0e0e0;
-            font-size: 1em;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            color: white;
-            transition: background 0.3s ease;
-        }
-        .modal-content #loginBtn {
-            background: #388e3c;
-        }
-        .modal-content #loginBtn:hover {
-            background: #66bb6a;
-        }
-        .modal-content #cancelBtn {
-            background: #666;
-        }
-        .modal-content #cancelBtn:hover {
-            background: #888;
-        }
-        .modal-content .forgot-password {
-            color: #66bb6a;
-            text-decoration: underline;
-            cursor: pointer;
-            font-size: 0.9em;
             margin-top: 10px;
         }
-        .modal.hide, .modal-content.hide {
-            opacity: 0;
-            transform: translateY(-20px);
-            pointer-events: none;
+        .item-cash { color: #2e7d32; }
+        .item-card { color: #d32f2f; }
+        .item-tickets { color: #1a73e8; }
+        .item-comp { color: #ffa500; }
+        .transaction-details {
+            margin-top: 20px;
         }
-        .loading {
-            display: none;
-            color: #e0e0e0;
-            font-style: italic;
-        }
-        @media (max-width: 768px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto;
-            }
-            .modal-content {
-                width: 80%;
-            }
-        }
+        .transaction-details p { margin: 5px 0; }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Login</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <div class="loading">Logging in...</div>
-            <button id="loginBtn">Login</button>
-            <button id="cancelBtn">Cancel</button>
-            <div class="forgot-password">Forgot Password?</div>
+    <div class="container">
+        <h2>Current Transaction</h2>
+        <select id="sessionSelect">
+            <option value="">Select a session</option>
+        </select>
+        <div class="summary-grid">
+            <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
+            <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
+            <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
+            <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
+            <p>Total Sales: $<span id="totalSales">0.00</span></p>
+            <p>Thru Door: <span id="doorCount">0</span></p>
         </div>
-    </div>
-    <div class="grid-container">
-        <div class="log-container" id="session-selection">
-            <h2>Select Session</h2>
-            <select id="sessionSelect">
-                <option value="">Select a session</option>
-            </select>
-            <button id="printPdfBtn">Print PDF Report</button>
-        </div>
-        <div class="log-container" id="sales-summary">
-            <h2>Sales Summary</h2>
-            <div class="summary-grid">
-                <p><span class="item-cash">CASH</span> Sales: $<span id="cashSales">0.00</span></p>
-                <p><span class="item-card">CARD</span> Sales: $<span id="cardSales">0.00</span></p>
-                <p><span class="item-comp">COMP</span> Count: <span id="compCount">0</span></p>
-                <p><span class="item-tickets">Tickets</span> Count: <span id="ticketCount">0</span></p>
-                <p>Total Sales: $<span id="totalSales">0.00</span></p>
-                <p>Thru Door: <span id="doorCount">0</span></p>
-            </div>
-        </div>
-        <div class="log-container" id="customer-graph">
-            <h2>Transactions Over Time</h2>
-            <div class="graph-container">
-                <canvas id="transactionGraph"></canvas>
-            </div>
-            <button id="resetZoomBtn">Reset Zoom</button>
-        </div>
-        <div class="log-container" id="transaction-log">
-            <h2>Transaction Log</h2>
-            <div class="table-wrapper">
-                <table id="transactionTable">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Note</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div id="grandTotal">Total Sales: $0.00</div>
+        <div class="transaction-details">
+            <p>Time: <span id="transactionTime"></span></p>
+            <p>Items: <span id="transactionItems"></span></p>
+            <p>Note: <span id="transactionNote"></span></p>
         </div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Replace with your API key
-        const SPREADSHEET_ID = 'your_spreadsheet_id_here'; // Replace with your Spreadsheet ID
-        let db, transactionChart, updateInterval;
-        const username = 'brad';
-        const passwordHash = CryptoJS.SHA256('password123').toString();
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        let db, updateInterval;
 
         $(document).ready(() => {
-            $('#loginBtn').on('click', () => {
-                const user = $('#username').val().trim();
-                const pass = $('#password').val().trim();
-                if (!user || !pass) {
-                    alert('Please enter both username and password');
-                    return;
+            const request = indexedDB.open('SalesDB', 2);
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('sessions')) {
+                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
                 }
-                $('.modal-content button, .modal-content input').prop('disabled', true);
-                $('.loading').show();
-                setTimeout(() => {
-                    const inputHash = CryptoJS.SHA256(pass).toString();
-                    if (user === username && inputHash === passwordHash) {
-                        $('#loginModal').addClass('hide');
-                        setTimeout(() => {
-                            $('#loginModal').hide();
-                            $('.grid-container').show().css('opacity', 1);
-                            loadSessions();
-                        }, 300);
-                    } else {
-                        $('.modal-content button, .modal-content input').prop('disabled', false);
-                        $('.loading').hide();
-                        alert('Incorrect username or password');
-                    }
-                }, 500);
-            });
-
-            $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
-
-            $('#resetZoomBtn').on('click', () => transactionChart && transactionChart.resetZoom());
+            };
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                loadSessions();
+            };
 
             $('#sessionSelect').on('change', function() {
                 const sessionId = $(this).val();
@@ -302,22 +96,7 @@
                     resetDisplay();
                 }
             });
-
-            $('#printPdfBtn').on('click', () => printPDF());
         });
-
-        const request = indexedDB.open('SalesDB', 2);
-        request.onupgradeneeded = (e) => {
-            db = e.target.result;
-            if (!db.objectStoreNames.contains('sessions')) {
-                db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-        request.onsuccess = (e) => {
-            db = e.target.result;
-            loadSessions();
-        };
-        request.onerror = () => alert('Failed to open database.');
 
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
@@ -334,162 +113,53 @@
             };
         }
 
-        async function fetchTransactions(sessionId) {
-            const range = 'Sheet1!A2:G';
+        async function fetchTransaction() {
+            const range = 'Sheet1!A2';
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                const rows = data.values || [];
-                const transactions = rows.map(row => ({
-                    sessionId: row[0],
-                    timestamp: row[1],
-                    time: row[2],
-                    itemList: JSON.parse(row[3]),
-                    total: parseFloat(row[4]),
-                    note: row[5],
-                    doorCount: parseInt(row[6])
-                })).filter(tr => tr.sessionId === sessionId);
-                return transactions;
+                const value = data.values ? data.values[0][0] : null;
+                return value ? JSON.parse(value) : null;
             } catch (error) {
-                console.error('Error fetching transactions:', error);
-                return [];
+                console.error('Error fetching transaction:', error);
+                return null;
             }
         }
 
         async function updateLog(sessionId) {
-            if (!sessionId) {
-                resetDisplay();
-                return;
-            }
-            const transactions = await fetchTransactions(sessionId);
-            if (!transactions.length) {
+            const transaction = await fetchTransaction();
+            if (!transaction || transaction.sessionId !== sessionId) {
                 resetDisplay();
                 return;
             }
 
-            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-            const cashData = [], cardData = [], compData = [], ticketData = [];
-
-            transactions.forEach(tr => {
-                tr.itemList.forEach(item => {
-                    const value = item.price * item.quantity;
-                    if (item.type === 'CASH') cashSales += value;
-                    else if (item.type === 'CARD') cardSales += value;
-                    if (item.type === 'COMP') compCount += item.quantity;
-                    if (item.type === 'Tickets') ticketCount += item.quantity;
-                });
-                totalSales += tr.total;
-                totalDoorCount += tr.doorCount;
-
-                cashData.push({ x: new Date(tr.timestamp), y: cashSales });
-                cardData.push({ x: new Date(tr.timestamp), y: cardSales });
-                compData.push({ x: new Date(tr.timestamp), y: compCount });
-                ticketData.push({ x: new Date(tr.timestamp), y: ticketCount });
+            let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0;
+            transaction.itemList.forEach(item => {
+                const value = item.price * item.quantity;
+                if (item.type === 'CASH') cashSales += value;
+                else if (item.type === 'CARD') cardSales += value;
+                if (item.type === 'COMP') compCount += item.quantity;
+                if (item.type === 'Tickets') ticketCount += item.quantity;
             });
+            totalSales = transaction.total;
 
             $('#cashSales').text(cashSales.toFixed(2));
             $('#cardSales').text(cardSales.toFixed(2));
             $('#compCount').text(compCount);
             $('#ticketCount').text(ticketCount);
             $('#totalSales').text(totalSales.toFixed(2));
-            $('#doorCount').text(totalDoorCount);
-
-            updateGraph(cashData, cardData, compData, ticketData);
-
-            const $tbody = $('#transactionTable tbody').empty();
-            transactions.reverse().forEach(tr => {
-                const itemsHtml = tr.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (<b>${i.quantity}</b>)</span>`).join(', ');
-                $tbody.append(`<tr><td>${tr.time}</td><td>${itemsHtml}</td><td>$<span class="summary-value">${tr.total.toFixed(2)}</span></td><td>${tr.note || ''}</td></tr>`);
-            });
-            $('#grandTotal').html(`Total Sales: $<span class="summary-value">${totalSales.toFixed(2)}</span>`);
+            $('#doorCount').text(transaction.doorCount);
+            $('#transactionTime').text(transaction.time);
+            $('#transactionItems').html(transaction.itemList.map(i => `<span class="item-${i.type.toLowerCase()}">${i.item} (<b>${i.quantity}</b>)</span>`).join(', '));
+            $('#transactionNote').text(transaction.note || '');
         }
 
         function resetDisplay() {
             $('#cashSales, #cardSales').text('0.00');
             $('#compCount, #ticketCount, #doorCount').text('0');
             $('#totalSales').text('0.00');
-            if (transactionChart) {
-                transactionChart.data.datasets.forEach(d => d.data = []);
-                transactionChart.update();
-            }
-            $('#transactionTable tbody').empty();
-            $('#grandTotal').html('Total Sales: $0.00');
-        }
-
-        function updateGraph(cashData, cardData, compData, ticketData) {
-            const ctx = document.getElementById('transactionGraph').getContext('2d');
-            if (!transactionChart) {
-                transactionChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [
-                            { label: 'CASH Sales', data: cashData, borderColor: '#2e7d32', fill: false },
-                            { label: 'CARD Sales', data: cardData, borderColor: '#d32f2f', fill: false },
-                            { label: 'COMP Count', data: compData, borderColor: '#ffa500', fill: false },
-                            { label: 'Ticket Count', data: ticketData, borderColor: '#1a73e8', fill: false }
-                        ]
-                    },
-                    options: {
-                        scales: {
-                            x: { type: 'time', time: { unit: 'minute' } },
-                            y: { beginAtZero: true }
-                        },
-                        plugins: { zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }, pan: { enabled: true, mode: 'xy' } } }
-                    }
-                });
-            } else {
-                transactionChart.data.datasets[0].data = cashData;
-                transactionChart.data.datasets[1].data = cardData;
-                transactionChart.data.datasets[2].data = compData;
-                transactionChart.data.datasets[3].data = ticketData;
-                transactionChart.update();
-            }
-        }
-
-        function printPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const sessionId = $('#sessionSelect').val();
-            if (!sessionId) {
-                alert('Please select a session to print.');
-                return;
-            }
-
-            const session = $('#sessionSelect option:selected').text();
-            doc.setFontSize(16);
-            doc.text('Sales Report', 105, 10, { align: 'center' });
-            doc.setFontSize(12);
-            doc.text(session, 105, 20, { align: 'center' });
-
-            doc.setFontSize(14);
-            doc.text('Summary', 10, 40);
-            doc.setFontSize(12);
-            doc.text(`CASH Sales: $${$('#cashSales').text()}`, 10, 50);
-            doc.text(`CARD Sales: $${$('#cardSales').text()}`, 10, 60);
-            doc.text(`COMP Count: ${$('#compCount').text()}`, 10, 70);
-            doc.text(`Ticket Count: ${$('#ticketCount').text()}`, 10, 80);
-            doc.text(`Total Sales: $${$('#totalSales').text()}`, 10, 90);
-            doc.text(`Thru Door: ${$('#doorCount').text()}`, 10, 100);
-
-            doc.setFontSize(14);
-            doc.text('Transactions', 10, 120);
-            let y = 130;
-            $('#transactionTable tbody tr').each(function() {
-                const time = $(this).find('td:eq(0)').text();
-                const items = $(this).find('td:eq(1)').text();
-                const total = $(this).find('td:eq(2)').text();
-                const note = $(this).find('td:eq(3)').text();
-                doc.setFontSize(10);
-                doc.text(`${time} - ${items} - ${total}${note ? ' (' + note + ')' : ''}`, 10, y);
-                y += 10;
-                if (y > 280) {
-                    doc.addPage();
-                    y = 10;
-                }
-            });
-
-            doc.save('sales_report.pdf');
+            $('#transactionTime, #transactionItems, #transactionNote').text('');
         }
     </script>
 </body>
