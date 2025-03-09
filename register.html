@@ -38,15 +38,15 @@
         .transaction-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 20px;
         }
         button {
-            padding: 10px;
+            padding: 15px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             color: white;
         }
         .cash-btn { background: #2e7d32; }
@@ -100,6 +100,15 @@
             color: #e0e0e0;
             border: 1px solid #bdc3c7;
             border-radius: 4px;
+        }
+        @media (max-width: 768px) {
+            .transaction-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            button {
+                padding: 20px;
+                font-size: 20px;
+            }
         }
     </style>
 </head>
@@ -170,6 +179,10 @@
                     }
                 });
 
+                // Prefill date
+                const today = new Date().toISOString().split('T')[0];
+                $('#sessionDate').val(today);
+
                 // Initialize sales button state
                 if (this.salesOpen) {
                     $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
@@ -221,6 +234,8 @@
                         $('#pinInput').val('');
                     } else {
                         alert('Incorrect PIN');
+                        $('#pinModal').addClass('hidden');
+                        $('#pinInput').val('');
                     }
                 });
             }
