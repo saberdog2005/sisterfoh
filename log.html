@@ -6,7 +6,7 @@
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 20px; font-size: 16px; }
         h2 { margin-bottom: 10px; text-align: center; }
@@ -18,27 +18,12 @@
         .item-card { color: #d32f2f; }
         .item-tickets { color: #1a73e8; }
         .item-comp { color: #ffa500; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-        .modal-content { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; }
-        .modal-content input { margin: 10px 0; padding: 8px; width: 80%; }
-        .modal-content button { padding: 10px 20px; margin: 5px; background: #388e3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .modal-content button:hover { background: #66bb6a; }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Login</h2>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button id="loginBtn">Login</button>
-            <button id="cancelBtn">Cancel</button>
-            <div class="forgot-password">Forgot Password?</div>
-        </div>
-    </div>
-    <div class="grid-container" style="display:none;">
+    <div class="grid-container">
         <div class="log-container graph-container">
-            <h2>Sales and Counts Over Time</h2>
+            <h2>Sales Over Time</h2>
             <canvas id="salesGraph"></canvas>
         </div>
         <div class="log-container">
@@ -59,33 +44,22 @@
         </div>
     </div>
     <script>
-        const API_KEY = 'YOUR_API_KEY'; // Replace with your Google API Key
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        let db, updateInterval, salesChart;
-        const username = 'brad', passwordHash = CryptoJS.SHA256('password123').toString();
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+        let salesChart, updateInterval;
 
         $(document).ready(() => {
-            $('#loginBtn').on('click', () => {
-                const user = $('#username').val().trim(), pass = $('#password').val().trim();
-                if (!user || !pass) { alert('Please enter both username and password'); return; }
-                const inputHash = CryptoJS.SHA256(pass).toString();
-                if (user === username && inputHash === passwordHash) {
-                    $('#loginModal').hide();
-                    $('.grid-container').show();
+            gapi.load('client', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: DISCOVERY_DOCS
+                }).then(() => {
                     loadSessions();
-                } else { alert('Incorrect username or password'); }
+                }).catch(error => console.error('Error initializing GAPI:', error));
             });
-            $('#cancelBtn').on('click', () => $('#username, #password').val(''));
-            $('.forgot-password').on('click', () => alert('Forgot Password not implemented.'));
 
-            const request = indexedDB.open('SalesDB', 2);
-            request.onupgradeneeded = (e) => {
-                db = e.target.result;
-                if (!db.objectStoreNames.contains('sessions')) {
-                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            request.onsuccess = (e) => { db = e.target.result; };
             $('#sessionSelect').on('change', function () {
                 const sessionId = $(this).val();
                 if (sessionId) {
@@ -99,39 +73,42 @@
             });
         });
 
-        function loadSessions() {
-            const tx = db.transaction(['sessions'], 'readonly');
-            const store = tx.objectStore('sessions');
-            store.getAll().onsuccess = (e) => {
-                const sessions = e.target.result;
-                const $select = $('#sessionSelect');
-                $select.empty().append('<option value="">Select a session</option>');
-                sessions.forEach(s => $select.append(`<option value="${s.id}">${s.date} - ${s.venue} - ${s.eventName} - ${s.cashier}${s.status === 'open' ? ' (Current)' : ''}</option>`));
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (activeSessionId) $select.val(activeSessionId);
-            };
+        async function loadSessions() {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Sheet1!A2:G'
+            });
+            const rows = response.result.values || [];
+            const sessions = {};
+            rows.forEach(row => {
+                if (row[0] && row[0] !== 'CLOSED') {
+                    sessions[row[0]] = true;
+                }
+            });
+            const $select = $('#sessionSelect');
+            $select.empty().append('<option value="">Select a session</option>');
+            Object.keys(sessions).forEach(id => {
+                $select.append(`<option value="${id}">${id}</option>`);
+            });
+            const activeSessionId = localStorage.getItem('activeSessionId');
+            if (activeSessionId) $select.val(activeSessionId);
         }
 
         async function fetchTransactions() {
-            const range = 'Sheet1!A2:Z';
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const rows = data.values || [];
-                return rows.map(row => ({
-                    sessionId: row[0],
-                    timestamp: row[1],
-                    time: row[2],
-                    itemList: JSON.parse(row[3]),
-                    total: parseFloat(row[4]),
-                    note: row[5],
-                    doorCount: parseInt(row[6])
-                }));
-            } catch (error) {
-                console.error('Error fetching transactions:', error);
-                return [];
-            }
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Sheet1!A2:G'
+            });
+            const rows = response.result.values || [];
+            return rows.map(row => ({
+                sessionId: row[0],
+                timestamp: row[1],
+                time: row[2],
+                items: row[3],
+                total: parseFloat(row[4] || 0),
+                note: row[5],
+                doorCount: parseInt(row[6] || 0)
+            })).filter(tr => tr.sessionId !== 'CLOSED');
         }
 
         async function updateLog(sessionId) {
@@ -139,30 +116,18 @@
             const sessionTransactions = transactions.filter(tr => tr.sessionId === sessionId);
             if (!sessionTransactions.length) { resetDisplay(); return; }
             let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
-            const graphData = { labels: [], cash: [], card: [], comp: [], tickets: [], door: [] };
+            const graphData = { labels: [], sales: [] };
 
             sessionTransactions.forEach(tr => {
-                let transactionCash = 0, transactionCard = 0, transactionComp = 0, transactionTicket = 0;
-                tr.itemList.forEach(item => {
-                    const value = item.price * item.quantity;
-                    if (item.type === 'CASH') transactionCash += value;
-                    else if (item.type === 'CARD') transactionCard += value;
-                    if (item.type === 'COMP') transactionComp += item.quantity;
-                    if (item.type === 'Tickets') transactionTicket += item.quantity;
-                });
-                cashSales += transactionCash;
-                cardSales += transactionCard;
-                compCount += transactionComp;
-                ticketCount += transactionTicket;
+                if (tr.items.includes('CASH')) cashSales += tr.total;
+                if (tr.items.includes('CC')) cardSales += tr.total;
+                if (tr.items.includes('COMP')) compCount += tr.doorCount;
+                if (tr.items.includes('TICKET')) ticketCount += tr.doorCount;
                 totalSales += tr.total;
                 totalDoorCount += tr.doorCount;
 
                 graphData.labels.push(tr.time);
-                graphData.cash.push(cashSales);
-                graphData.card.push(cardSales);
-                graphData.comp.push(compCount);
-                graphData.tickets.push(ticketCount);
-                graphData.door.push(totalDoorCount);
+                graphData.sales.push(totalSales);
             });
 
             $('#cashSales').text(cashSales.toFixed(2));
@@ -178,15 +143,13 @@
         function updateTransactionLog(transactions) {
             const $log = $('#transactionLog').empty();
             transactions.forEach(tr => {
-                const items = tr.itemList.map(i => `${i.item} (${i.quantity})`).join(', ');
-                $log.append(`<p>${tr.time} - ${items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
+                $log.append(`<p>${tr.time} - ${tr.items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
             });
         }
 
         function resetDisplay() {
-            $('#cashSales, #cardSales').text('0.00');
+            $('#cashSales, #cardSales, #totalSales').text('0.00');
             $('#compCount, #ticketCount, #doorCount').text('0');
-            $('#totalSales').text('0.00');
             if (salesChart) salesChart.destroy();
             $('#transactionLog').empty();
         }
@@ -198,13 +161,7 @@
                 type: 'line',
                 data: {
                     labels: data.labels,
-                    datasets: [
-                        { label: 'CASH Sales', data: data.cash, borderColor: '#2e7d32', fill: false },
-                        { label: 'CARD Sales', data: data.card, borderColor: '#d32f2f', fill: false },
-                        { label: 'COMP Count', data: data.comp, borderColor: '#ffa500', fill: false },
-                        { label: 'Ticket Count', data: data.tickets, borderColor: '#1a73e8', fill: false },
-                        { label: 'Thru Door', data: data.door, borderColor: '#ffffff', fill: false }
-                    ]
+                    datasets: [{ label: 'Total Sales', data: data.sales, borderColor: '#388e3c', fill: false }]
                 },
                 options: { scales: { y: { beginAtZero: true } } }
             });
