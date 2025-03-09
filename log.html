@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
         body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;margin:0;padding:20px;font-size:16px;}
         h2{margin-bottom:10px;text-align:center;}
         .container{background:#2d2d2d;padding:15px;border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,0.3);max-height:80vh;overflow-y:auto;}
@@ -17,10 +18,25 @@
         .item-tickets{color:#1a73e8;}
         .item-comp{color:#ffa500;}
         .graph-container{margin-top:20px;height:300px;}
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;}
+        .modal-content{background:#2d2d2d;padding:20px;border-radius:8px;text-align:center;}
+        .modal-content input{margin:10px 0;padding:8px;width:80%;}
+        .modal-content button{padding:10px 20px;margin:5px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;}
+        .modal-content button:hover{background:#66bb6a;}
     </style>
 </head>
 <body>
-    <div class="container">
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="loginBtn">Login</button>
+            <button id="cancelBtn">Cancel</button>
+            <div class="forgot-password">Forgot Password?</div>
+        </div>
+    </div>
+    <div class="container" style="display:none;">
         <h2>Live Sales Summary</h2>
         <select id="sessionSelect">
             <option value="">Select a session</option>
@@ -41,11 +57,25 @@
         const API_KEY='AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
         const SPREADSHEET_ID='1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         let db,updateInterval,salesChart;
+        const username='brad',passwordHash=CryptoJS.SHA256('password123').toString();
 
         $(document).ready(()=>{
+            $('#loginBtn').on('click',()=>{
+                const user=$('#username').val().trim(),pass=$('#password').val().trim();
+                if(!user||!pass){alert('Please enter both username and password');return;}
+                const inputHash=CryptoJS.SHA256(pass).toString();
+                if(user===username&&inputHash===passwordHash){
+                    $('#loginModal').hide();
+                    $('.container').show();
+                    loadSessions();
+                }else{alert('Incorrect username or password');}
+            });
+            $('#cancelBtn').on('click',()=>$('#username, #password').val(''));
+            $('.forgot-password').on('click',()=>alert('Forgot Password not implemented.'));
+
             const request=indexedDB.open('SalesDB',2);
             request.onupgradeneeded=(e)=>{db=e.target.result;if(!db.objectStoreNames.contains('sessions')){db.createObjectStore('sessions',{keyPath:'id',autoIncrement:true});}};
-            request.onsuccess=(e)=>{db=e.target.result;loadSessions();};
+            request.onsuccess=(e)=>{db=e.target.result;};
             $('#sessionSelect').on('change',function(){const sessionId=$(this).val();if(sessionId){updateLog(sessionId);clearInterval(updateInterval);updateInterval=setInterval(()=>updateLog(sessionId),5000);}else{clearInterval(updateInterval);resetDisplay();}});
         });
 
