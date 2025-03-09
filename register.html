@@ -28,12 +28,13 @@
             flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 20px;
+            align-items: center;
         }
         .header label {
             display: flex;
             flex-direction: column;
         }
-        .header input {
+        .header input, .header select {
             padding: 8px;
             background: #34495e;
             color: #e0e0e0;
@@ -52,35 +53,12 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-        }
-        .cash-btn {
-            background: #4CAF50;
             color: white;
         }
-        .cc-btn {
-            background: #d32f2f;
-            color: white;
-        }
-        .ticket-btn {
-            background: #1a73e8;
-            color: white;
-        }
-        .comp-btn {
-            background: #ffa500;
-            color: white;
-        }
-        .custom-cash {
-            display: flex;
-            gap: 5px;
-        }
-        .custom-cash input {
-            flex: 1;
-            padding: 10px;
-            background: #34495e;
-            color: #e0e0e0;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-        }
+        .cash-btn { background: #2e7d32; }
+        .cc-btn { background: #d32f2f; }
+        .ticket-btn { background: #1a73e8; }
+        .comp-btn { background: #ffa500; }
         .summary {
             display: flex;
             justify-content: space-between;
@@ -110,6 +88,23 @@
             color: white;
             padding: 10px;
         }
+        .custom-cash input {
+            width: 100%;
+            padding: 10px;
+            background: #34495e;
+            color: #e0e0e0;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        .custom-cash button {
+            background: #2e7d32;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
         @media (max-width: 768px) {
             .transaction-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -126,16 +121,16 @@
             <label>Cashier: <input type="text" id="sessionCashier" placeholder="Cashier"></label>
             <button id="toggleSalesBtn">Open Sales</button>
         </div>
-        <div class="transaction-grid">
-            <button class="cash-btn" data-amount="20">$20</button>
-            <button class="cash-btn" data-amount="15">$15</button>
-            <button class="cash-btn" data-amount="12">$12</button>
-            <button class="cash-btn" data-amount="10">$10</button>
-            <button class="cash-btn" data-amount="7">$7</button>
-            <button class="cash-btn" data-amount="5">$5</button>
-            <button class="cc-btn">CC TRANS</button>
-            <button class="ticket-btn">TICKET</button>
-            <button class="comp-btn">COMP</button>
+        <div class="transaction-grid" id="transactionGrid">
+            <button class="cash-btn" data-type="cash" data-amount="20">$20</button>
+            <button class="cash-btn" data-type="cash" data-amount="15">$15</button>
+            <button class="cash-btn" data-type="cash" data-amount="12">$12</button>
+            <button class="cash-btn" data-type="cash" data-amount="10">$10</button>
+            <button class="cash-btn" data-type="cash" data-amount="7">$7</button>
+            <button class="cash-btn" data-type="cash" data-amount="5">$5</button>
+            <button class="cc-btn" data-type="card" data-amount="0">CC TRANS</button>
+            <button class="ticket-btn" data-type="ticket" data-amount="0">TICKET</button>
+            <button class="comp-btn" data-type="comp" data-amount="0">COMP</button>
             <div class="custom-cash">
                 <input type="number" id="customCashInput" placeholder="Custom Amount">
                 <button id="addCustomCashBtn">Add</button>
@@ -196,38 +191,19 @@
                 });
             }
 
-            addCashTransaction(amount) {
-                this.cart.push({ type: 'cash', amount });
-                this.cashTotal += amount;
+            addTransaction(type, amount) {
+                this.cart.push({ type, amount });
+                if (type === 'cash') {
+                    this.cashTotal += amount;
+                }
                 this.doorCount++;
                 this.updateDisplay();
             }
 
             addCustomCashTransaction(amount) {
                 if (!isNaN(amount) && amount > 0) {
-                    this.cart.push({ type: 'cash', amount });
-                    this.cashTotal += amount;
-                    this.doorCount++;
-                    this.updateDisplay();
+                    this.addTransaction('cash', amount);
                 }
-            }
-
-            addCcTransaction() {
-                this.cart.push({ type: 'card', amount: 0 });
-                this.doorCount++;
-                this.updateDisplay();
-            }
-
-            addTicketTransaction() {
-                this.cart.push({ type: 'ticket', amount: 0 });
-                this.doorCount++;
-                this.updateDisplay();
-            }
-
-            addCompTransaction() {
-                this.cart.push({ type: 'comp', amount: 0 });
-                this.doorCount++;
-                this.updateDisplay();
             }
 
             logSale() {
@@ -287,18 +263,16 @@
                     if (date && venue && event && cashier) app.startSession(date, venue, event, cashier);
                 }
             });
-            $('.cash-btn').on('click', function() {
+            $('.cash-btn, .cc-btn, .ticket-btn, .comp-btn').on('click', function() {
+                const type = $(this).data('type');
                 const amount = parseFloat($(this).data('amount'));
-                app.addCashTransaction(amount);
+                app.addTransaction(type, amount);
             });
             $('#addCustomCashBtn').on('click', () => {
                 const amount = parseFloat($('#customCashInput').val());
                 app.addCustomCashTransaction(amount);
                 $('#customCashInput').val('');
             });
-            $('.cc-btn').on('click', () => app.addCcTransaction());
-            $('.ticket-btn').on('click', () => app.addTicketTransaction());
-            $('.comp-btn').on('click', () => app.addCompTransaction());
             $('#logSaleBtn').on('click', () => app.logSale());
         });
     </script>
