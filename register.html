@@ -6,7 +6,6 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 10px; font-size: 18px; }
@@ -22,7 +21,7 @@
         .card-item { background: #8B0000; }
         .ticket-item { background: #00008B; }
         .comp-item { background: #CC8400; }
-        .product-item.disabled { background: #555; opacity: 0.5; pointer-events: none; }
+        .product-item.inactive { background: #555; opacity: 0.5; pointer-events: none; }
         .increment-btn { width: 100%; height: 60px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.2em; color: white; font-weight: bold; background: inherit; }
         .increment-btn:hover { filter: brightness(1.1); }
         .decrement-btn { width: 40px; height: 40px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.5em; color: white; background: #8B0000; }
@@ -30,7 +29,7 @@
         .control-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px; }
         .count { font-size: 1.5em; width: 40px; height: 40px; line-height: 40px; font-weight: bold; background: #000; color: white; border-radius: 50%; text-align: center; }
         .custom-input { display: flex; gap: 10px; justify-content: center; }
-        .custom-input input { width: 100px; padding: 8px; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 1em; }
+        .custom-input input { width: 100px; padding: 8px; background: #333; color: #e0e0e0; border: 1px solid #666; border-radius: 4px; font-size: 1.2em; }
         .add-custom { padding: 8px 16px; background: #006400; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
         .add-custom:hover { background: #008000; }
         .totals-container { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; background: #3c3c3c; padding: 10px; border-radius: 4px; }
@@ -81,25 +80,20 @@
         <div id="message" class="message"></div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const WEB_APP_URL = 'YOUR_WEB_APP_URL'; // Replace with your Google Apps Script web app URL
-
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec'; // Replace with your deployed script URL
         const allButtons = [
-            { item: 'CASH $20', enabled: true },
-            { item: 'CASH $15', enabled: true },
-            { item: 'CASH $12', enabled: true },
-            { item: 'CASH $10', enabled: true },
-            { item: 'CASH $7', enabled: true },
-            { item: 'CASH $5', enabled: true },
-            { item: 'CASH (CUSTOM)', enabled: true },
-            { item: 'CC TRANS', enabled: true },
-            { item: 'TICKET', enabled: true },
-            { item: 'COMP', enabled: true }
+            { item: 'CASH $20', enabled: false },
+            { item: 'CASH $15', enabled: false },
+            { item: 'CASH $12', enabled: false },
+            { item: 'CASH $10', enabled: false },
+            { item: 'CASH $7', enabled: false },
+            { item: 'CASH $5', enabled: false },
+            { item: 'CASH (CUSTOM)', enabled: false },
+            { item: 'CC TRANS', enabled: false },
+            { item: 'TICKET', enabled: false },
+            { item: 'COMP', enabled: false }
         ];
         let layout = JSON.parse(localStorage.getItem('buttonLayout')) || allButtons.map(b => ({ ...b }));
-        let interactionLog = [];
 
         const itemConfig = {
             'CASH $20': { class: 'cash-item', price: 20 },
@@ -116,9 +110,9 @@
 
         function createButtonHTML(item, enabled) {
             const config = itemConfig[item] || {};
-            const disabledClass = !enabled ? 'disabled' : '';
+            const inactiveClass = enabled ? '' : 'inactive';
             const html = item === 'CASH (CUSTOM)' ? `
-                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}">
+                <div class="product-item ${config.class} ${inactiveClass}" data-item="${item}">
                     <div class="custom-input">
                         <input type="number" step="0.01" min="0" placeholder="Amount">
                         <button class="add-custom">Add</button>
@@ -130,7 +124,7 @@
                     </div>
                 </div>
             ` : `
-                <div class="product-item ${config.class} ${disabledClass}" data-item="${item}" data-price="${config.price}">
+                <div class="product-item ${config.class} ${inactiveClass}" data-item="${item}" data-price="${config.price}">
                     <button class="increment-btn">${item}</button>
                     <div class="control-row"><span class="count">0</span><button class="decrement-btn">-</button></div>
                     <div class="edit-controls">
@@ -146,7 +140,7 @@
             const $container = $('#buttonContainer').empty();
             const buttonsToShow = editMode ? allButtons : layout.filter(b => b.enabled);
             buttonsToShow.forEach(config => {
-                $container.append(createButtonHTML(config.item, editMode ? config.enabled : true));
+                $container.append(createButtonHTML(config.item, config.enabled));
             });
             if (editMode) {
                 $('.edit-controls').show();
@@ -159,35 +153,7 @@
             }
         }
 
-        function logInteraction(action, details) {
-            const timestamp = new Date().toISOString();
-            interactionLog.push({ timestamp, action, details });
-            sendInteractionToSheet({ timestamp, action, details });
-        }
-
-        async function sendInteractionToSheet(interaction) {
-            try {
-                const response = await fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'INTERACTION',
-                        sessionId: app.sessionId || 'N/A',
-                        timestamp: interaction.timestamp,
-                        action: interaction.action,
-                        details: JSON.stringify(interaction.details)
-                    })
-                });
-                if (!response.ok) throw new Error('Network response was not ok');
-                console.log('Interaction logged:', interaction);
-            } catch (err) {
-                console.error('Error logging interaction:', err);
-                $('#message').text('Error logging interaction. Data saved locally.');
-            }
-        }
-
         $('#editLayoutBtn').on('click', function() {
-            logInteraction('EDIT_LAYOUT_START', {});
             renderButtons(true);
             $(this).hide();
             $('#confirmLayoutBtn').show();
@@ -197,33 +163,26 @@
             const newLayout = [];
             $('#buttonContainer .product-item').each(function() {
                 const item = $(this).data('item');
-                const enabled = !$(this).hasClass('disabled');
+                const enabled = !$(this).hasClass('inactive');
                 newLayout.push({ item, enabled });
             });
-            layout = newLayout;
+            layout = newLayout.filter(b => b.enabled);
             localStorage.setItem('buttonLayout', JSON.stringify(layout));
             renderButtons(false);
-            logInteraction('EDIT_LAYOUT_CONFIRM', { layout: layout });
             $(this).hide();
             $('#editLayoutBtn').show();
         });
 
         $(document).on('click', '.enable-btn', function() {
-            const $item = $(this).closest('.product-item');
-            $item.removeClass('disabled');
-            logInteraction('ENABLE_BUTTON', { item: $item.data('item') });
+            $(this).closest('.product-item').removeClass('inactive');
         });
 
         $(document).on('click', '.disable-btn', function() {
-            const $item = $(this).closest('.product-item');
-            $item.addClass('disabled');
-            logInteraction('DISABLE_BUTTON', { item: $item.data('item') });
+            $(this).closest('.product-item').addClass('inactive');
         });
 
         if (localStorage.getItem('adminLoggedIn') === 'true') {
             $('#adminControls').show();
-        } else {
-            $('#adminControls').hide();
         }
 
         class SalesApp {
@@ -232,7 +191,6 @@
                 this.doorCount = 0;
                 this.items = {};
                 this.isSalesActive = false;
-                this.sessionId = null;
                 this.initEvents();
             }
 
@@ -240,31 +198,28 @@
                 $(document).on('click', '.increment-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
+                    if ($item.hasClass('inactive')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.increment(item, price);
-                    logInteraction('INCREMENT', { item, price });
                 });
 
                 $(document).on('click', '.decrement-btn', (e) => {
                     if (!this.isSalesActive) return;
                     const $item = $(e.target).closest('.product-item');
-                    if ($item.hasClass('disabled')) return;
+                    if ($item.hasClass('inactive')) return;
                     const item = $item.data('item');
                     const price = parseFloat($item.data('price') || 0);
                     this.decrement(item, price);
-                    logInteraction('DECREMENT', { item, price });
                 });
 
                 $(document).on('click', '.add-custom', () => {
                     if (!this.isSalesActive) return;
                     const $custom = $('#buttonContainer .product-item[data-item="CASH (CUSTOM)"]');
-                    if ($custom.hasClass('disabled')) return;
+                    if ($custom.hasClass('inactive')) return;
                     const amount = parseFloat($custom.find('input').val()) || 0;
                     if (amount > 0) {
                         this.increment('CASH (CUSTOM)', amount);
-                        logInteraction('ADD_CUSTOM', { amount });
                         $custom.find('input').val('');
                     }
                 });
@@ -275,14 +230,13 @@
 
                 $('#logSaleBtn').on('click', () => {
                     this.logSale();
-                    logInteraction('LOG_SALE', { cashTotal: this.cashTotal, doorCount: this.doorCount, items: this.items });
                 });
             }
 
             increment(item, price) {
                 this.items[item] = (this.items[item] || 0) + 1;
                 if (price > 0) this.cashTotal += price;
-                if (item === 'TICKET' || item === 'COMP') this.doorCount++;
+                if (item !== 'CASH (CUSTOM)') this.doorCount++;
                 this.updateDisplay();
             }
 
@@ -290,7 +244,7 @@
                 if (this.items[item] > 0) {
                     this.items[item]--;
                     if (price > 0) this.cashTotal -= price;
-                    if (item === 'TICKET' || item === 'COMP') this.doorCount--;
+                    if (item !== 'CASH (CUSTOM)') this.doorCount--;
                     this.updateDisplay();
                 }
             }
@@ -306,92 +260,56 @@
                 $('#logSaleBtn').prop('disabled', this.cashTotal <= 0 && this.doorCount <= 0);
             }
 
-            toggleSales() {
+            async toggleSales() {
                 this.isSalesActive = !this.isSalesActive;
                 $('#toggleSalesBtn').text(this.isSalesActive ? 'Close Sales' : 'Open Sales');
                 $('#message').text(this.isSalesActive ? 'Sales are now active.' : 'Sales are closed.');
                 if (this.isSalesActive) {
-                    this.sessionId = Date.now().toString();
-                    $('#adminControls').hide();
-                    this.postSessionStart();
-                    logInteraction('OPEN_SALES', { sessionId: this.sessionId });
+                    const sessionId = Date.now().toString();
+                    localStorage.setItem('activeSessionId', sessionId);
+                    const titleRow = ['Type', 'SessionID', 'Date', 'Time', 'ItemList', 'Total', 'Note', 'DoorCount'];
+                    await this.sendPostRequest({ type: 'TITLE', sessionId, data: titleRow });
+                    $('#editLayoutBtn').hide();
                 } else {
-                    this.postSessionClose();
-                    logInteraction('CLOSE_SALES', { sessionId: this.sessionId, cashTotal: this.cashTotal, doorCount: this.doorCount });
-                    if (localStorage.getItem('adminLoggedIn') === 'true') {
-                        $('#adminControls').show();
-                    }
-                    this.sessionId = null;
+                    localStorage.removeItem('activeSessionId');
+                    $('#editLayoutBtn').show();
                 }
             }
 
-            async postSessionStart() {
+            logSale() {
+                if (!this.isSalesActive || (this.cashTotal <= 0 && this.doorCount <= 0)) return;
+                const sessionId = localStorage.getItem('activeSessionId');
+                const transaction = {
+                    type: 'TRANSACTION',
+                    sessionId,
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    itemList: Object.entries(this.items).map(([item, quantity]) => {
+                        const price = parseFloat($(`[data-item="${item}"]`).data('price') || 0);
+                        return { item, price, quantity, type: itemConfig[item].class.replace('-item', '') };
+                    }),
+                    total: this.cashTotal,
+                    note: $('#noteInput').val().trim(),
+                    doorCount: this.doorCount
+                };
+                this.sendPostRequest(transaction);
+                this.reset();
+            }
+
+            async sendPostRequest(data) {
                 try {
-                    const sessionData = {
-                        type: 'SESSION_START',
-                        sessionId: this.sessionId,
-                        date: $('#eventDate').val(),
-                        venue: $('#eventVenue').val(),
-                        eventName: $('#eventName').val(),
-                        cashier: $('#cashierName').val()
-                    };
                     const response = await fetch(WEB_APP_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sessionData)
+                        body: JSON.stringify(data)
                     });
                     if (!response.ok) throw new Error('Network response was not ok');
-                    $('#message').text('Session started successfully.');
-                } catch (err) {
-                    console.error('Error posting session start:', err);
-                    $('#message').text('Error starting session. Please try again.');
-                }
-            }
-
-            async postSessionClose() {
-                try {
-                    const sessionData = {
-                        type: 'SESSION_CLOSE',
-                        sessionId: this.sessionId,
-                        grandTotal: this.cashTotal,
-                        doorCount: this.doorCount
-                    };
-                    const response = await fetch(https://script.google.com/macros/s/AKfycbzdoFgive1pD6OhgFEEZJiiFGZRGeLylu-qI99MhzS-2mLtMQ4uTceyXJU6dnDVv-PV/exec, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sessionData)
-                    });
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    $('#message').text('Session closed successfully.');
-                } catch (err) {
-                    console.error('Error posting session close:', err);
-                    $('#message').text('Error closing session. Please try again.');
-                }
-            }
-
-            async logSale() {
-                try {
-                    const saleData = {
-                        type: 'TRANSACTION',
-                        sessionId: this.sessionId,
-                        timestamp: new Date().toISOString(),
-                        time: new Date().toLocaleTimeString(),
-                        itemList: Object.entries(this.items).map(([item, quantity]) => ({ item, quantity, price: itemConfig[item]?.price || 0 })),
-                        total: this.cashTotal,
-                        note: $('#noteInput').val(),
-                        doorCount: this.doorCount
-                    };
-                    const response = await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(saleData)
-                    });
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    $('#message').text('Sale logged successfully.');
-                    this.reset();
-                } catch (err) {
-                    console.error('Error logging sale:', err);
-                    $('#message').text('Error logging sale. Please try again.');
+                    const result = await response.json();
+                    if (result.status === 'error') throw new Error(result.message);
+                    $('#message').text('Data sent successfully').css('color', '#4CAF50');
+                } catch (error) {
+                    console.error('Error sending data:', error);
+                    $('#message').text('Failed to send data: ' + error.message).css('color', '#ff6b6b');
                 }
             }
 
