@@ -23,9 +23,9 @@
         </div>
     </div>
     <script>
-        const CLIENT_ID = 'YOUR_CLIENT_ID';
-        const API_KEY = 'YOUR_API_KEY';
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.google.com';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 
         function updateCurrentTransactionDisplay(itemsJson) {
@@ -107,7 +107,8 @@
 
         function updateChart(data) {
             const ctx = $('#doorChart')[0].getContext('2d');
-            new Chart(ctx, {
+            if (window.doorChart) window.doorChart.destroy(); // Destroy previous chart instance
+            window.doorChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.labels,
