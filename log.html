@@ -44,10 +44,9 @@
         </div>
     </div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Replace with your API key
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Replace with your Spreadsheet ID
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
         let salesChart, updateInterval;
 
         $(document).ready(() => {
@@ -76,56 +75,60 @@
         async function loadSessions() {
             const response = await gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A2:G'
+                range: 'Sheet1!A2:A'
             });
             const rows = response.result.values || [];
-            const sessions = {};
-            rows.forEach(row => {
-                if (row[0] && row[0] !== 'CLOSED') {
-                    sessions[row[0]] = true;
-                }
-            });
+            const sessions = [...new Set(rows.map(row => row[0]).filter(id => id && id !== 'CLOSED'))];
             const $select = $('#sessionSelect');
             $select.empty().append('<option value="">Select a session</option>');
-            Object.keys(sessions).forEach(id => {
-                $select.append(`<option value="${id}">${id}</option>`);
-            });
-            const activeSessionId = localStorage.getItem('activeSessionId');
-            if (activeSessionId) $select.val(activeSessionId);
+            sessions.forEach(id => $select.append(`<option value="${id}">${id}</option>`));
         }
 
-        async function fetchTransactions() {
+        async function fetchSessionData(sessionId) {
             const response = await gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A2:G'
+                range: 'Sheet1!A2:H'
             });
             const rows = response.result.values || [];
-            return rows.map(row => ({
-                sessionId: row[0],
-                timestamp: row[1],
-                time: row[2],
-                items: row[3],
-                total: parseFloat(row[4] || 0),
-                note: row[5],
-                doorCount: parseInt(row[6] || 0)
-            })).filter(tr => tr.sessionId !== 'CLOSED');
+            let sessionInfo = { transactions: [], grandTotal: 0 };
+            rows.forEach(row => {
+                const type = row[0];
+                const rowSessionId = row[1];
+                if (rowSessionId === sessionId) {
+                    if (type === 'SESSION_START') {
+                        sessionInfo = { date: row[2], venue: row[3], eventName: row[4], cashier: row[5], transactions: [], grandTotal: 0 };
+                    } else if (type === 'TRANSACTION') {
+                        sessionInfo.transactions.push({
+                            timestamp: row[2],
+                            time: row[3],
+                            items: JSON.parse(row[4]),
+                            total: parseFloat(row[5]),
+                            note: row[6],
+                            doorCount: parseInt(row[7])
+                        });
+                    } else if (type === 'SESSION_CLOSE') {
+                        sessionInfo.grandTotal = parseFloat(row[2]);
+                    }
+                }
+            });
+            return sessionInfo;
         }
 
         async function updateLog(sessionId) {
-            const transactions = await fetchTransactions();
-            const sessionTransactions = transactions.filter(tr => tr.sessionId === sessionId);
-            if (!sessionTransactions.length) { resetDisplay(); return; }
+            const sessionInfo = await fetchSessionData(sessionId);
+            if (!sessionInfo) { resetDisplay(); return; }
             let cashSales = 0, cardSales = 0, compCount = 0, ticketCount = 0, totalSales = 0, totalDoorCount = 0;
             const graphData = { labels: [], sales: [] };
 
-            sessionTransactions.forEach(tr => {
-                if (tr.items.includes('CASH')) cashSales += tr.total;
-                if (tr.items.includes('CC')) cardSales += tr.total;
-                if (tr.items.includes('COMP')) compCount += tr.doorCount;
-                if (tr.items.includes('TICKET')) ticketCount += tr.doorCount;
+            sessionInfo.transactions.forEach(tr => {
+                tr.items.forEach(item => {
+                    if (item.item.startsWith('CASH')) cashSales += item.price * item.quantity;
+                    if (item.item.startsWith('CC')) cardSales += item.price * item.quantity;
+                    if (item.item === 'COMP') compCount += item.quantity;
+                    if (item.item === 'TICKET') ticketCount += item.quantity;
+                });
                 totalSales += tr.total;
                 totalDoorCount += tr.doorCount;
-
                 graphData.labels.push(tr.time);
                 graphData.sales.push(totalSales);
             });
@@ -137,13 +140,14 @@
             $('#totalSales').text(totalSales.toFixed(2));
             $('#doorCount').text(totalDoorCount);
             updateGraph(graphData);
-            updateTransactionLog(sessionTransactions);
+            updateTransactionLog(sessionInfo.transactions);
         }
 
         function updateTransactionLog(transactions) {
             const $log = $('#transactionLog').empty();
             transactions.forEach(tr => {
-                $log.append(`<p>${tr.time} - ${tr.items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
+                const items = tr.items.map(i => `${i.item} (${i.quantity})`).join(', ');
+                $log.append(`<p>${tr.time} - ${items} - $${tr.total.toFixed(2)} - Thru Door: ${tr.doorCount} ${tr.note ? '(' + tr.note + ')' : ''}</p>`);
             });
         }
 
