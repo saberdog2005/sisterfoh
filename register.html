@@ -7,7 +7,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
-        /* Dark Theme and General Styling */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -24,7 +23,6 @@
             max-width: 1024px;
             margin: 0 auto;
         }
-        /* Header Section */
         .header {
             display: flex;
             flex-wrap: wrap;
@@ -42,7 +40,6 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        /* Transaction Buttons Grid */
         .transaction-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -57,19 +54,19 @@
             font-size: 16px;
         }
         .cash-btn {
-            background: #4CAF50; /* Green */
+            background: #4CAF50;
             color: white;
         }
         .cc-btn {
-            background: #d32f2f; /* Red */
+            background: #d32f2f;
             color: white;
         }
         .ticket-btn {
-            background: #1a73e8; /* Blue */
+            background: #1a73e8;
             color: white;
         }
         .comp-btn {
-            background: #ffa500; /* Orange */
+            background: #ffa500;
             color: white;
         }
         .custom-cash {
@@ -84,7 +81,6 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
-        /* Summary Section */
         .summary {
             display: flex;
             justify-content: space-between;
@@ -92,10 +88,9 @@
             font-size: 20px;
         }
         #doorCount {
-            color: #800080; /* Purple for "Thru Door" */
+            color: #800080;
             font-weight: bold;
         }
-        /* Note and Log Sale Section */
         .note-section {
             display: flex;
             flex-direction: column;
@@ -115,7 +110,6 @@
             color: white;
             padding: 10px;
         }
-        /* Responsive Design */
         @media (max-width: 768px) {
             .transaction-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -125,7 +119,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header Section -->
         <div class="header">
             <label>Date: <input type="date" id="sessionDate"></label>
             <label>Venue: <input type="text" id="sessionVenue" placeholder="Venue"></label>
@@ -133,7 +126,6 @@
             <label>Cashier: <input type="text" id="sessionCashier" placeholder="Cashier"></label>
             <button id="toggleSalesBtn">Open Sales</button>
         </div>
-        <!-- Transaction Buttons Grid -->
         <div class="transaction-grid">
             <button class="cash-btn" data-amount="20">$20</button>
             <button class="cash-btn" data-amount="15">$15</button>
@@ -149,19 +141,16 @@
                 <button id="addCustomCashBtn">Add</button>
             </div>
         </div>
-        <!-- Summary Section -->
         <div class="summary">
             <div>Cash Total: $<span id="cashTotal">0.00</span></div>
             <div>Thru Door: <span id="doorCount">0</span></div>
         </div>
-        <!-- Note and Log Sale Section -->
         <div class="note-section">
             <textarea id="noteInput" placeholder="Add a note..."></textarea>
             <button id="logSaleBtn">Log Sale</button>
         </div>
     </div>
     <script>
-        // Google Sheets API Configuration with Persistent IDs
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
@@ -224,19 +213,19 @@
             }
 
             addCcTransaction() {
-                this.cart.push({ type: 'cc' });
+                this.cart.push({ type: 'card', amount: 0 });
                 this.doorCount++;
                 this.updateDisplay();
             }
 
             addTicketTransaction() {
-                this.cart.push({ type: 'ticket' });
+                this.cart.push({ type: 'ticket', amount: 0 });
                 this.doorCount++;
                 this.updateDisplay();
             }
 
             addCompTransaction() {
-                this.cart.push({ type: 'comp' });
+                this.cart.push({ type: 'comp', amount: 0 });
                 this.doorCount++;
                 this.updateDisplay();
             }
