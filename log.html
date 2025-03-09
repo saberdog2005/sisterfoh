@@ -7,11 +7,40 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; margin: 0; padding: 20px; font-size: 16px; }
-        .log-container { background: #2d2d2d; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        select { padding: 5px; font-size: 16px; background: #424242; color: #e0e0e0; border: none; border-radius: 4px; }
-        h2 { margin-top: 0; }
-        .message { color: #ff6b6b; margin-top: 10px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            font-size: 16px;
+        }
+        .log-container {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        select, button {
+            padding: 5px;
+            font-size: 16px;
+            background: #424242;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .message {
+            color: #ff6b6b;
+            margin-top: 10px;
+        }
+        #transactions p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -37,8 +66,8 @@
     </div>
     <div id="message" class="message"></div>
     <script>
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic'; // Replace with your API key
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY'; // Replace with your Spreadsheet ID
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 
         async function loadSessions() {
