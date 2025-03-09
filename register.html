@@ -13,7 +13,7 @@
             margin: 0;
             padding: 10px;
             font-size: 18px;
-            overflow-x: hidden; /* Prevent horizontal scroll */
+            overflow-x: hidden;
         }
         .header {
             display: flex;
@@ -36,7 +36,7 @@
             color: #e0e0e0;
             border-radius: 4px;
             font-size: 1em;
-            width: 22%; /* Equal width for 4 inputs */
+            width: 22%;
             margin: 0 5px;
         }
         .header input.locked {
@@ -44,17 +44,17 @@
             color: #888;
         }
         .container {
-            max-width: 85%; /* Leave space on right for scrolling */
+            max-width: 85%;
             margin: 0 auto;
             background: #2d2d2d;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            min-height: 600px; /* Fit iPad height */
+            min-height: 600px;
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 columns for primary buttons */
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin-top: 20px;
         }
@@ -66,7 +66,7 @@
         }
         .increment-btn {
             width: 100%;
-            height: 100px; /* Large buttons for quick access */
+            height: 100px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -87,7 +87,7 @@
         .count {
             font-size: 1.5em;
             width: 40px;
-            font-weight: bold; /* Make counts bold */
+            font-weight: bold;
         }
         .minus {
             width: 30px;
@@ -137,7 +137,7 @@
         .door-count {
             font-size: 1.5em;
             color: #e0e0e0;
-            font-weight: bold; /* Make door count bold */
+            font-weight: bold;
         }
         #logSaleBtn {
             display: block;
@@ -187,12 +187,8 @@
         #errorMessage { color: #ff6b6b; }
         #successMessage { color: #2e7d32; }
         @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-            .container {
-                max-width: 85%;
-            }
-            .button-container {
-                grid-template-columns: repeat(4, 1fr);
-            }
+            .container { max-width: 85%; }
+            .button-container { grid-template-columns: repeat(4, 1fr); }
         }
     </style>
 </head>
@@ -209,7 +205,6 @@
     </div>
     <div class="container">
         <div class="button-container">
-            <!-- Cash Buttons (Highest to Lowest) -->
             <div class="product-item" data-item="CASH $20" data-price="20">
                 <button class="increment-btn cash">CASH $20</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
@@ -226,22 +221,18 @@
                 <button class="increment-btn cash">CASH $10</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <!-- Single CC Transaction Button -->
             <div class="product-item" data-item="CC TRANS" data-price="0">
                 <button class="increment-btn cc">CC TRANS</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <!-- Ticket Count Button -->
             <div class="product-item" data-item="TICKET" data-price="0">
                 <button class="increment-btn ticket">TICKET</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <!-- Comp Button -->
             <div class="product-item" data-item="COMP" data-price="0">
                 <button class="increment-btn comp">COMP</button>
                 <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <!-- Custom Cash -->
             <div class="product-item" data-item="CASH (CUSTOM)">
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
@@ -277,10 +268,11 @@
                 this.currentItems = [];
                 this.total = 0;
                 this.doorCount = 0;
+                // Replace with your deployed Google Apps Script Web App URL
+                this.apiUrl = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; 
             }
 
             init() {
-                // Open IndexedDB
                 const request = indexedDB.open('SalesDB', 2);
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
@@ -296,22 +288,16 @@
                     this.db = event.target.result;
                     this.checkSessionStatus();
                 };
-                request.onerror = () => {
-                    this.showError('Failed to open database.');
-                };
+                request.onerror = () => this.showError('Failed to open database.');
 
-                // Set up event listeners
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
                 $(document).on('click', '.increment-btn', (event) => {
                     const $item = $(event.target).closest('.product-item');
-                    const itemName = $item.data('item');
-                    const itemPrice = parseFloat($item.data('price'));
-                    this.incrementItem(itemName, itemPrice);
+                    this.incrementItem($item.data('item'), parseFloat($item.data('price')));
                 });
                 $(document).on('click', '.minus', (event) => {
                     const $item = $(event.target).closest('.product-item');
-                    const itemName = $item.data('item');
-                    this.decrementItem(itemName);
+                    this.decrementItem($item.data('item'));
                 });
                 $(document).on('click', '.add-custom', (event) => {
                     const $item = $(event.target).closest('.product-item');
@@ -327,7 +313,6 @@
                 });
                 $('#logSaleBtn').on('click', () => this.logSale());
 
-                // Set default date to today
                 const today = new Date().toISOString().split('T')[0];
                 $('#eventDate').val(today);
             }
@@ -344,7 +329,6 @@
                             this.sessionStarted = true;
                             this.sessionId = session.id;
                             $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
-                            // Set each input field individually
                             $('#eventDate').val(session.date);
                             $('#eventVenue').val(session.venue);
                             $('#eventName').val(session.eventName);
@@ -424,7 +408,7 @@
                     };
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
-                    if (pin === '1234') { // Placeholder PIN; secure method needed later
+                    if (pin === '1234') {
                         const tx = this.db.transaction(['sessions'], 'readwrite');
                         const store = tx.objectStore('sessions');
                         const request = store.get(this.sessionId);
@@ -505,24 +489,33 @@
                 const request = store.add(transaction);
                 request.onsuccess = () => {
                     tx.oncomplete = () => {
+                        this.sendToApi(transaction);
                         this.resetSale();
                         $('#logSaleBtn').addClass('flash');
                         setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
                         this.showSuccess('Sale logged successfully.');
                     };
                 };
-                request.onerror = () => {
-                    this.showError('Failed to log sale.');
-                };
+                request.onerror = () => this.showError('Failed to log sale.');
             }
 
             resetSale() {
-                this.currentItems = []; // Clear all items, including tickets
-                this.total = 0; // Reset the transaction total
-                $('.count').text('0'); // Reset all item counts to zero, including tickets
-                $('#cashTotal').text('0.00'); // Update the displayed total
-                $('#noteInput').val(''); // Clear any notes
-                // Note: doorCount is cumulative and not reset here
+                this.currentItems = [];
+                this.total = 0;
+                $('.count').text('0');
+                $('#cashTotal').text('0.00');
+                $('#noteInput').val('');
+            }
+
+            sendToApi(transaction) {
+                fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transaction)
+                })
+                .then(response => response.json())
+                .then(data => console.log('API Response:', data))
+                .catch(error => console.error('API Error:', error));
             }
 
             showError(message) {
