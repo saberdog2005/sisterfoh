@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -42,12 +42,13 @@
             margin-bottom: 20px;
         }
         button {
-            padding: 10px;
+            padding: 15px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             color: white;
+            touch-action: manipulation;
         }
         .cash-btn { background: #2e7d32; }
         .cc-btn { background: #d32f2f; }
@@ -101,11 +102,20 @@
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
+        @media (max-width: 768px) {
+            .transaction-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            button {
+                padding: 20px;
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="header" id="sessionHeader">
             <label>Date: <input type="date" id="sessionDate"></label>
             <label>Venue: <input type="text" id="sessionVenue" value="Sister"></label>
             <label>Event: <input type="text" id="sessionEvent" value="Open Mic"></label>
@@ -274,6 +284,8 @@
                     resource: { values: [['SALES OPEN', this.sessionId, new Date().toISOString()]] }
                 }).then(() => {
                     $('#toggleSalesBtn').text('Close Sales').addClass('sales-open').removeClass('sales-closed');
+                    // Lock header fields
+                    $('#sessionHeader input').prop('disabled', true);
                 }).catch(err => alert('Error starting session: ' + err.message));
             }
 
@@ -291,6 +303,8 @@
                     this.doorCount = 0;
                     this.updateDisplay();
                     $('#toggleSalesBtn').text('Open Sales').addClass('sales-closed').removeClass('sales-open');
+                    // Unlock header fields
+                    $('#sessionHeader input').prop('disabled', false);
                 }).catch(err => alert('Error closing session: ' + err.message));
             }
 
