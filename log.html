@@ -26,6 +26,7 @@
             background: #2d2d2d; /* Slightly lighter dark background */
             padding: 20px;
             box-sizing: border-box;
+            display: none; /* Hidden until login */
         }
 
         /* Grid Layout for Four Columns */
@@ -88,10 +89,62 @@
         .cc { color: #f44336; } /* Red */
         .ticket { color: #2196f3; } /* Blue */
         .comp { color: #ff9800; } /* Orange */
+
+        /* Modal Styles */
+        .modal {
+            display: block; /* Show modal by default */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        }
+        .modal-content {
+            background-color: #2d2d2d;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #555;
+            width: 300px;
+            text-align: center;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .modal-content button:hover {
+            background-color: #026aa7;
+        }
+        .error {
+            color: #f44336;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Admin Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <p id="errorMsg" class="error"></p>
+        </div>
+    </div>
+
+    <!-- Sales Log Container (Hidden Initially) -->
+    <div class="container" id="salesLogContainer">
         <div class="grid">
             <!-- Header -->
             <h1 class="header">Sales Log</h1>
@@ -146,6 +199,28 @@
     </div>
 
     <script>
+        // Admin Credentials (Hardcoded for simplicity; use secure methods in production)
+        const adminUsername = "admin";
+        const adminPassword = "password123";
+
+        // Modal and Container Elements
+        const loginModal = document.getElementById('loginModal');
+        const salesLogContainer = document.getElementById('salesLogContainer');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Login Functionality
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === adminUsername && password === adminPassword) {
+                loginModal.style.display = 'none';
+                salesLogContainer.style.display = 'block';
+                new SalesLog(); // Initialize SalesLog after successful login
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+            }
+        });
+
         // Initialize BroadcastChannel and Chart Variables
         const channel = new BroadcastChannel('transaction_channel');
         let chart; // Line chart for door count
@@ -407,9 +482,6 @@
                 doc.save('sales_log.pdf');
             }
         }
-
-        // Initialize on Page Load
-        document.addEventListener('DOMContentLoaded', () => new SalesLog());
     </script>
 </body>
 </html>
