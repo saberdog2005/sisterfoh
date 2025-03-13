@@ -7,6 +7,7 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
+        /* Original CSS retained */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -169,10 +170,21 @@
             .increment-btn, .minus, .add-custom { padding: 1.2em; font-size: 1.8em; }
             #logSaleBtn { padding: 1.2em; font-size: 1.8em; }
         }
+        /* Added for accessibility */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
     </style>
 </head>
 <body>
-    <div class="header" id="sessionHeader">
+    <header class="header" id="sessionHeader">
         <label for="eventDate">Date:</label>
         <input type="date" id="eventDate" required>
         <label for="eventVenue">Venue:</label>
@@ -181,45 +193,67 @@
         <input type="text" id="eventName" placeholder="Event Name">
         <label for="cashierName">Cashier Name:</label>
         <input type="text" id="cashierName" placeholder="Cashier" required>
-    </div>
-    <div class="container">
+    </header>
+    <main class="container">
         <div class="button-container">
             <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
                     <div class="custom-input">
-                        <input type="number" step="0.01" min="0.01" placeholder="Amount">
-                        <button class="add-custom">Add</button>
+                        <label for="customCashInput" class="visually-hidden">Custom Cash Amount</label>
+                        <input type="number" step="0.01" min="0.01" id="customCashInput" placeholder="Amount">
+                        <button class="add-custom" aria-label="Add custom cash amount">Add</button>
                     </div>
                 </div>
             </div>
             <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
-                <button class="increment-btn cash">CASH $20</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn cash" aria-label="Add $20 cash transaction">CASH $20</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one $20 cash transaction">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
-                <button class="increment-btn cash">CASH $15</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn cash" aria-label="Add $15 cash transaction">CASH $15</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one $15 cash transaction">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="CASH $12" data-price="12" data-active="true">
-                <button class="increment-btn cash">CASH $12</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn cash" aria-label="Add $12 cash transaction">CASH $12</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one $12 cash transaction">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
-                <button class="increment-btn cash">CASH $10</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn cash" aria-label="Add $10 cash transaction">CASH $10</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one $10 cash transaction">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
-                <button class="increment-btn cc">CC TRANS</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn cc" aria-label="Add credit card transaction">CC TRANS</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one credit card transaction">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
-                <button class="increment-btn ticket">TICKET</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn ticket" aria-label="Add ticket entry">TICKET</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one ticket entry">-</button>
+                </div>
             </div>
             <div class="product-item" data-item="COMP" data-price="0" data-active="true">
-                <button class="increment-btn comp">COMP</button>
-                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                <button class="increment-btn comp" aria-label="Add complimentary entry">COMP</button>
+                <div class="control-row">
+                    <span class="count">0</span>
+                    <button class="minus" aria-label="Remove one complimentary entry">-</button>
+                </div>
             </div>
         </div>
         <div class="totals-container">
@@ -230,17 +264,16 @@
             <label for="noteInput">Add a note...</label>
             <textarea id="noteInput" placeholder="Add a note..."></textarea>
         </div>
-        <button id="logSaleBtn">Log Sale</button>
-    </div>
-    <div class="footer">
-        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
-        <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
-        <div id="successMessage"></div>
-        <div id="errorMessage"></div>
-    </div>
+        <button id="logSaleBtn" aria-label="Log current sale">Log Sale</button>
+    </main>
+    <footer class="footer">
+        <button id="toggleSalesBtn" class="open-btn" aria-label="Open or close sales session">Open Sales</button>
+        <button id="editLayoutBtn" class="edit-btn" aria-label="Edit button layout">Edit Layout</button>
+        <div id="successMessage" aria-live="polite"></div>
+        <div id="errorMessage" aria-live="polite"></div>
+    </footer>
 
     <script>
-        // Replace with your actual Google Apps Script Web App URL
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
 
         class SalesApp {
@@ -359,10 +392,10 @@
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const amount = parseFloat(input.value);
                 if (amount > 0) {
-                    const item = btn.dataset.item; // Use "CASH (CUSTOM)" as the item key
-                    const current = this.state.currentItems.get(item) || { count: 0, price: amount };
+                    const item = "CASH (CUSTOM)";
+                    let current = this.state.currentItems.get(item) || { amounts: [], count: 0 };
+                    current.amounts.push(amount);
                     current.count++;
-                    current.price = amount; // Update price for custom amounts
                     this.state.currentItems.set(item, current);
                     this.updateTotals(amount, 1, item);
                     input.value = '';
@@ -373,7 +406,7 @@
                 if (item.startsWith('CASH')) {
                     this.state.cashTotal += priceDelta;
                 }
-                this.state.doorCount += countDelta; // All transactions increment door count, including COMP
+                this.state.doorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -411,7 +444,7 @@
                     this.state.doorCount = 0;
                     this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
-                    this.elements.currentItems.clear();
+                    this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
                 } else {
                     localStorage.removeItem('activeSessionId');
@@ -454,8 +487,14 @@
                 }
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
-                    .map(([key, { count, price }]) => `${key}: ${count} @ $${price.toFixed(2)}`)
-                    .join(', ');
+                    .filter(([_, value]) => value.count > 0)
+                    .map(([key, value]) => {
+                        if (key === "CASH (CUSTOM)") {
+                            return `CASH (CUSTOM): ${value.amounts.map(a => `$${a.toFixed(2)}`).join(', ')}`;
+                        } else {
+                            return `${key}: ${value.count} @ $${value.price.toFixed(2)}`;
+                        }
+                    }).join('; ');
                 const note = this.elements.noteInput.value;
                 const transaction = {
                     sessionId: this.state.sessionId,
@@ -471,7 +510,6 @@
                     synced: false
                 };
 
-                // Store in IndexedDB
                 const tx = this.state.db.transaction(['transactions'], 'readwrite');
                 const store = tx.objectStore('transactions');
                 await new Promise((resolve, reject) => {
@@ -480,15 +518,13 @@
                     request.onerror = () => reject(request.error);
                 });
 
-                // Sync with Google Sheets
                 try {
                     const response = await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(transaction),
-                        mode: 'no-cors' // Use 'no-cors' if testing without proper CORS setup
+                        mode: 'no-cors'
                     });
-                    // Note: 'no-cors' mode won't allow response checking, so assume success if no error
                     this.showSuccess('Sale logged successfully');
                     const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
                     const updateStore = updateTx.objectStore('transactions');
