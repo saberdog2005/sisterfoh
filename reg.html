@@ -34,10 +34,6 @@
             border: 1px solid #555;
             border-radius: 3px;
         }
-        .header input:disabled {
-            background-color: #555;
-            color: #888;
-        }
         .container {
             display: flex;
             flex-direction: column;
@@ -169,45 +165,6 @@
             clip: rect(0,0,0,0);
             border: 0;
         }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #2d2d2d;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px;
-            color: #e0e0e0;
-            text-align: center;
-        }
-        .modal-content h2 { color: #bb86fc; }
-        .modal-content input {
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-            margin: 10px 0;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            background: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .modal-content button:hover {
-            background: #026aa7;
-        }
     </style>
 </head>
 <body>
@@ -300,19 +257,8 @@
         <div id="errorMessage" aria-live="polite"></div>
     </footer>
 
-    <div id="pinModal" class="modal">
-        <div class="modal-content">
-            <h2>Enter PIN to Close Sales</h2>
-            <input type="password" id="pinInput" placeholder="PIN">
-            <button id="submitPinBtn">Submit</button>
-            <p id="pinError" style="color: red;"></p>
-        </div>
-    </div>
-
     <script>
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
-        const channel = new BroadcastChannel('transaction_channel');
-        const DEFAULT_PIN = '0000';
 
         class SalesApp {
             constructor() {
@@ -338,11 +284,7 @@
                     logSaleBtn: document.getElementById('logSaleBtn'),
                     cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
-                    noteInput: document.getElementById('noteInput'),
-                    pinModal: document.getElementById('pinModal'),
-                    pinInput: document.getElementById('pinInput'),
-                    submitPinBtn: document.getElementById('submitPinBtn'),
-                    pinError: document.getElementById('pinError')
+                    noteInput: document.getElementById('noteInput')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.initDB().then(() => {
@@ -359,9 +301,7 @@
                         const db = event.target.result;
                         const oldVersion = event.oldVersion;
                         if (oldVersion < 1) {
-                            if (!db.objectStoreNames.contains('transactions')) {
-                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                            }
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
                         if (oldVersion < 2) {
                             const store = event.target.transaction.objectStore('transactions');
@@ -372,6 +312,7 @@
                     };
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
+                        console.log('Database opened successfully');
                         resolve();
                     };
                     request.onerror = (event) => reject(event.target.error);
@@ -413,7 +354,6 @@
                     else this.showError('Cannot edit layout while sales are open');
                 });
                 this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
-                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
             }
 
             handleIncrement(btn) {
@@ -456,7 +396,7 @@
 
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
-                this.state.doorCount += countDelta;
+                this.state.doorCount += countDelta; // 1 item = 1 thru door
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -485,13 +425,9 @@
             }
 
             toggleSales() {
+                this.state.sessionStarted = !this.state.sessionStarted;
+                localStorage.setItem('sessionActive', this.state.sessionStarted);
                 if (this.state.sessionStarted) {
-                    this.elements.pinModal.style.display = 'block';
-                    this.elements.pinInput.value = '';
-                    this.elements.pinError.textContent = '';
-                } else {
-                    this.state.sessionStarted = true;
-                    localStorage.setItem('sessionActive', true);
                     this.state.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.state.sessionId);
                     this.state.cashTotal = 0;
@@ -500,23 +436,12 @@
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
-                    this.showSuccess('Sales session started');
-                    this.checkSessionStatus();
-                }
-            }
-
-            confirmCloseSales() {
-                const pin = this.elements.pinInput.value;
-                if (pin === DEFAULT_PIN) {
-                    this.state.sessionStarted = false;
+                } else {
                     localStorage.removeItem('activeSessionId');
                     this.state.sessionId = null;
-                    this.elements.pinModal.style.display = 'none';
-                    this.showSuccess('Sales session ended');
-                    this.checkSessionStatus();
-                } else {
-                    this.elements.pinError.textContent = 'Incorrect PIN';
                 }
+                this.checkSessionStatus();
+                this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
             }
 
             toggleEditMode() {
@@ -568,9 +493,7 @@
                     this.showError('No items to log');
                     return;
                 }
-                const transactionId = `${this.state.sessionId}_${timestamp}`;
                 const transaction = {
-                    id: transactionId,
                     sessionId: this.state.sessionId,
                     timestamp,
                     items,
@@ -584,27 +507,16 @@
                     synced: false
                 };
 
-                const tx = this.state.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const existingTransaction = await new Promise((resolve) => {
-                    const request = store.get(transactionId);
-                    request.onsuccess = () => resolve(request.result);
-                });
-
-                if (existingTransaction) {
-                    this.showError('Transaction already logged');
-                    return;
-                }
-
-                const addTx = this.state.db.transaction(['transactions'], 'readwrite');
-                const addStore = addTx.objectStore('transactions');
-                await new Promise((resolve, reject) => {
-                    const request = addStore.add(transaction);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-
+                this.elements.logSaleBtn.disabled = true;
                 try {
+                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                    const store = tx.objectStore('transactions');
+                    await new Promise((resolve, reject) => {
+                        const request = store.add(transaction);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+
                     await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -621,12 +533,13 @@
                     });
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
-                    console.error('Error logging to Google Sheets:', error);
+                    console.error('Error logging sale:', error);
                     this.showError('Saved locally, failed to sync: ' + error.message);
                     localStorage.setItem('transactionLogged', Date.now().toString());
+                } finally {
+                    this.elements.logSaleBtn.disabled = false;
                 }
                 this.resetForm();
-                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
