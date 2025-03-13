@@ -34,6 +34,10 @@
             border: 1px solid #555;
             border-radius: 3px;
         }
+        .header input:disabled {
+            background-color: #555;
+            color: #888;
+        }
         .container {
             display: flex;
             flex-direction: column;
@@ -301,7 +305,9 @@
                         const db = event.target.result;
                         const oldVersion = event.oldVersion;
                         if (oldVersion < 1) {
-                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            if (!db.objectStoreNames.contains('transactions')) {
+                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            }
                         }
                         if (oldVersion < 2) {
                             const store = event.target.transaction.objectStore('transactions');
@@ -312,7 +318,7 @@
                     };
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
-                        console.log('Database opened successfully');
+                        console.log('Database opened successfully with version:', this.state.db.version);
                         resolve();
                     };
                     request.onerror = (event) => reject(event.target.error);
@@ -396,7 +402,7 @@
 
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
-                this.state.doorCount += countDelta; // 1 item = 1 thru door
+                this.state.doorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -422,26 +428,47 @@
                         this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
+                // Disable/enable top inputs
+                if (this.state.sessionStarted) {
+                    this.elements.eventDate.disabled = true;
+                    this.elements.eventVenue.disabled = true;
+                    this.elements.eventName.disabled = true;
+                    this.elements.cashierName.disabled = true;
+                } else {
+                    this.elements.eventDate.disabled = false;
+                    this.elements.eventVenue.disabled = false;
+                    this.elements.eventName.disabled = false;
+                    this.elements.cashierName.disabled = false;
+                }
             }
 
             toggleSales() {
-                this.state.sessionStarted = !this.state.sessionStarted;
-                localStorage.setItem('sessionActive', this.state.sessionStarted);
-                if (this.state.sessionStarted) {
-                    this.state.sessionId = Date.now().toString();
+                if (!this.state.sessionStarted) {
+                    // Starting session
+                    if (!this.elements.cashierName.value) {
+                        this.showError('Please enter cashier name');
+                        return;
+                    }
+                    this.state.sessionId = this.elements.cashierName.value;
                     localStorage.setItem('activeSessionId', this.state.sessionId);
+                    this.state.sessionStarted = true;
+                    localStorage.setItem('sessionActive', true);
                     this.state.cashTotal = 0;
                     this.state.doorCount = 0;
                     this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
+                    this.showSuccess('Sales session started');
                 } else {
+                    // Ending session
                     localStorage.removeItem('activeSessionId');
                     this.state.sessionId = null;
+                    this.state.sessionStarted = false;
+                    localStorage.setItem('sessionActive', false);
+                    this.showSuccess('Sales session ended');
                 }
                 this.checkSessionStatus();
-                this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
             }
 
             toggleEditMode() {
@@ -507,16 +534,15 @@
                     synced: false
                 };
 
-                this.elements.logSaleBtn.disabled = true;
-                try {
-                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                    const store = tx.objectStore('transactions');
-                    await new Promise((resolve, reject) => {
-                        const request = store.add(transaction);
-                        request.onsuccess = () => resolve();
-                        request.onerror = () => reject(request.error);
-                    });
+                const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                await new Promise((resolve, reject) => {
+                    const request = store.add(transaction);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
 
+                try {
                     await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -533,11 +559,9 @@
                     });
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
-                    console.error('Error logging sale:', error);
-                    this.showError('Saved locally, failed to sync: ' + error.message);
+                    console.error('Error logging to Google Sheets:', error);
+                    this.showError('Saved locally, failed to sync to Google Sheets: ' + error.message);
                     localStorage.setItem('transactionLogged', Date.now().toString());
-                } finally {
-                    this.elements.logSaleBtn.disabled = false;
                 }
                 this.resetForm();
             }
@@ -545,7 +569,6 @@
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 this.elements.noteInput.value = '';
