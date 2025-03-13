@@ -283,20 +283,24 @@
                     noteInput: document.getElementById('noteInput')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
+                this.initializeButtonStates();
+                this.bindEvents();
                 this.initDB().then(() => {
                     this.checkSessionStatus();
-                    this.initializeButtonStates();
-                    this.bindEvents();
                     this.initGoogleAPI();
-                }).catch(error => this.showError('Database initialization failed: ' + error));
+                }).catch(error => {
+                    this.showError('Database initialization failed: ' + error.message);
+                    // Proceed with basic functionality even if DB fails
+                });
             }
 
             async initDB() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 1);
+                    const request = indexedDB.open('SalesDB', 2); // Increased version to 2
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        if (!db.objectStoreNames.contains('transactions')) {
+                        const oldVersion = event.oldVersion;
+                        if (oldVersion < 1 || !db.objectStoreNames.contains('transactions')) {
                             db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
                     };
@@ -305,6 +309,7 @@
                         resolve();
                     };
                     request.onerror = (event) => reject(event.target.error);
+                    request.onblocked = () => reject(new Error('Database upgrade blocked by open connections'));
                 });
             }
 
@@ -507,13 +512,15 @@
                 };
 
                 // Store in IndexedDB
-                const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                const store = tx.objectStore('transactions');
-                await new Promise((resolve, reject) => {
-                    const request = store.add(transaction);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
+                if (this.state.db) {
+                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                    const store = tx.objectStore('transactions');
+                    await new Promise((resolve, reject) => {
+                        const request = store.add(transaction);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
 
                 // Attempt to sync with Google Sheets
                 if (!this.state.token) {
@@ -539,13 +546,15 @@
                         }
                     );
                     if (!response.ok) throw new Error('Failed to log sale to Google Sheets');
-                    const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
-                    const updateStore = updateTx.objectStore('transactions');
-                    await new Promise((resolve, reject) => {
-                        const request = updateStore.put({ ...transaction, synced: true });
-                        request.onsuccess = () => resolve();
-                        request.onerror = () => reject(request.error);
-                    });
+                    if (this.state.db) {
+                        const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
+                        const updateStore = updateTx.objectStore('transactions');
+                        await new Promise((resolve, reject) => {
+                            const request = updateStore.put({ ...transaction, synced: true });
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                        });
+                    }
                     this.showSuccess('Sale logged successfully');
                 } catch (error) {
                     this.showError('Error logging to Google Sheets, saved locally: ' + error.message);
@@ -555,7 +564,7 @@
             }
 
             async syncPendingTransactions() {
-                if (!this.state.token) return;
+                if (!this.state.token || !this.state.db) return;
                 const tx = this.state.db.transaction(['transactions'], 'readwrite');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
