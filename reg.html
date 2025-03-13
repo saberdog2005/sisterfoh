@@ -371,7 +371,7 @@
 
             async initDB() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 2);
+                    const request = indexedDB.open('SalesDB', 2); // Fixed to version 2
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
                         if (!db.objectStoreNames.contains('transactions')) {
