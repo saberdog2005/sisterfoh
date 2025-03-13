@@ -10,89 +10,51 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #121212; color: #e0e0e0; }
-        .container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        #loginForm { background: #2a2a2a; padding: 20px; border-radius: 5px; }
-        #salesLogContent { display: none; }
-        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: #2a2a2a; padding: 10px; border-radius: 5px; }
-        .transaction-list { max-height: 400px; overflow-y: auto; background: #2a2a2a; padding: 10px; border-radius: 5px; }
-        .transaction { padding: 10px; background: #3c3c3c; margin: 5px 0; border-radius: 5px; }
-        #exportBtn, #logoutBtn { padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
-        #exportBtn:hover, #logoutBtn:hover { background: #026aa7; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        canvas { max-width: 100%; }
+        #exportBtn { margin-top: 10px; padding: 10px; background-color: #2196F3; color: white; border: none; cursor: pointer; }
+        .cash { color: #4caf50; }
+        .cc { color: #f44336; }
+        .ticket { color: #2196f3; }
+        .comp { color: #ff9800; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="loginForm">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p id="loginError" style="color: red;"></p>
-        </div>
-        <div id="salesLogContent">
-            <h1>Sales Log</h1>
-            <div id="sessionInfo"></div>
-            <div class="stats" id="stats">
-                <p>Total Transactions: <span id="totalTransactions">0</span></p>
-                <p>Total Sales: $<span id="totalSales">0.00</span></p>
-                <p>Avg Transaction: $<span id="avgTransaction">0.00</span></p>
-                <p>Total Thru Door: <span id="totalDoorCount">0</span></p>
-                <p>Cash Transactions: <span id="cashCount">0</span></p>
-                <p>CC Transactions: <span id="ccCount">0</span></p>
-                <p>Ticket Transactions: <span id="ticketCount">0</span></p>
-                <p>Comp Transactions: <span id="compCount">0</span></p>
-            </div>
-            <canvas id="doorCountChart" height="200"></canvas>
-            <div class="transaction-list" id="log"></div>
-            <button id="exportBtn">Export to PDF</button>
-            <button id="logoutBtn">Logout</button>
-        </div>
+        <h1>Sales Log</h1>
+        <div id="sessionInfo"></div>
+        <div>Total Transactions: <span id="totalTransactions">0</span></div>
+        <div>Total Sales: $<span id="totalSales">0.00</span></div>
+        <div>Avg Transaction: $<span id="avgTransaction">0.00</span></div>
+        <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
+        <canvas id="doorCountChart"></canvas>
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Cashier</th>
+                    <th>Items</th>
+                    <th>Cash Total</th>
+                    <th>Thru Door</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+        </table>
+        <button id="exportBtn">Export to PDF</button>
     </div>
 
     <script>
         const channel = new BroadcastChannel('transaction_channel');
         let chart;
-        const ADMIN_USERNAME = 'admin';
-        const ADMIN_PASSWORD = 'password';
 
         class SalesLog {
             constructor() {
                 this.db = null;
-                this.checkLoginStatus();
-                document.getElementById('loginBtn').addEventListener('click', () => this.login());
-                document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
-            }
-
-            checkLoginStatus() {
-                if (localStorage.getItem('loggedIn') === 'true') {
-                    this.showSalesLog();
-                } else {
-                    document.getElementById('loginForm').style.display = 'block';
-                }
-            }
-
-            login() {
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                    localStorage.setItem('loggedIn', 'true');
-                    this.showSalesLog();
-                } else {
-                    document.getElementById('loginError').textContent = 'Invalid username or password';
-                }
-            }
-
-            logout() {
-                localStorage.removeItem('loggedIn');
-                document.getElementById('salesLogContent').style.display = 'none';
-                document.getElementById('loginForm').style.display = 'block';
-            }
-
-            showSalesLog() {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('salesLogContent').style.display = 'block';
                 this.initDB().then(() => {
                     this.updateLog();
                     setInterval(() => this.updateLog(), 5000);
@@ -100,6 +62,7 @@
                         if (event.data.type === 'new_transaction') this.updateLog();
                     };
                 }).catch(error => console.error('Database initialization failed:', error));
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
             }
 
             async initDB() {
@@ -145,27 +108,18 @@
                 const request = store.getAll();
                 request.onsuccess = () => {
                     const allTransactions = request.result;
-                    let sessionTransactions = [];
-                    let isCurrentSession = false;
-                    let selectedSessionId = '';
-
-                    if (activeSessionId) {
-                        sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
-                        isCurrentSession = true;
-                        selectedSessionId = activeSessionId;
-                    } else {
-                        if (allTransactions.length === 0) {
-                            this.clearDisplay('No sessions available');
-                            return;
-                        }
-                        const sessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
-                        const maxSessionId = sessionIds.reduce((max, id) => Math.max(max, parseInt(id, 10)), 0).toString();
-                        sessionTransactions = allTransactions.filter(t => t.sessionId === maxSessionId);
-                        selectedSessionId = maxSessionId;
-                    }
-
+                    let sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     if (sessionTransactions.length === 0) {
-                        this.clearDisplay(`${isCurrentSession ? 'Current' : 'Last Closed'} Session: ${selectedSessionId} (No transactions)`);
+                        document.getElementById('sessionInfo').innerHTML = '<p>No active session or transactions</p>';
+                        if (chart) {
+                            chart.data.datasets.forEach(dataset => dataset.data = []);
+                            chart.update();
+                        }
+                        document.getElementById('logBody').innerHTML = '';
+                        document.getElementById('totalTransactions').textContent = '0';
+                        document.getElementById('totalSales').textContent = '0.00';
+                        document.getElementById('avgTransaction').textContent = '0.00';
+                        document.getElementById('totalDoorCount').textContent = '0';
                         return;
                     }
 
@@ -189,98 +143,49 @@
                     const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
                     const totalDoorCount = cumulative.TOTAL;
 
-                    this.updateStats(selectedSessionId, isCurrentSession, totalTransactions, totalSales, avgTransaction, totalDoorCount, cumulative);
-                    this.updateChart(dataPoints);
+                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p>`;
+                    document.getElementById('totalTransactions').textContent = totalTransactions;
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+                    document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
+                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
+
+                    if (chart) {
+                        chart.data.datasets[0].data = dataPoints.CASH;
+                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
+                        chart.data.datasets[2].data = dataPoints.TICKET;
+                        chart.data.datasets[3].data = dataPoints.COMP;
+                        chart.data.datasets[4].data = dataPoints.TOTAL;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: {
+                                datasets: [
+                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
+                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
+                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
+                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
+                                ]
+                            },
+                            options: {
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                                },
+                                plugins: { legend: { display: true } }
+                            }
+                        });
+                    }
+
                     this.displayLog(sessionTransactions);
                 };
                 request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
             }
 
-            updateStats(sessionId, isCurrent, totalTrans, totalSales, avgTrans, totalDoor, cumulative) {
-                const sessionInfo = document.getElementById('sessionInfo');
-                const totalTransactions = document.getElementById('totalTransactions');
-                const totalSalesEl = document.getElementById('totalSales');
-                const avgTransaction = document.getElementById('avgTransaction');
-                const totalDoorCount = document.getElementById('totalDoorCount');
-                const cashCount = document.getElementById('cashCount');
-                const ccCount = document.getElementById('ccCount');
-                const ticketCount = document.getElementById('ticketCount');
-                const compCount = document.getElementById('compCount');
-
-                if (!sessionInfo || !totalTransactions || !totalSalesEl || !avgTransaction || !totalDoorCount || !cashCount || !ccCount || !ticketCount || !compCount) {
-                    console.error('One or more stat elements are missing in the DOM');
-                    return;
-                }
-
-                sessionInfo.innerHTML = `<p>${isCurrent ? 'Current' : 'Last Closed'} Session: ${sessionId}</p>`;
-                totalTransactions.textContent = totalTrans;
-                totalSalesEl.textContent = totalSales.toFixed(2);
-                avgTransaction.textContent = avgTrans.toFixed(2);
-                totalDoorCount.textContent = totalDoor;
-                cashCount.textContent = cumulative.CASH;
-                ccCount.textContent = cumulative['CC TRANS'];
-                ticketCount.textContent = cumulative.TICKET;
-                compCount.textContent = cumulative.COMP;
-            }
-
-            clearDisplay(message) {
-                const sessionInfo = document.getElementById('sessionInfo');
-                const log = document.getElementById('log');
-                const statsSpans = document.querySelectorAll('#stats span');
-                if (sessionInfo && log && statsSpans.length) {
-                    sessionInfo.innerHTML = `<p>${message}</p>`;
-                    log.innerHTML = '';
-                    statsSpans.forEach(span => span.textContent = '0');
-                    if (chart) {
-                        chart.data.datasets.forEach(dataset => dataset.data = []);
-                        chart.update();
-                    }
-                }
-            }
-
-            updateChart(dataPoints) {
-                const ctx = document.getElementById('doorCountChart');
-                if (!ctx) {
-                    console.error('Chart canvas not found');
-                    return;
-                }
-                if (chart) {
-                    chart.data.datasets[0].data = dataPoints.CASH;
-                    chart.data.datasets[1].data = dataPoints['CC TRANS'];
-                    chart.data.datasets[2].data = dataPoints.TICKET;
-                    chart.data.datasets[3].data = dataPoints.COMP;
-                    chart.data.datasets[4].data = dataPoints.TOTAL;
-                    chart.update();
-                } else {
-                    chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            datasets: [
-                                { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
-                                { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
-                                { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
-                                { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
-                                { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
-                            ]
-                        },
-                        options: {
-                            scales: {
-                                x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                                y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                            },
-                            plugins: { legend: { display: true } }
-                        }
-                    });
-                }
-            }
-
             displayLog(transactions) {
-                const log = document.getElementById('log');
-                if (!log) {
-                    console.error('Log element not found');
-                    return;
-                }
-                log.innerHTML = transactions.map(t => {
+                const logBody = document.getElementById('logBody');
+                logBody.innerHTML = transactions.map(t => {
                     const items = t.items.split('; ').map(item => {
                         const [key] = item.split(': ');
                         let className = '';
@@ -290,7 +195,16 @@
                         else if (key === 'COMP') className = 'comp';
                         return `<span class="${className}">${item}</span>`;
                     }).join('; ');
-                    return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Cashier: ${t.cashierName || 'Unknown'} | ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
+                    return `
+                        <tr>
+                            <td>${new Date(t.timestamp).toLocaleString()}</td>
+                            <td>${t.cashierName || 'Unknown'}</td>
+                            <td>${items}</td>
+                            <td>$${t.cashTotal.toFixed(2)}</td>
+                            <td>${t.doorCount}</td>
+                            <td>${t.note || ''}</td>
+                        </tr>
+                    `;
                 }).join('');
             }
 
