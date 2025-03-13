@@ -95,7 +95,6 @@
         class SalesLog {
             constructor() {
                 this.db = null;
-                this.transactionIds = new Set(); // Track unique transaction IDs
                 this.initDB().then(() => {
                     this.updateLog();
                     setInterval(() => this.updateLog(), 5000);
@@ -112,7 +111,7 @@
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
                         if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id' });
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
                     };
                     request.onsuccess = (event) => {
