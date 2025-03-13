@@ -7,17 +7,19 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1e1e1e; color: #e0e0e0; }
         #main-content { max-width: 1200px; margin: auto; }
-        h1 { text-align: center; }
-        #session-selector { width: 100%; padding: 5px; margin-bottom: 10px; }
+        h1 { text-align: center; color: #e0e0e0; }
+        #session-selector { width: 100%; padding: 5px; margin-bottom: 10px; background: #3c3c3c; color: #e0e0e0; border: 1px solid #555; }
         button { padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:hover { background: #1976D2; }
-        #session-details { margin: 10px 0; font-size: 1.1em; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #4CAF50; color: white; }
-        canvas { width: 100% !important; max-height: 400px; margin: 20px 0; }
+        #session-details { margin: 10px 0; font-size: 1.1em; color: #e0e0e0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #2d2d2d; color: #e0e0e0; }
+        th, td { padding: 10px; border: 1px solid #444; text-align: left; }
+        th { background: #3c3c3c; color: white; }
+        canvas { width: 100% !important; max-height: 300px; margin: 20px 0; background: #2d2d2d; }
+        .chart-container { display: flex; gap: 20px; }
+        .chart { flex: 1; }
     </style>
 </head>
 <body>
@@ -31,8 +33,10 @@
             <thead><tr><th>Time</th><th>Type</th><th>Amount</th></tr></thead>
             <tbody id="transaction-table"></tbody>
         </table>
-        <canvas id="cashGraph"></canvas>
-        <canvas id="doorGraph"></canvas>
+        <div class="chart-container">
+            <div class="chart"><canvas id="cashGraph"></canvas></div>
+            <div class="chart"><canvas id="doorGraph"></canvas></div>
+        </div>
     </div>
 
     <script>
