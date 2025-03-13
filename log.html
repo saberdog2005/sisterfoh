@@ -10,42 +10,97 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f0f0f0; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        canvas { max-width: 100%; }
-        #exportBtn { margin-top: 10px; padding: 10px; background-color: #2196F3; color: white; border: none; cursor: pointer; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .stats p {
+            margin: 5px 0;
+        }
+        #doorCountChart {
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .transaction {
+            padding: 10px;
+            background: #3c3c3c;
+            margin: 5px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .cash { color: #4caf50; }
+        .cc { color: #f44336; }
+        .ticket { color: #2196f3; }
+        .comp { color: #ff9800; }
+        #exportBtn {
+            padding: 10px 20px;
+            background: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            align-self: center;
+        }
+        #exportBtn:hover {
+            background: #026aa7;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sales Log</h1>
-        <div id="sessionInfo"></div>
-        <div>Total Transactions: <span id="totalTransactions">0</span></div>
-        <div>Total Sales: $<span id="totalSales">0.00</span></div>
-        <div>Avg Transaction: $<span id="avgTransaction">0.00</span></div>
-        <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
-        <canvas id="doorCountChart"></canvas>
-        <table>
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Items</th>
-                    <th>Cash Total</th>
-                    <th>Door Count</th>
-                    <th>Note</th>
-                </tr>
-            </thead>
-            <tbody id="logBody"></tbody>
-        </table>
+        <div class="stats" id="stats">
+            <p>Total Transactions: <span id="totalTransactions">0</span></p>
+            <p>Total Sales: $<span id="totalSales">0.00</span></p>
+            <p>Avg Transaction: $<span id="avgTransaction">0.00</span></p>
+            <p>Total Thru Door: <span id="totalDoorCount">0</span></p>
+            <p>Cash Transactions: <span id="cashCount">0</span></p>
+            <p>CC Transactions: <span id="ccCount">0</span></p>
+            <p>Ticket Transactions: <span id="ticketCount">0</span></p>
+            <p>Comp Transactions: <span id="compCount">0</span></p>
+        </div>
+        <canvas id="doorCountChart" height="200"></canvas>
+        <div class="transaction-list" id="log"></div>
         <button id="exportBtn">Export to PDF</button>
     </div>
 
     <script>
-        const channel = new BroadcastChannel('transaction_channel');
         let chart;
+        const channel = new BroadcastChannel('transaction_channel');
 
         class SalesLog {
             constructor() {
@@ -118,11 +173,8 @@
                                 chart.data.datasets.forEach(dataset => dataset.data = []);
                                 chart.update();
                             }
-                            document.getElementById('logBody').innerHTML = '';
-                            document.getElementById('totalTransactions').textContent = '0';
-                            document.getElementById('totalSales').textContent = '0.00';
-                            document.getElementById('avgTransaction').textContent = '0.00';
-                            document.getElementById('totalDoorCount').textContent = '0';
+                            document.getElementById('log').innerHTML = '';
+                            document.getElementById('stats').querySelectorAll('span').forEach(span => span.textContent = '0');
                             return;
                         }
                         const sessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
@@ -137,11 +189,8 @@
                             chart.data.datasets.forEach(dataset => dataset.data = []);
                             chart.update();
                         }
-                        document.getElementById('logBody').innerHTML = '';
-                        document.getElementById('totalTransactions').textContent = '0';
-                        document.getElementById('totalSales').textContent = '0.00';
-                        document.getElementById('avgTransaction').textContent = '0.00';
-                        document.getElementById('totalDoorCount').textContent = '0';
+                        document.getElementById('log').innerHTML = '';
+                        document.getElementById('stats').querySelectorAll('span').forEach(span => span.textContent = '0');
                         return;
                     }
 
@@ -170,6 +219,10 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
+                    document.getElementById('cashCount').textContent = cumulative.CASH;
+                    document.getElementById('ccCount').textContent = cumulative['CC TRANS'];
+                    document.getElementById('ticketCount').textContent = cumulative.TICKET;
+                    document.getElementById('compCount').textContent = cumulative.COMP;
 
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints.CASH;
@@ -183,10 +236,10 @@
                             type: 'line',
                             data: {
                                 datasets: [
-                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#2e7d32', fill: false },
-                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#d32f2f', fill: false },
-                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#1a73e8', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ffa500', fill: false },
+                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
+                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
+                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
                                     { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
                                 ]
                             },
@@ -206,15 +259,19 @@
             }
 
             displayLog(transactions) {
-                document.getElementById('logBody').innerHTML = transactions.map(t => `
-                    <tr>
-                        <td>${new Date(t.timestamp).toLocaleString()}</td>
-                        <td>${t.items}</td>
-                        <td>$${t.cashTotal.toFixed(2)}</td>
-                        <td>${t.doorCount}</td>
-                        <td>${t.note || ''}</td>
-                    </tr>
-                `).join('');
+                const log = document.getElementById('log');
+                log.innerHTML = transactions.map(t => {
+                    const items = t.items.split('; ').map(item => {
+                        const [key] = item.split(': ');
+                        let className = '';
+                        if (key.startsWith('CASH')) className = 'cash';
+                        else if (key === 'CC TRANS') className = 'cc';
+                        else if (key === 'TICKET') className = 'ticket';
+                        else if (key === 'COMP') className = 'comp';
+                        return `<span class="${className}">${item}</span>`;
+                    }).join('; ');
+                    return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
+                }).join('');
             }
 
             async exportPDF() {
