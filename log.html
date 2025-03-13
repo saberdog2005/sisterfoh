@@ -10,37 +10,127 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
-        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
-        h1 { color: #bb86fc; text-align: center; }
-        #totalCount { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
-        #doorCountChart { margin-bottom: 20px; }
-        .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        #container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+        }
+        .graph-column, .log-column {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .graph-column {
+            height: 400px;
+        }
+        .log-column {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        #totalCount {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #login {
+            text-align: center;
+            margin: 20px;
+        }
+        #login input {
+            padding: 5px;
+            margin: 5px;
+            border-radius: 3px;
+        }
+        #login button {
+            padding: 10px 20px;
+            background: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #login button:hover {
+            background: #026aa7;
+        }
+        .transaction {
+            padding: 10px;
+            background: #2a2a2a;
+            margin: 5px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
         .cash { color: #4caf50; }
         .cc { color: #f44336; }
         .ticket { color: #2196f3; }
         .comp { color: #ff9800; }
-        #exportBtn { margin-top: 20px; padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #exportBtn:hover { background: #026aa7; }
+        #exportBtn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #exportBtn:hover {
+            background: #026aa7;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Sales Log</h1>
-        <h2 id="totalCount">Total Thru Door: 0</h2>
-        <canvas id="doorCountChart" width="400" height="200"></canvas>
-        <div id="log"></div>
-        <button id="exportBtn">Export to PDF</button>
+    <div id="container">
+        <div id="login" style="display: block;">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <p id="loginError" style="color: red; display: none;">Invalid username or password</p>
+        </div>
+        <div id="mainContent" style="display: none;">
+            <h1>Sales Log</h1>
+            <h2 id="totalCount">Total Thru Door: 0</h2>
+            <div class="grid-container">
+                <div class="graph-column">
+                    <canvas id="thruDoorChart"></canvas>
+                </div>
+                <div class="log-column" id="log"></div>
+            </div>
+            <button id="exportBtn">Export to PDF</button>
+        </div>
     </div>
 
     <script>
         let chart;
+        const username = 'admin';
+        const password = 'password';
 
         class SalesLog {
             constructor() {
                 this.db = null;
                 this.initDB();
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+                document.getElementById('loginBtn').addEventListener('click', this.handleLogin.bind(this));
+                document.getElementById('exportBtn').addEventListener('click', this.exportPDF.bind(this));
             }
 
             initDB() {
@@ -53,106 +143,119 @@
                 };
                 request.onsuccess = (event) => {
                     this.db = event.target.result;
-                    this.updateChart();
-                    setInterval(() => this.updateChart(), 5000);
                 };
                 request.onerror = (event) => console.error('Database error:', event.target.error);
             }
 
-            parseItems(itemsString) {
-                const counts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+            handleLogin() {
+                const inputUsername = document.getElementById('username').value;
+                const inputPassword = document.getElementById('password').value;
+                if (inputUsername === username && inputPassword === password) {
+                    document.getElementById('login').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    this.updateDisplay();
+                    setInterval(() => this.updateDisplay(), 5000);
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            }
+
+            parseCashItems(itemsString) {
                 const items = itemsString.split(', ');
+                let cashCount = 0;
                 items.forEach(item => {
-                    const [keyPart, valuePart] = item.split(': ');
-                    if (keyPart && valuePart) {
-                        const count = parseInt(valuePart.split(' @')[0], 10);
-                        if (keyPart.startsWith('CASH')) {
-                            counts.CASH += count;
-                        } else if (keyPart === 'CC TRANS') {
-                            counts['CC TRANS'] += count;
-                        } else if (keyPart === 'TICKET') {
-                            counts.TICKET += count;
-                        } else if (keyPart === 'COMP') {
-                            counts.COMP += count;
+                    if (item.startsWith('CASH')) {
+                        const valuePart = item.split(': ')[1];
+                        if (valuePart) {
+                            const count = parseInt(valuePart.split(' @')[0], 10);
+                            cashCount += count || 0;
                         }
                     }
                 });
-                return counts;
+                return cashCount;
             }
 
-            updateChart() {
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (!activeSessionId) {
-                    if (chart) {
-                        chart.data.datasets.forEach(dataset => dataset.data = []);
-                        chart.update();
-                    }
-                    document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
-                    document.getElementById('log').innerHTML = '<p>No active session</p>';
-                    return;
-                }
-                const tx = this.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const allTransactions = request.result;
-                    const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
-                    sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
-                    let dataPoints = {
-                        CASH: [],
-                        'CC TRANS': [],
-                        TICKET: [],
-                        COMP: [],
-                        TOTAL: []
+            async fetchTransactions() {
+                return new Promise((resolve, reject) => {
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    if (!activeSessionId) return resolve([]);
+                    const tx = this.db.transaction(['transactions'], 'readonly');
+                    const store = tx.objectStore('transactions');
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        const allTransactions = request.result;
+                        const sessionTransactions = allTransactions
+                            .filter(t => t.sessionId === activeSessionId)
+                            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        resolve(sessionTransactions);
                     };
+                    request.onerror = () => reject(new Error('Error fetching transactions'));
+                });
+            }
 
-                    sessionTransactions.forEach(transaction => {
-                        const counts = this.parseItems(transaction.items);
-                        for (const type in counts) {
-                            cumulative[type] += counts[type];
-                            dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
-                        }
-                        cumulative.TOTAL = transaction.doorCount;
-                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: cumulative.TOTAL });
-                    });
+            async updateDisplay() {
+                try {
+                    const transactions = await this.fetchTransactions();
+                    if (transactions.length === 0) {
+                        document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
+                        document.getElementById('log').innerHTML = '<p>No active session</p>';
+                        if (chart) chart.data.datasets[0].data = [];
+                        chart?.update();
+                        return;
+                    }
 
-                    const totalThruDoor = sessionTransactions.length > 0 ? sessionTransactions[sessionTransactions.length - 1].doorCount : 0;
+                    const totalThruDoor = transactions[transactions.length - 1].doorCount || 0;
                     document.getElementById('totalCount').textContent = `Total Thru Door: ${totalThruDoor}`;
 
-                    if (chart) {
-                        chart.data.datasets[0].data = dataPoints.CASH;
-                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
-                        chart.data.datasets[2].data = dataPoints.TICKET;
-                        chart.data.datasets[3].data = dataPoints.COMP;
-                        chart.data.datasets[4].data = dataPoints.TOTAL;
-                        chart.update();
-                    } else {
-                        chart = new Chart(document.getElementById('doorCountChart'), {
-                            type: 'line',
-                            data: {
-                                datasets: [
-                                    { label: 'CASH', data: dataPoints.CASH, borderColor: 'green', backgroundColor: 'rgba(0, 255, 0, 0.1)', fill: false },
-                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: 'red', backgroundColor: 'rgba(255, 0, 0, 0.1)', fill: false },
-                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', backgroundColor: 'rgba(255, 165, 0, 0.1)', fill: false },
-                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: 'purple', backgroundColor: 'rgba(128, 0, 128, 0.1)', fill: false }
-                                ]
-                            },
-                            options: {
-                                scales: {
-                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                                },
-                                plugins: { legend: { display: true } }
-                            }
-                        });
-                    }
+                    this.renderGraph(transactions);
+                    this.displayLog(transactions);
+                } catch (error) {
+                    console.error(error);
+                }
+            }
 
-                    this.displayLog(sessionTransactions);
-                };
-                request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
+            renderGraph(transactions) {
+                let cumulativeCashThruDoor = 0;
+                const labels = [];
+                const data = [];
+
+                transactions.forEach(tx => {
+                    const cashCount = this.parseCashItems(tx.items);
+                    cumulativeCashThruDoor += cashCount;
+                    labels.push(new Date(tx.timestamp).toLocaleTimeString());
+                    data.push(cumulativeCashThruDoor);
+                });
+
+                const ctx = document.getElementById('thruDoorChart').getContext('2d');
+                if (chart) {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = data;
+                    chart.update();
+                } else {
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Thru Door from Cash',
+                                data: data,
+                                borderColor: 'green',
+                                backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                                fill: true,
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { title: { display: true, text: 'Time' } },
+                                y: { beginAtZero: true, title: { display: true, text: 'Thru Door' } }
+                            },
+                            plugins: { legend: { display: true } }
+                        }
+                    });
+                }
             }
 
             displayLog(transactions) {
@@ -175,22 +278,16 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
 
-                // Add total thru door
-                const totalThruDoor = document.getElementById('totalCount').textContent;
-                doc.text(totalThruDoor, 10, 10);
+                doc.text(document.getElementById('totalCount').textContent, 10, 10);
 
-                // Add chart image
-                const canvas = document.getElementById('doorCountChart');
+                const canvas = document.getElementById('thruDoorChart');
                 const chartImage = await html2canvas(canvas);
                 const imgData = chartImage.toDataURL('image/png');
                 doc.addImage(imgData, 'PNG', 10, 20, 180, 90);
 
-                // Add transaction log
-                const log = document.getElementById('log');
-                const logText = log.innerText;
+                const logText = document.getElementById('log').innerText;
                 doc.text(logText, 10, 120);
 
-                // Save the PDF
                 doc.save('sales_log.pdf');
             }
         }
