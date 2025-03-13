@@ -3,41 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log</title>
+    <title>Transaction Log</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
+            font-family: Arial, sans-serif;
             background-color: #121212;
             color: #e0e0e0;
-            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 10px;
         }
         .container {
             display: flex;
             justify-content: space-between;
             max-width: 1200px;
-            margin: 20px auto;
+            margin: 0 auto;
         }
         .left-column, .right-column {
             width: 48%;
         }
-        #salesStatus {
-            margin-bottom: 10px;
-            font-size: 18px;
+        #transactionList {
+            max-height: 400px;
+            overflow-y: scroll;
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
         }
-        #transactionTable {
-            width: 100%;
-            border-collapse: collapse;
+        .transaction {
+            margin-bottom: 5px;
         }
-        #transactionTable th, #transactionTable td {
-            border: 1px solid #444;
-            padding: 8px;
-            text-align: left;
-        }
-        #transactionTable th {
-            background-color: #333;
-        }
+        .transaction.cash { color: #4caf50; }
+        .transaction.cc-trans { color: #f44336; }
+        .transaction.ticket { color: #2196f3; }
+        .transaction.comp { color: #ff9800; }
         canvas {
             max-width: 100%;
         }
@@ -46,20 +44,10 @@
 <body>
     <div class="container">
         <div class="left-column">
-            <div id="salesStatus">Sales Closed</div>
             <canvas id="thruDoorChart"></canvas>
         </div>
         <div class="right-column">
-            <table id="transactionTable">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Category</th>
-                        <th>Door Count</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div id="transactionList"></div>
         </div>
     </div>
 
@@ -80,7 +68,7 @@
             });
         }
 
-        // Fetch all transactions
+        // Fetch all transactions from IndexedDB
         async function fetchTransactions(db) {
             return new Promise((resolve, reject) => {
                 const tx = db.transaction('transactions', 'readonly');
@@ -91,65 +79,61 @@
             });
         }
 
-        // Process transactions for graph
-        function processData(transactions) {
+        // Render the top 20 transactions in the scrolling list
+        function renderTransactionList(transactions) {
+            const listContainer = document.getElementById('transactionList');
+            listContainer.innerHTML = '';
+            transactions.forEach(tx => {
+                const item = document.createElement('div');
+                item.className = `transaction ${tx.type.toLowerCase().replace(' ', '-')}`;
+                item.textContent = `[${new Date(tx.timestamp).toLocaleString()}] ${tx.type}`;
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Update the real-time graph with cumulative counts
+        function updateGraph(transactions) {
             transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            const categories = ['Cash', 'CC TRANS', 'TICKET', 'COMP'];
-            const data = {
-                labels: [],
-                datasets: categories.map(cat => ({ label: cat, data: [], borderColor: getColor(cat), fill: false })),
-                total: { label: 'Total', data: [], borderColor: '#ffff00', fill: false } // Yellow for visibility
-            };
-            let counts = { 'Cash': 0, 'CC TRANS': 0, 'TICKET': 0, 'COMP': 0 };
+            const types = ['CASH', 'CC TRANS', 'TICKET', 'COMP'];
+            const datasets = types.map(type => ({
+                label: type,
+                data: [],
+                borderColor: getColor(type),
+                fill: false
+            }));
+            const totalData = { label: 'Total', data: [], borderColor: '#ffff00', fill: false };
+            let counts = { 'CASH': 0, 'CC TRANS': 0, 'TICKET': 0, 'COMP': 0, 'Total': 0 };
 
             transactions.forEach(tx => {
-                data.labels.push(new Date(tx.timestamp).toLocaleTimeString());
-                if (categories.includes(tx.category)) {
-                    counts[tx.category]++;
+                if (types.includes(tx.type)) {
+                    counts[tx.type]++;
+                    datasets.find(ds => ds.label === tx.type).data.push({ x: tx.timestamp, y: counts[tx.type] });
                 }
-                categories.forEach((cat, index) => {
-                    data.datasets[index].data.push(counts[cat]);
-                });
-                data.total.data.push(tx.doorCount);
+                counts.Total++;
+                totalData.data.push({ x: tx.timestamp, y: counts.Total });
             });
 
-            return data;
-        }
-
-        // Assign colors for graph lines
-        function getColor(category) {
-            const colors = {
-                'Cash': '#00bfff',     // Light blue
-                'CC TRANS': '#7cfc00', // Light green
-                'TICKET': '#ff4500',   // Orange red
-                'COMP': '#da70d6'      // Orchid
-            };
-            return colors[category] || 'gray';
-        }
-
-        // Update Chart.js graph
-        function updateChart(data) {
-            const ctx = document.getElementById('thruDoorChart').getContext('2d');
             if (chart) {
-                chart.data.labels = data.labels;
-                chart.data.datasets = [...data.datasets, data.total];
+                chart.data.datasets = [...datasets, totalData];
                 chart.update();
             } else {
+                const ctx = document.getElementById('thruDoorChart').getContext('2d');
                 chart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.labels,
-                        datasets: [...data.datasets, data.total]
+                        datasets: [...datasets, totalData]
                     },
                     options: {
                         scales: {
+                            x: {
+                                type: 'time',
+                                time: { unit: 'minute' },
+                                title: { display: true, text: 'Time', color: '#e0e0e0' },
+                                ticks: { color: '#e0e0e0' }
+                            },
                             y: {
                                 beginAtZero: true,
                                 title: { display: true, text: 'Count', color: '#e0e0e0' },
-                                ticks: { color: '#e0e0e0' }
-                            },
-                            x: {
-                                title: { display: true, text: 'Time', color: '#e0e0e0' },
                                 ticks: { color: '#e0e0e0' }
                             }
                         },
@@ -161,50 +145,40 @@
             }
         }
 
-        // Update transaction table
-        function updateTable(transactions) {
-            const tbody = document.querySelector('#transactionTable tbody');
-            tbody.innerHTML = '';
-            transactions.forEach(tx => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${new Date(tx.timestamp).toLocaleString()}</td>
-                    <td>${tx.category}</td>
-                    <td>${tx.doorCount}</td>
-                `;
-                tbody.appendChild(row);
-            });
+        // Assign colors for transaction types and graph lines
+        function getColor(type) {
+            const colors = {
+                'CASH': '#4caf50',     // Green
+                'CC TRANS': '#f44336', // Red
+                'TICKET': '#2196f3',   // Blue
+                'COMP': '#ff9800'      // Orange
+            };
+            return colors[type] || 'gray';
         }
 
-        // Update sales status
-        function updateSalesStatus() {
-            const salesOpen = localStorage.getItem('salesOpen') === 'true';
-            const cashierName = localStorage.getItem('cashierName') || 'Unknown';
-            const eventName = localStorage.getItem('eventName') || 'Unknown';
-            const statusDiv = document.getElementById('salesStatus');
-            statusDiv.textContent = salesOpen 
-                ? `Sales Open - Cashier: ${cashierName} - Event: ${eventName}`
-                : 'Sales Closed';
-        }
-
-        // Main update function
+        // Update the display (graph and transaction list)
         async function updateDisplay() {
             try {
                 const transactions = await fetchTransactions(db);
-                const data = processData(transactions);
-                updateChart(data);
-                updateTable(transactions);
-                updateSalesStatus();
+                transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const top20 = transactions.slice(0, 20);
+                renderTransactionList(top20);
+                updateGraph(transactions);
             } catch (error) {
                 console.error('Update failed:', error);
             }
         }
 
-        // Initialize and set real-time updates
+        // Initialize the page and set up real-time updates
         async function init() {
             db = await openDB();
             await updateDisplay();
-            setInterval(updateDisplay, 5000); // Update every 5 seconds
+            // Listen for new transactions via storage events
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'transactionLogged') {
+                    updateDisplay();
+                }
+            });
         }
 
         init().catch(error => console.error('Initialization failed:', error));
