@@ -194,10 +194,7 @@
         .edit-btn { background: #555; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .open-btn { background: #1a73e8; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .close-btn { background: #d32f2f; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-        .disabled { opacity: 0.5; }
-        body:not(.edit-mode) .product-item.disabled {
-            pointer-events: none;
-        }
+        .disabled { opacity: 0.5; pointer-events: none; }
         .hidden { display: none; }
     </style>
 </head>
@@ -306,7 +303,7 @@
             }
 
             initDB() {
-                const request = indexedDB.open('SalesDB', 2);
+                const request = indexedDB.open('SalesDB', 3); // Bumped to version 3 for tickers store
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
                     if (!this.db.objectStoreNames.contains('sessions')) {
@@ -315,6 +312,9 @@
                     if (!this.db.objectStoreNames.contains('transactions')) {
                         const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+                    }
+                    if (!this.db.objectStoreNames.contains('tickers')) {
+                        this.db.createObjectStore('tickers', { keyPath: 'id', autoIncrement: true });
                     }
                 };
                 request.onsuccess = (event) => {
@@ -349,14 +349,6 @@
                 $('.minus').on('click', (event) => this.handleDecrement(event));
                 $('.add-custom').on('click', () => this.handleCustomAdd());
                 $('#logSaleBtn').on('click', () => this.logSale());
-                $('.product-item').on('click', (event) => {
-                    if (this.isEditing && !$(event.target).is('.add-custom, input')) {
-                        const $item = $(event.currentTarget);
-                        const currentActive = $item.attr('data-active') === 'true';
-                        $item.attr('data-active', !currentActive);
-                        $item.toggleClass('disabled', currentActive);
-                    }
-                });
             }
 
             handleIncrement(event) {
@@ -393,13 +385,7 @@
 
             toggleEditMode() {
                 this.isEditing = !this.isEditing;
-                if (this.isEditing) {
-                    $('body').addClass('edit-mode');
-                    $('#editLayoutBtn').text('Save Layout');
-                } else {
-                    $('body').removeClass('edit-mode');
-                    $('#editLayoutBtn').text('Edit Layout');
-                }
+                $('#editLayoutBtn').text(this.isEditing ? 'Save Layout' : 'Edit Layout');
                 this.transactionButtons.each((_, btn) => {
                     const $btn = $(btn);
                     const key = $btn.data('item');
@@ -474,15 +460,24 @@
                         this.showError('Please fill in date, venue, and cashier name.');
                         return;
                     }
-                    const tx = this.db.transaction(['sessions'], 'readwrite');
-                    const store = tx.objectStore('sessions');
-                    store.add(session).onsuccess = (event) => {
+                    const tx = this.db.transaction(['sessions', 'tickers'], 'readwrite');
+                    const sessionStore = tx.objectStore('sessions');
+                    sessionStore.add(session).onsuccess = (event) => {
                         this.sessionId = event.target.result;
                         localStorage.setItem('activeSessionId', this.sessionId);
                         this.sessionStarted = true;
                         $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
                         $('#sessionHeader input').prop('disabled', true).addClass('locked');
                         this.logToGoogleSheet(['SALES OPEN', this.sessionId, session.startTime, '', '', '', '', '']);
+                        
+                        // Send ticker to IndexedDB for log.html
+                        const tickerStore = tx.objectStore('tickers');
+                        const ticker = {
+                            sessionId: this.sessionId,
+                            timestamp: new Date().toISOString(),
+                            doorCount: this.doorCount // 0 at opening
+                        };
+                        tickerStore.add(ticker);
                     };
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
@@ -523,6 +518,7 @@
                 const existingItem = this.currentItems.find(i => i.item === itemName);
                 if (existingItem) {
                     existingItem.quantity--;
+                    this.doorCount--;
                     if (existingItem.quantity <= 0) this.currentItems = this.currentItems.filter(i => i.item !== itemName);
                     if (itemName.includes('CASH')) this.cashTotal -= existingItem.price;
                     this.updateTotals();
@@ -550,7 +546,7 @@
                         total: item.price * item.quantity,
                         type: item.item.split(' ')[0],
                         note: note,
-                        doorCount: 1
+                        doorCount: item.quantity // Each independent item logged increments thru door by its quantity
                     };
                     const tx = this.db.transaction(['transactions'], 'readwrite');
                     const store = tx.objectStore('transactions');
@@ -563,7 +559,7 @@
                             JSON.stringify(transaction.itemList),
                             transaction.total.toFixed(2),
                             transaction.type,
-                            this.doorCount
+                            transaction.doorCount
                         ]);
                     };
                 });
