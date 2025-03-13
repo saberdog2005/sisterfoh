@@ -4,54 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #1e1e1e;
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
             color: #e0e0e0;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 10px;
+            font-size: 18px;
         }
         .container {
-            max-width: 1000px;
-            width: 100%;
-            background-color: #2d2d2d;
+            max-width: 85%;
+            margin: 0 auto;
+            background: #2d2d2d;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         h1 {
             text-align: center;
             color: #bb86fc;
+            margin-bottom: 20px;
         }
-        #log {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #3c3c3c;
-            border-radius: 4px;
-            max-height: 300px;
-            overflow-y: auto;
+        #chartContainer {
+            position: relative;
+            height: 400px;
         }
-        .chart-container {
+        .no-data {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 1.2em;
             margin-top: 20px;
-            padding: 15px;
-            background-color: #3c3c3c;
-            border-radius: 4px;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sales Log</h1>
-        <div class="chart-container">
+        <h1>Thru Door Over Time</h1>
+        <div id="chartContainer">
             <canvas id="thruDoorChart"></canvas>
         </div>
-        <div id="log"></div>
+        <div id="noDataMessage" class="no-data"></div>
     </div>
 
     <script>
@@ -63,97 +59,112 @@
             }
 
             initDB() {
-                const request = indexedDB.open('SalesDB', 1);
-                request.onupgradeneeded = () => {
-                    const db = request.result;
-                    db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                const request = indexedDB.open('SalesDB', 2);
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.loadData();
                 };
-                request.onsuccess = () => {
-                    this.db = request.result;
-                    this.loadTransactions();
+                request.onerror = () => {
+                    $('#noDataMessage').text('Failed to access database.');
                 };
-                request.onerror = () => console.error('Database error');
             }
 
-            async loadTransactions() {
-                const tx = this.db.transaction('transactions', 'readonly');
+            loadData() {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (!activeSessionId) {
+                    $('#noDataMessage').text('No active sales session.');
+                    return;
+                }
+                const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const transactions = request.result;
-                    this.displayLog(transactions);
-                    this.displayThruDoorGraph(transactions);
+                const index = store.index('sessionId');
+                const request = index.getAll(Number(activeSessionId));
+                request.onsuccess = (event) => {
+                    const transactions = event.target.result;
+                    if (transactions.length === 0) {
+                        $('#noDataMessage').text('No transactions for the current session.');
+                    } else {
+                        this.displayGraph(transactions);
+                    }
                 };
             }
 
-            displayLog(transactions) {
-                const log = document.getElementById('log');
-                log.innerHTML = transactions
-                    .map(t => `<p>[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${t.items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</p>`)
-                    .join('');
-            }
-
-            parseItems(items) {
-                const counts = { cash: 0, cc: 0, ticket: 0, comp: 0 };
-                const parts = items.split(', ');
-                parts.forEach(part => {
-                    const [item, details] = part.split(': ');
-                    const count = parseInt(details.split(' @ ')[0]);
-                    if (item.startsWith('CASH')) counts.cash += count;
-                    else if (item === 'CC TRANS') counts.cc += count;
-                    else if (item === 'TICKET') counts.ticket += count;
-                    else if (item === 'COMP') counts.comp += count;
-                });
-                return counts;
-            }
-
-            displayThruDoorGraph(transactions) {
-                let cashCumulative = 0, ccCumulative = 0, ticketCumulative = 0, compCumulative = 0;
-                const labels = transactions.map(t => new Date(t.timestamp).toLocaleTimeString());
-                const cashData = [], ccData = [], ticketData = [], compData = [], totalData = [];
+            displayGraph(transactions) {
+                transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const typeToCumulative = {};
+                let totalCumulative = 0;
+                const datasets = [];
 
                 transactions.forEach(t => {
-                    const counts = this.parseItems(t.items);
-                    cashCumulative += counts.cash;
-                    ccCumulative += counts.cc;
-                    ticketCumulative += counts.ticket;
-                    compCumulative += counts.comp;
-                    cashData.push(cashCumulative);
-                    ccData.push(ccCumulative);
-                    ticketData.push(ticketCumulative);
-                    compData.push(compCumulative);
-                    totalData.push(t.doorCount); // Cumulative total from register
-                });
+                    const timestamp = t.timestamp;
+                    t.itemList.forEach(item => {
+                        const type = item.item;
+                        if (!typeToCumulative[type]) typeToCumulative[type] = 0;
+                        typeToCumulative[type] += item.quantity;
+                    });
+                    totalCumulative += t.itemList.reduce((sum, item) => sum + item.quantity, 0);
 
-                const ctx = document.getElementById('thruDoorChart').getContext('2d');
-                if (this.chart) this.chart.destroy();
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            { label: 'Cash Thru Door', data: cashData, borderColor: '#2e7d32', fill: false },
-                            { label: 'CC Thru Door', data: ccData, borderColor: '#d32f2f', fill: false },
-                            { label: 'Ticket Thru Door', data: ticketData, borderColor: '#1a73e8', fill: false },
-                            { label: 'Comp Thru Door', data: compData, borderColor: '#ffa500', fill: false },
-                            { label: 'Total Thru Door', data: totalData, borderColor: '#9c27b0', borderWidth: 2, fill: false }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true, title: { display: true, text: 'Thru Door Count', color: '#e0e0e0' } },
-                            x: { title: { display: true, text: 'Time', color: '#e0e0e0' } }
-                        },
-                        plugins: {
-                            legend: { labels: { color: '#e0e0e0' } }
+                    const totalDataset = datasets.find(d => d.label === 'Total Thru Door');
+                    if (totalDataset) {
+                        totalDataset.data.push({ x: timestamp, y: totalCumulative });
+                    } else {
+                        datasets.push({
+                            label: 'Total Thru Door',
+                            data: [{ x: timestamp, y: totalCumulative }],
+                            borderColor: '#9c27b0',
+                            borderWidth: 2,
+                            fill: false
+                        });
+                    }
+
+                    for (const [type, cumulative] of Object.entries(typeToCumulative)) {
+                        const dataset = datasets.find(d => d.label === type);
+                        if (dataset) {
+                            dataset.data.push({ x: timestamp, y: cumulative });
+                        } else {
+                            datasets.push({
+                                label: type,
+                                data: [{ x: timestamp, y: cumulative }],
+                                borderColor: this.getColor(type),
+                                fill: false
+                            });
                         }
                     }
                 });
+
+                const ctx = document.getElementById('thruDoorChart').getContext('2d');
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: { unit: 'minute' },
+                                title: { display: true, text: 'Time', color: '#e0e0e0' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Thru Door Count', color: '#e0e0e0' }
+                            }
+                        },
+                        plugins: { legend: { labels: { color: '#e0e0e0' } } }
+                    }
+                });
+            }
+
+            getColor(type) {
+                const colors = {
+                    'CASH': '#2e7d32',
+                    'CC TRANS': '#d32f2f',
+                    'TICKET': '#1a73e8',
+                    'COMP': '#ffa500'
+                };
+                return colors[type.split(' ')[0]] || '#888888';
             }
         }
 
-        new SalesLog();
+        $(document).ready(() => new SalesLog());
     </script>
 </body>
 </html>
