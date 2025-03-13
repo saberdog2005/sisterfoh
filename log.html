@@ -5,16 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
             margin: 0;
             padding: 10px;
-            font-size: 18px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        #loginScreen {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+        #loginScreen input {
+            padding: 10px;
+            margin: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        #loginBtn {
+            padding: 10px 20px;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        #loginError {
+            color: #ff6b6b;
+            display: none;
+        }
+        #mainContent {
+            display: none;
         }
         .container {
             max-width: 85%;
@@ -24,147 +58,130 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        h1 {
-            text-align: center;
-            color: #bb86fc;
-            margin-bottom: 20px;
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        #chartContainer {
-            position: relative;
-            height: 400px;
+        .log-table th, .log-table td {
+            padding: 10px;
+            border: 1px solid #555;
+            text-align: left;
         }
-        .no-data {
-            text-align: center;
-            color: #ff6b6b;
-            font-size: 1.2em;
+        .log-table th {
+            background-color: #3c3c3c;
+        }
+        .logout-btn {
+            padding: 15px 30px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Thru Door Over Time</h1>
-        <div id="chartContainer">
-            <canvas id="thruDoorChart"></canvas>
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div style="text-align: center;">
+            <h2>Login to View Sales Log</h2>
+            <input type="text" id="username" placeholder="Username"><br>
+            <input type="password" id="password" placeholder="Password"><br>
+            <button id="loginBtn">Login</button>
+            <p id="loginError">Invalid credentials</p>
         </div>
-        <div id="noDataMessage" class="no-data"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="container">
+        <h1>Sales Log</h1>
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Items</th>
+                    <th>Cash Total</th>
+                    <th>Thru Door</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+        </table>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
     </div>
 
     <script>
         class SalesLog {
             constructor() {
                 this.db = null;
-                this.chart = null;
                 this.initDB();
+                this.bindEvents();
             }
 
             initDB() {
-                const request = indexedDB.open('SalesDB', 2);
+                const request = indexedDB.open('SalesDB', 1);
                 request.onsuccess = (event) => {
                     this.db = event.target.result;
-                    this.loadData();
                 };
-                request.onerror = () => {
-                    $('#noDataMessage').text('Failed to access database.');
+                request.onerror = (event) => {
+                    console.error('Database error:', event.target.error);
                 };
             }
 
-            loadData() {
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (!activeSessionId) {
-                    $('#noDataMessage').text('No active sales session.');
-                    return;
-                }
+            bindEvents() {
+                document.getElementById('loginBtn').addEventListener('click', () => {
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    if (username === 'admin' && password === 'password') {
+                        localStorage.setItem('loggedIn', 'true');
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('mainContent').style.display = 'block';
+                        this.loadTransactions();
+                    } else {
+                        document.getElementById('loginError').style.display = 'block';
+                    }
+                });
+
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    localStorage.removeItem('loggedIn');
+                    location.reload();
+                });
+            }
+
+            loadTransactions() {
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
-                const index = store.index('sessionId');
-                const request = index.getAll(Number(activeSessionId));
+                const request = store.getAll();
                 request.onsuccess = (event) => {
                     const transactions = event.target.result;
-                    if (transactions.length === 0) {
-                        $('#noDataMessage').text('No transactions for the current session.');
-                    } else {
-                        this.displayGraph(transactions);
-                    }
-                };
-            }
-
-            displayGraph(transactions) {
-                transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                const typeToCumulative = {};
-                let totalCumulative = 0;
-                const datasets = [];
-
-                transactions.forEach(t => {
-                    const timestamp = t.timestamp;
-                    t.itemList.forEach(item => {
-                        const type = item.item;
-                        if (!typeToCumulative[type]) typeToCumulative[type] = 0;
-                        typeToCumulative[type] += item.quantity;
+                    const tableBody = document.getElementById('logTableBody');
+                    tableBody.innerHTML = '';
+                    transactions.forEach(t => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                            <td>${t.timestamp}</td>
+                            <td>${t.items}</td>
+                            <td>${t.cashTotal}</td>
+                            <td>${t.doorCount}</td>
+                            <td>${t.note}</td>
+                        `;
                     });
-                    totalCumulative += t.itemList.reduce((sum, item) => sum + item.quantity, 0);
-
-                    const totalDataset = datasets.find(d => d.label === 'Total Thru Door');
-                    if (totalDataset) {
-                        totalDataset.data.push({ x: timestamp, y: totalCumulative });
-                    } else {
-                        datasets.push({
-                            label: 'Total Thru Door',
-                            data: [{ x: timestamp, y: totalCumulative }],
-                            borderColor: '#9c27b0',
-                            borderWidth: 2,
-                            fill: false
-                        });
-                    }
-
-                    for (const [type, cumulative] of Object.entries(typeToCumulative)) {
-                        const dataset = datasets.find(d => d.label === type);
-                        if (dataset) {
-                            dataset.data.push({ x: timestamp, y: cumulative });
-                        } else {
-                            datasets.push({
-                                label: type,
-                                data: [{ x: timestamp, y: cumulative }],
-                                borderColor: this.getColor(type),
-                                fill: false
-                            });
-                        }
-                    }
-                });
-
-                const ctx = document.getElementById('thruDoorChart').getContext('2d');
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: { datasets },
-                    options: {
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: { unit: 'minute' },
-                                title: { display: true, text: 'Time', color: '#e0e0e0' }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'Thru Door Count', color: '#e0e0e0' }
-                            }
-                        },
-                        plugins: { legend: { labels: { color: '#e0e0e0' } } }
-                    }
-                });
-            }
-
-            getColor(type) {
-                const colors = {
-                    'CASH': '#2e7d32',
-                    'CC TRANS': '#d32f2f',
-                    'TICKET': '#1a73e8',
-                    'COMP': '#ffa500'
                 };
-                return colors[type.split(' ')[0]] || '#888888';
             }
         }
 
-        $(document).ready(() => new SalesLog());
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('loggedIn') === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                new SalesLog().loadTransactions();
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        });
     </script>
 </body>
 </html>
