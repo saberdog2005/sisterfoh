@@ -6,301 +6,169 @@
     <title>Transaction Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #1e1e1e;
-            color: #e0e0e0;
-        }
-        #login-form {
-            max-width: 300px;
-            margin: 20px auto;
-            padding: 20px;
-            background: #2d2d2d;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        #login-form input {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            background: #3c3c3c;
-            border: 1px solid #555;
-            color: #e0e0e0;
-            border-radius: 4px;
-        }
-        #main-content { display: none; }
-        .container {
-            display: flex;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .left-side, .right-side { flex: 1; }
-        .left-side { max-width: 50%; }
-        .right-side { max-width: 50%; }
-        #thru-door { color: #ab47bc; font-size: 1.2em; font-weight: bold; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #2d2d2d;
-            margin-top: 10px;
-            color: #e0e0e0;
-        }
-        th, td {
-            padding: 8px;
-            border: 1px solid #444;
-            text-align: left;
-        }
-        th { background: #3c3c3c; }
-        tbody {
-            display: block;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        thead, tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-        button, select {
-            padding: 8px;
-            margin: 5px 0;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover { background: #2196f3; }
-        #sales-status.open { color: #2e7d32; }
-        #sales-status.closed { color: #d32f2f; }
-        #cashier-name { color: #ffa500; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+        #main-content { max-width: 1200px; margin: auto; }
+        h1 { text-align: center; }
+        #session-selector { width: 100%; padding: 5px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1976D2; }
+        #session-details { margin: 10px 0; font-size: 1.1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #4CAF50; color: white; }
+        canvas { width: 100% !important; max-height: 400px; margin: 20px 0; }
     </style>
 </head>
 <body>
-    <div id="login-form">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <button onclick="login()">Login</button>
-    </div>
-
     <div id="main-content">
         <h1>Transaction Log</h1>
         <select id="session-selector" onchange="updateSession()"></select>
-        <button onclick="refreshData()">Refresh</button>
-        <button onclick="logout()">Logout</button>
-        <label><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh</label>
-        
-        <div class="container">
-            <div class="left-side">
-                <canvas id="transactionGraph"></canvas>
-            </div>
-            <div class="right-side">
-                <p>Sales Status: <span id="sales-status"></span></p>
-                <p>Cashier: <span id="cashier-name"></span></p>
-                <p>Thru Door Count: <span id="thru-door">0</span></p>
-                <h3>Last 20 Transactions</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transaction-table"></tbody>
-                </table>
-            </div>
-        </div>
+        <button onclick="exportData()">Export Data</button>
+        <div id="session-details"></div>
+        <h3>Last 20 Transactions</h3>
+        <table>
+            <thead><tr><th>Time</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody id="transaction-table"></tbody>
+        </table>
+        <canvas id="cashGraph"></canvas>
+        <canvas id="doorGraph"></canvas>
     </div>
 
     <script>
-        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
+        let db, cashChart, doorChart;
 
-        let chart, autoRefreshInterval, db;
-
-        // Initialize Google API client
-        function initClient() {
-            gapi.load('client:auth2', () => {
-                gapi.client.init({
-                    apiKey: API_KEY,
-                    clientId: CLIENT_ID,
-                    discoveryDocs: DISCOVERY_DOCS,
-                    scope: SCOPES
-                }).then(() => {
-                    if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                        gapi.auth2.getAuthInstance().signIn();
-                    }
-                    initDB();
-                }).catch(error => console.error('Error initializing Google API:', error));
-            });
-        }
-
-        // Initialize IndexedDB
         function initDB() {
             const request = indexedDB.open('SalesDB', 3);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('sessions')) {
+                    db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                }
+                if (!db.objectStoreNames.contains('transactions')) {
+                    const txStore = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                    txStore.createIndex('sessionId', 'sessionId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('tickers')) {
+                    db.createObjectStore('tickers', { keyPath: 'id', autoIncrement: true });
+                }
+            };
             request.onsuccess = (event) => {
                 db = event.target.result;
-                checkLoginStatus();
+                loadSessions();
             };
             request.onerror = () => console.error('Failed to open IndexedDB');
         }
 
-        // Login handling
-        function checkLoginStatus() {
-            if (localStorage.getItem('isLoggedIn') === 'true') {
-                $('#login-form').hide();
-                $('#main-content').show();
-                loadSessions();
-            } else {
-                $('#login-form').show();
-                $('#main-content').hide();
-            }
-        }
-
-        function login() {
-            const username = $('#username').val();
-            const password = $('#password').val();
-            if (username === 'admin' && password === 'password') {
-                localStorage.setItem('isLoggedIn', 'true');
-                checkLoginStatus();
-            } else {
-                alert('Invalid credentials');
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('selectedSession');
-            gapi.auth2.getAuthInstance().signOut();
-            location.reload();
-        }
-
-        // Load sessions from IndexedDB
         function loadSessions() {
             const tx = db.transaction(['sessions'], 'readonly');
             const store = tx.objectStore('sessions');
             store.getAll().onsuccess = (event) => {
                 const sessions = event.target.result;
                 const sessionSelector = $('#session-selector');
-                sessionSelector.empty().append(sessions.map(session => 
-                    `<option value="${session.id}">${session.cashier} - ${session.date} (${session.status})</option>`));
+                sessionSelector.empty().append('<option value="">Select a session</option>');
+                sessions.forEach(session => {
+                    sessionSelector.append(`<option value="${session.id}">${session.cashier} - ${session.date} (${session.status})</option>`);
+                });
                 const savedSession = localStorage.getItem('selectedSession');
                 if (savedSession && sessions.some(s => s.id === Number(savedSession))) {
                     sessionSelector.val(savedSession);
+                    updateSession();
                 }
-                updateSession();
             };
         }
 
-        // Update UI based on selected session
         function updateSession() {
-            const selectedSession = $('#session-selector').val();
-            if (!selectedSession) return;
-            localStorage.setItem('selectedSession', selectedSession);
-            refreshData();
-        }
-
-        // Refresh data from IndexedDB
-        function refreshData() {
             const selectedSession = Number($('#session-selector').val());
-            if (!selectedSession) return;
-
-            const tx = db.transaction(['sessions', 'transactions', 'tickers'], 'readonly');
+            if (!selectedSession) {
+                $('#session-details').text('');
+                $('#transaction-table').empty();
+                if (cashChart) cashChart.destroy();
+                if (doorChart) doorChart.destroy();
+                return;
+            }
+            localStorage.setItem('selectedSession', selectedSession);
+            const tx = db.transaction(['sessions', 'transactions'], 'readonly');
             const sessionStore = tx.objectStore('sessions');
             const transactionStore = tx.objectStore('transactions');
-            const tickerStore = tx.objectStore('tickers');
-
-            // Get session details
             sessionStore.get(selectedSession).onsuccess = (event) => {
                 const session = event.target.result;
                 if (!session) return;
-                $('#sales-status').text(session.status)
-                    .removeClass('open closed')
-                    .addClass(session.status === 'open' ? 'open' : 'closed');
-                $('#cashier-name').text(session.cashier || 'Unknown');
+                $('#session-details').text(`Date: ${session.date}, Venue: ${session.venue}, Event: ${session.eventName}, Cashier: ${session.cashier}, Status: ${session.status}`);
             };
-
-            // Get transactions and calculate totals
-            const transactionIndex = transactionStore.index('sessionId');
-            transactionIndex.getAll(selectedSession).onsuccess = (event) => {
+            const index = transactionStore.index('sessionId');
+            index.getAll(selectedSession).onsuccess = (event) => {
                 const transactions = event.target.result;
-                let thruDoorCount = 0, cashTotal = 0;
-                const graphData = {
-                    labels: [],
-                    datasets: [
-                        { label: 'Cumulative Cash', data: [], borderColor: '#2e7d32', fill: false },
-                        { label: 'Thru Door Count', data: [], borderColor: '#ab47bc', fill: false }
-                    ]
-                };
-
-                transactions.forEach(t => {
-                    cashTotal += t.total;
-                    thruDoorCount += t.doorCount;
-                    graphData.labels.push(t.time || t.timestamp);
-                    graphData.datasets[0].data.push(cashTotal);
-                    graphData.datasets[1].data.push(thruDoorCount);
-                });
-
-                $('#thru-door').text(thruDoorCount);
-                const recentTransactions = transactions.slice(-20).reverse().map(t => ({
-                    timestamp: t.time || t.timestamp,
-                    type: t.type,
-                    amount: t.total.toFixed(2)
-                }));
+                const recentTransactions = transactions.slice(-20).reverse();
                 $('#transaction-table').empty().append(recentTransactions.map(t => 
-                    `<tr><td>${t.timestamp}</td><td>${t.type}</td><td>${t.amount}</td></tr>`));
-                updateGraph(graphData);
-            };
-
-            // Get ticker data (for initialization)
-            tickerStore.getAll().onsuccess = (event) => {
-                const tickers = event.target.result.filter(t => t.sessionId === selectedSession);
-                if (tickers.length > 0) {
-                    console.log('Ticker for session:', tickers[0]);
-                }
+                    `<tr><td>${t.time}</td><td>${t.type}</td><td>${t.total.toFixed(2)}</td></tr>`));
+                const cashData = { labels: [], data: [] };
+                const doorData = { labels: [], data: [] };
+                let cumulativeCash = 0, cumulativeDoor = 0;
+                transactions.forEach(t => {
+                    cumulativeCash += t.total;
+                    cumulativeDoor += t.doorCount;
+                    cashData.labels.push(t.time);
+                    cashData.data.push(cumulativeCash);
+                    doorData.labels.push(t.time);
+                    doorData.data.push(cumulativeDoor);
+                });
+                updateGraphs(cashData, doorData);
             };
         }
 
-        // Update the graph
-        function updateGraph(graphData) {
-            if (chart) chart.destroy();
-            chart = new Chart($('#transactionGraph'), {
+        function updateGraphs(cashData, doorData) {
+            if (cashChart) cashChart.destroy();
+            cashChart = new Chart($('#cashGraph'), {
                 type: 'line',
-                data: graphData,
-                options: {
-                    responsive: true,
-                    scales: {
-                        x: { title: { display: true, text: 'Time', color: '#e0e0e0' }, ticks: { color: '#e0e0e0' } },
-                        y: { 
-                            title: { display: true, text: 'Value', color: '#e0e0e0' }, 
-                            ticks: { color: '#e0e0e0' },
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: { legend: { labels: { color: '#e0e0e0' } } }
-                }
+                data: {
+                    labels: cashData.labels,
+                    datasets: [{ label: 'Cumulative Cash ($)', data: cashData.data, borderColor: '#2e7d32', fill: false }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+            if (doorChart) doorChart.destroy();
+            doorChart = new Chart($('#doorGraph'), {
+                type: 'line',
+                data: {
+                    labels: doorData.labels,
+                    datasets: [{ label: 'Cumulative Door Count', data: doorData.data, borderColor: '#ab47bc', fill: false }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
             });
         }
 
-        // Toggle auto-refresh
-        function toggleAutoRefresh() {
-            if ($('#auto-refresh').is(':checked')) {
-                autoRefreshInterval = setInterval(refreshData, 10000);
-            } else {
-                clearInterval(autoRefreshInterval);
-            }
+        function exportData() {
+            const tx = db.transaction(['sessions', 'transactions'], 'readonly');
+            const sessionStore = tx.objectStore('sessions');
+            const transactionStore = tx.objectStore('transactions');
+            sessionStore.getAll().onsuccess = (event) => {
+                const sessions = event.target.result;
+                const data = { sessions: [] };
+                let completed = 0;
+                sessions.forEach((session, index) => {
+                    const sessionData = { ...session, transactions: [] };
+                    const indexTx = transactionStore.index('sessionId');
+                    indexTx.getAll(session.id).onsuccess = (e) => {
+                        sessionData.transactions = e.target.result;
+                        data.sessions[index] = sessionData;
+                        completed++;
+                        if (completed === sessions.length) {
+                            const dataStr = JSON.stringify(data, null, 2);
+                            const blob = new Blob([dataStr], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'data.log';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
+                    };
+                });
+            };
         }
 
-        $(document).ready(() => initClient());
+        $(document).ready(() => initDB());
     </script>
 </body>
 </html>
