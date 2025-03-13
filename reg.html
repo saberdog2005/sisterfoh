@@ -38,7 +38,7 @@
         <button id="editLayoutBtn">Edit Layout</button>
         <button id="logSaleBtn">Log Sale</button>
         <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-        <div>Door Count: <span id="doorCount">0</span></div>
+        <div>Thru Door: <span id="doorCount">0</span></div>
         <textarea id="noteInput" placeholder="Notes"></textarea>
         <div class="product-grid">
             <div class="product-item" data-item="CASH $5" data-price="5" data-active="true">
@@ -369,6 +369,8 @@
                     this.showError('Please fill in all required fields (Date, Venue, Cashier)');
                     return;
                 }
+                this.elements.logSaleBtn.disabled = true; // Disable button to prevent duplicates
+
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
@@ -381,6 +383,7 @@
                     }).join('; ');
                 if (!items) {
                     this.showError('No items to log');
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
                 const transaction = {
@@ -425,14 +428,16 @@
                     this.showError('Saved locally, failed to sync: ' + error.message);
                 }
                 this.resetForm();
+                this.elements.logSaleBtn.disabled = false; // Re-enable button
                 channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
+                this.state.doorCount = 0; // Reset transaction door count
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.doorCount;
+                this.elements.doorCount.textContent = '0';
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
