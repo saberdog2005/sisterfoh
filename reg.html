@@ -54,13 +54,22 @@
             display: none;
         }
         .increment-btn, .minus, .add-custom {
-            padding: 30px;
-            margin: 5px 0;
+            padding: 1em;
+            margin: 0.5em 0;
             width: 100%;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 28px;
+            font-size: 1.5em;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .increment-btn:hover, .minus:hover, .add-custom:hover {
+            background-color: #444;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
@@ -93,15 +102,19 @@
             background-color: #2d2d2d;
             padding: 10px;
             border-radius: 5px;
+            margin-bottom: 10px;
         }
         .note-section {
             display: flex;
             flex-direction: column;
+            margin-bottom: 10px;
+        }
+        .note-section label {
+            margin-bottom: 5px;
         }
         .note-section textarea {
             width: 100%;
             height: 60px;
-            margin-top: 5px;
             padding: 5px;
             background-color: #3c3c3c;
             color: #e0e0e0;
@@ -109,13 +122,18 @@
             border-radius: 3px;
         }
         #logSaleBtn {
-            padding: 30px;
+            padding: 1em;
             background-color: #0288d1;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 28px;
+            font-size: 1.5em;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        #logSaleBtn:hover {
+            background-color: #026aa7;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
         .footer {
             display: flex;
@@ -128,23 +146,28 @@
             align-items: center;
         }
         .edit-btn, .open-btn, .close-btn {
-            padding: 15px 30px;
+            padding: 0.8em 1.5em;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 1.5em;
+            font-size: 1.2em;
             font-weight: bold;
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         .edit-btn { background-color: #555; color: white; }
         .open-btn { background-color: #0288d1; color: white; }
         .close-btn { background-color: #d32f2f; color: white; }
-        #successMessage { color: #2e7d32; }
-        #errorMessage { color: #d32f2f; }
+        .edit-btn:hover, .open-btn:hover, .close-btn:hover {
+            background-color: #444;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        #successMessage { color: #2e7d32; font-weight: bold; }
+        #errorMessage { color: #d32f2f; font-weight: bold; }
         .hidden { display: none; }
         @media only screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: landscape) {
             .button-container { grid-template-columns: repeat(4, 1fr); }
-            .increment-btn, .minus, .add-custom { padding: 35px; font-size: 32px; }
-            #logSaleBtn { padding: 35px; font-size: 32px; }
+            .increment-btn, .minus, .add-custom { padding: 1.2em; font-size: 1.8em; }
+            #logSaleBtn { padding: 1.2em; font-size: 1.8em; }
         }
     </style>
 </head>
@@ -218,7 +241,7 @@
 
     <script>
         // Replace with your actual Google Apps Script Web App URL
-        const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
 
         class SalesApp {
             constructor() {
@@ -360,8 +383,18 @@
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
                 if (this.state.sessionStarted) {
                     this.elements.editLayoutBtn.classList.add('hidden');
+                    this.elements.transactionButtons.forEach(btn => {
+                        btn.querySelector('.increment-btn').disabled = false;
+                        btn.querySelector('.minus').disabled = false;
+                        if (btn.querySelector('.add-custom')) btn.querySelector('.add-custom').disabled = false;
+                    });
                 } else {
                     this.elements.editLayoutBtn.classList.remove('hidden');
+                    this.elements.transactionButtons.forEach(btn => {
+                        btn.querySelector('.increment-btn').disabled = true;
+                        btn.querySelector('.minus').disabled = true;
+                        if (btn.querySelector('.add-custom')) btn.querySelector('.add-custom').disabled = true;
+                    });
                 }
             }
 
@@ -381,6 +414,7 @@
                 }
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
                 this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
+                this.checkSessionStatus(); // Update button states immediately
             }
 
             toggleEditMode() {
