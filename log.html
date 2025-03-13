@@ -3,187 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log - Transaction Graph</title>
+    <title>Sales Log</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body {
+            background-color: #121212;
+            color: #e0e0e0;
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
-        #container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        .container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 20px auto;
         }
-        h1 {
-            text-align: center;
-            color: #333;
+        .left-column, .right-column {
+            width: 48%;
+        }
+        #salesStatus {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        #transactionTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #transactionTable th, #transactionTable td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+        #transactionTable th {
+            background-color: #333;
         }
         canvas {
-            width: 100% !important;
-            height: auto !important;
-        }
-        #exportPdf {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #exportPdf:hover {
-            background-color: #0056b3;
+            max-width: 100%;
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <h1>Transaction Log Graph</h1>
-        <canvas id="thruDoorChart"></canvas>
-        <button id="exportPdf">Export to PDF</button>
+    <div class="container">
+        <div class="left-column">
+            <div id="salesStatus">Sales Closed</div>
+            <canvas id="thruDoorChart"></canvas>
+        </div>
+        <div class="right-column">
+            <table id="transactionTable">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Category</th>
+                        <th>Door Count</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // Sample data (replace with your actual data source)
-        const items = [
-            { timestamp: "2023-10-01T10:00:00", category: "Cash" },
-            { timestamp: "2023-10-01T10:05:00", category: "CC TRANS" },
-            { timestamp: "2023-10-01T10:10:00", category: "TICKET" },
-            { timestamp: "2023-10-01T10:15:00", category: "COMP" },
-            { timestamp: "2023-10-01T10:20:00", category: "Cash" },
-            { timestamp: "2023-10-01T10:25:00", category: "CC TRANS" },
-            // Add more entries as needed
-        ];
+        let chart;
+        let db;
 
-        // Function to parse items and calculate cumulative counts by category
-        function parseItemsByCategory(items) {
-            const categories = ["Cash", "CC TRANS", "TICKET", "COMP"];
-            const dataByCategory = {};
-            const labels = new Set();
+        // Open IndexedDB
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('SalesDB', 2);
+                request.onsuccess = (event) => {
+                    resolve(event.target.result);
+                };
+                request.onerror = (event) => {
+                    reject(event.target.error);
+                };
+            });
+        }
 
-            // Initialize data structure for each category
-            categories.forEach(cat => {
-                dataByCategory[cat] = {};
+        // Fetch all transactions
+        async function fetchTransactions(db) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('transactions', 'readonly');
+                const store = tx.objectStore('transactions');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Process transactions for graph
+        function processData(transactions) {
+            transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const categories = ['Cash', 'CC TRANS', 'TICKET', 'COMP'];
+            const data = {
+                labels: [],
+                datasets: categories.map(cat => ({ label: cat, data: [], borderColor: getColor(cat), fill: false })),
+                total: { label: 'Total', data: [], borderColor: '#ffff00', fill: false } // Yellow for visibility
+            };
+            let counts = { 'Cash': 0, 'CC TRANS': 0, 'TICKET': 0, 'COMP': 0 };
+
+            transactions.forEach(tx => {
+                data.labels.push(new Date(tx.timestamp).toLocaleTimeString());
+                if (categories.includes(tx.category)) {
+                    counts[tx.category]++;
+                }
+                categories.forEach((cat, index) => {
+                    data.datasets[index].data.push(counts[cat]);
+                });
+                data.total.data.push(tx.doorCount);
             });
 
-            // Sort items by timestamp
-            items.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            return data;
+        }
 
-            // Calculate cumulative counts
-            items.forEach(item => {
-                const time = new Date(item.timestamp).toLocaleTimeString();
-                labels.add(time);
+        // Assign colors for graph lines
+        function getColor(category) {
+            const colors = {
+                'Cash': '#00bfff',     // Light blue
+                'CC TRANS': '#7cfc00', // Light green
+                'TICKET': '#ff4500',   // Orange red
+                'COMP': '#da70d6'      // Orchid
+            };
+            return colors[category] || 'gray';
+        }
 
-                categories.forEach(cat => {
-                    if (!dataByCategory[cat][time]) {
-                        const previousTime = Array.from(labels).slice(-2)[0];
-                        dataByCategory[cat][time] = previousTime ? dataByCategory[cat][previousTime] : 0;
-                    }
-                    if (item.category === cat) {
-                        dataByCategory[cat][time]++;
+        // Update Chart.js graph
+        function updateChart(data) {
+            const ctx = document.getElementById('thruDoorChart').getContext('2d');
+            if (chart) {
+                chart.data.labels = data.labels;
+                chart.data.datasets = [...data.datasets, data.total];
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [...data.datasets, data.total]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Count', color: '#e0e0e0' },
+                                ticks: { color: '#e0e0e0' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Time', color: '#e0e0e0' },
+                                ticks: { color: '#e0e0e0' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#e0e0e0' } }
+                        }
                     }
                 });
-            });
-
-            // Convert to arrays for Chart.js
-            const sortedLabels = Array.from(labels).sort();
-            return {
-                labels: sortedLabels,
-                datasets: categories.map(cat => ({
-                    label: `Thru Door from ${cat}`,
-                    data: sortedLabels.map(time => dataByCategory[cat][time] || 0),
-                    borderColor: getColor(cat),
-                    backgroundColor: getColor(cat, 0.1),
-                    fill: false
-                }))
-            };
+            }
         }
 
-        // Assign distinct colors for each category
-        function getColor(category, alpha = 1) {
-            const colors = {
-                "Cash": `rgba(0, 0, 255, ${alpha})`,      // Blue
-                "CC TRANS": `rgba(0, 128, 0, ${alpha})`, // Green
-                "TICKET": `rgba(255, 0, 0, ${alpha})`,   // Red
-                "COMP": `rgba(128, 0, 128, ${alpha})`    // Purple
-            };
-            return colors[category] || `rgba(0, 0, 0, ${alpha})`;
-        }
-
-        // Render the graph
-        function renderGraph() {
-            const chartData = parseItemsByCategory(items);
-            const ctx = document.getElementById("thruDoorChart").getContext("2d");
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: chartData.labels,
-                    datasets: chartData.datasets
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: true }
-                    },
-                    scales: {
-                        x: { title: { display: true, text: "Time" } },
-                        y: { title: { display: true, text: "Cumulative Count" } }
-                    }
-                }
+        // Update transaction table
+        function updateTable(transactions) {
+            const tbody = document.querySelector('#transactionTable tbody');
+            tbody.innerHTML = '';
+            transactions.forEach(tx => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(tx.timestamp).toLocaleString()}</td>
+                    <td>${tx.category}</td>
+                    <td>${tx.doorCount}</td>
+                `;
+                tbody.appendChild(row);
             });
         }
 
-        // PDF export function
-        async function exportToPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Add title and timestamp
-            doc.setFontSize(18);
-            doc.text("Transaction Log Graph", 10, 10);
-            doc.setFontSize(12);
-            doc.text(`Generated on: ${new Date().toLocaleString()}`, 10, 20);
-
-            // Capture the chart as an image
-            const canvas = document.getElementById("thruDoorChart");
-            const chartImage = await html2canvas(canvas);
-            const imgData = chartImage.toDataURL("image/png");
-
-            // Add the chart image to the PDF
-            doc.addImage(imgData, "PNG", 10, 30, 180, 100);
-
-            // Add transaction log (sample data)
-            doc.setFontSize(14);
-            doc.text("Transaction Log", 10, 140);
-            doc.setFontSize(10);
-            let yPosition = 150;
-            items.forEach((item, index) => {
-                doc.text(`${index + 1}. [${item.timestamp}] ${item.category}`, 10, yPosition);
-                yPosition += 10;
-                if (yPosition > 280) {
-                    doc.addPage();
-                    yPosition = 10;
-                }
-            });
-
-            // Save the PDF
-            doc.save("transaction_log.pdf");
+        // Update sales status
+        function updateSalesStatus() {
+            const salesOpen = localStorage.getItem('salesOpen') === 'true';
+            const cashierName = localStorage.getItem('cashierName') || 'Unknown';
+            const eventName = localStorage.getItem('eventName') || 'Unknown';
+            const statusDiv = document.getElementById('salesStatus');
+            statusDiv.textContent = salesOpen 
+                ? `Sales Open - Cashier: ${cashierName} - Event: ${eventName}`
+                : 'Sales Closed';
         }
 
-        // Call the render function when the page loads
-        window.onload = function() {
-            renderGraph();
-            document.getElementById("exportPdf").addEventListener("click", exportToPdf);
-        };
+        // Main update function
+        async function updateDisplay() {
+            try {
+                const transactions = await fetchTransactions(db);
+                const data = processData(transactions);
+                updateChart(data);
+                updateTable(transactions);
+                updateSalesStatus();
+            } catch (error) {
+                console.error('Update failed:', error);
+            }
+        }
+
+        // Initialize and set real-time updates
+        async function init() {
+            db = await openDB();
+            await updateDisplay();
+            setInterval(updateDisplay, 5000); // Update every 5 seconds
+        }
+
+        init().catch(error => console.error('Initialization failed:', error));
     </script>
 </body>
 </html>
