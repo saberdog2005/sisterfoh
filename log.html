@@ -8,14 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
         #doorCountChart { margin-bottom: 20px; }
-        .transaction { padding: 10px; background: #fff; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .cash { color: green; }
-        .cc { color: blue; }
-        .ticket { color: orange; }
-        .comp { color: red; }
+        .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
+        .cash { color: #4caf50; }
+        .cc { color: #2196f3; }
+        .ticket { color: #ff9800; }
+        .comp { color: #f44336; }
     </style>
 </head>
 <body>
@@ -26,6 +26,7 @@
     </div>
 
     <script>
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
         let chart;
 
         class SalesLog {
@@ -50,7 +51,7 @@
                 request.onerror = (event) => console.error('Database error:', event.target.error);
             }
 
-            updateChart() {
+            async updateChart() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
                 if (!activeSessionId) {
                     if (chart) {
@@ -60,39 +61,66 @@
                     document.getElementById('log').innerHTML = '<p>No active session</p>';
                     return;
                 }
-                const tx = this.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const allTransactions = request.result;
-                    const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
-                    sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                    const dataPoints = sessionTransactions.map(t => ({ x: t.timestamp, y: t.doorCount }));
-                    if (chart) {
-                        chart.data.datasets[0].data = dataPoints;
-                        chart.update();
-                    } else {
-                        chart = new Chart(document.getElementById('doorCountChart'), {
-                            type: 'line',
-                            data: {
-                                datasets: [{
-                                    label: 'Thru Door Count',
-                                    data: dataPoints,
-                                    borderColor: 'purple',
-                                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                scales: {
-                                    x: { type: 'time', time: { unit: 'minute' } },
-                                    y: { beginAtZero: true }
-                                }
+                const allTransactions = await this.getAllTransactions();
+                const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const dataPoints = sessionTransactions.map(t => ({ x: t.timestamp, y: t.doorCount }));
+                if (chart) {
+                    chart.data.datasets[0].data = dataPoints;
+                    chart.update();
+                } else {
+                    chart = new Chart(document.getElementById('doorCountChart'), {
+                        type: 'line',
+                        data: {
+                            datasets: [{
+                                label: 'Thru Door Count',
+                                data: dataPoints,
+                                borderColor: 'purple',
+                                backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                x: { type: 'time', time: { unit: 'minute' } },
+                                y: { beginAtZero: true }
                             }
+                        }
+                    });
+                }
+                this.displayLog(sessionTransactions);
+                await this.syncToSheets(allTransactions);
+            }
+
+            async getAllTransactions() {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(['transactions'], 'readonly');
+                    const store = tx.objectStore('transactions');
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async syncToSheets(allTransactions) {
+                const unsyncedTransactions = allTransactions.filter(t => !t.synced);
+                for (const transaction of unsyncedTransactions) {
+                    try {
+                        const response = await fetch(APPS_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(transaction)
                         });
+                        if (response.ok) {
+                            transaction.synced = true;
+                            const tx = this.db.transaction(['transactions'], 'readwrite');
+                            const store = tx.objectStore('transactions');
+                            store.put(transaction);
+                        }
+                    } catch (error) {
+                        console.error('Error syncing transaction:', error);
                     }
-                    this.displayLog(sessionTransactions);
-                };
+                }
             }
 
             displayLog(transactions) {
