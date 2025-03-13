@@ -318,7 +318,6 @@
                     };
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
-                        console.log('Database opened successfully with version:', this.state.db.version);
                         resolve();
                     };
                     request.onerror = (event) => reject(event.target.error);
@@ -428,7 +427,6 @@
                         this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
-                // Disable/enable top inputs
                 if (this.state.sessionStarted) {
                     this.elements.eventDate.disabled = true;
                     this.elements.eventVenue.disabled = true;
@@ -444,7 +442,6 @@
 
             toggleSales() {
                 if (!this.state.sessionStarted) {
-                    // Starting session
                     if (!this.elements.cashierName.value) {
                         this.showError('Please enter cashier name');
                         return;
@@ -461,7 +458,6 @@
                     this.elements.counts.forEach(count => count.textContent = '0');
                     this.showSuccess('Sales session started');
                 } else {
-                    // Ending session
                     localStorage.removeItem('activeSessionId');
                     this.state.sessionId = null;
                     this.state.sessionStarted = false;
@@ -569,6 +565,7 @@
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
+                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 this.elements.noteInput.value = '';
