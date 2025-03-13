@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -128,6 +127,18 @@
             .col-1, .col-2, .col-3, .col-4 {
                 flex: 1 0 100%;
             }
+        }
+        /* Single column layout for PDF export */
+        .pdf-single-column .grid {
+            flex-direction: column;
+        }
+        .pdf-single-column .col-1, .pdf-single-column .col-2, .pdf-single-column .col-3, .pdf-single-column .col-4 {
+            flex: 0 0 auto; /* Take natural height based on content */
+            width: 100%; /* Full width */
+        }
+        .pdf-single-column .transaction-log {
+            max-height: none;
+            overflow: visible;
         }
     </style>
 </head>
@@ -524,7 +535,13 @@
                     format: 'letter' // 8.5 x 11 inches
                 });
                 const content = document.querySelector('.container');
+                // Temporarily apply single-column layout
+                content.classList.add('pdf-single-column');
+                // Ensure charts are updated
+                if (chart) chart.update();
+                if (paymentChart) paymentChart.update();
                 const canvas = await html2canvas(content, { scale: 2 });
+                content.classList.remove('pdf-single-column'); // Restore original layout
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
