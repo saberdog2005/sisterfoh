@@ -421,12 +421,40 @@
                                 labels: ['CASH', 'CC TRANS', 'TICKET', 'COMP'],
                                 datasets: [{
                                     data: pieData,
-                                    backgroundColor: ['#4caf50', '#f44336', '#2196f3', '#ff9800']
+                                    backgroundColor: ['#4caf50', '#f44336', '#2196f3', '#ff9800'],
+                                    borderColor: '#ffffff',
+                                    borderWidth: 1
                                 }]
                             },
                             options: {
                                 plugins: {
-                                    legend: { display: true }
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                        labels: {
+                                            color: '#e0e0e0',
+                                            font: { size: 14 }
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Current Cash Transactions',
+                                        color: '#e0e0e0',
+                                        font: { size: 18 }
+                                    },
+                                    tooltip: {
+                                        enabled: true,
+                                        callbacks: {
+                                            label: function(context) {
+                                                let label = context.label || '';
+                                                if (label) {
+                                                    label += ': ';
+                                                }
+                                                label += '$' + context.raw.toFixed(2);
+                                                return label;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -487,9 +515,13 @@
 
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'in',
+                    format: 'letter' // 8.5 x 11 inches
+                });
                 const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
+                const canvas = await html2canvas(content, { scale: 2 }); // Higher scale for better quality
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
