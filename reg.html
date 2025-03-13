@@ -17,6 +17,7 @@
             padding: 10px;
             font-size: 18px;
             overflow-x: hidden;
+            touch-action: manipulation; /* Improves touch on iPad */
         }
         .header {
             display: flex;
@@ -75,6 +76,7 @@
             cursor: pointer;
             font-size: 1.5em;
             color: white;
+            touch-action: manipulation; /* Ensures clickability on iPad */
         }
         .increment-btn.cash { background: #2e7d32; }
         .increment-btn.cc { background: #d32f2f; }
@@ -347,7 +349,7 @@
             }
 
             initDB() {
-                const request = indexedDB.open('SalesDB', 2);
+                const request = indexedDB.open('SalesDB', 3);
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
                     if (!this.db.objectStoreNames.contains('sessions')) {
@@ -480,7 +482,7 @@
                 request.onsuccess = (event) => {
                     const transactions = event.target.result;
                     this.doorCount = transactions.reduce((sum, t) => sum + (t.itemList.some(i => i.item === 'TICKET') ? 1 : 0), 0);
-                    this.cashTotal = transactions.reduce((sum, t) => sum + t.total, 0);
+                    this.cashTotal = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
                     this.updateTotals();
                 };
             }
@@ -532,7 +534,7 @@
                             spreadsheetId: SPREADSHEET_ID,
                             range: 'Sheet1!A1',
                             valueInputOption: 'RAW',
-                            resource: { values: [['SALES OPEN', this.sessionId, session.startTime]] }
+                            resource: { values: [['SALES OPEN', this.sessionId, session.startTime, date, venue, eventName, cashier]] }
                         }).catch(err => this.showError('Google Sheet error: ' + err.message));
                     };
                 } else {
@@ -613,23 +615,23 @@
                     timestamp: new Date().toISOString(),
                     time: new Date().toLocaleTimeString(),
                     itemList: this.currentItems.map(item => ({ ...item })),
-                    total: this.cashTotal,
+                    total: this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
                     note: $('#noteInput').val()
                 };
                 const tx = this.db.transaction(['transactions'], 'readwrite');
                 const store = tx.objectStore('transactions');
                 const request = store.add(transaction);
-                request.onsuccess = () => {
+                request.onsuccess = (event) => {
+                    transaction.id = event.target.result;
                     gapi.client.sheets.spreadsheets.values.append({
                         spreadsheetId: SPREADSHEET_ID,
                         range: 'Sheet1!A1',
                         valueInputOption: 'RAW',
                         resource: {
-                            values: [['TRANSACTION', this.sessionId, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note, this.doorCount]]
+                            values: [['TRANSACTION', this.sessionId, transaction.id, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note, this.doorCount]]
                         }
                     }).then(() => {
                         this.currentItems = [];
-                        this.cashTotal = 0;
                         $('.count').text('0');
                         $('#noteInput').val('');
                         this.updateTotals();
