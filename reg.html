@@ -296,18 +296,37 @@
 
             async initDB() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 1);
+                    // Open the database with version 2
+                    const request = indexedDB.open('SalesDB', 2);
+
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        const oldVersion = event.oldVersion;
+                        const newVersion = event.newVersion;
+
+                        // Handle upgrades from version 0 to 1
+                        if (oldVersion < 1) {
+                            if (!db.objectStoreNames.contains('transactions')) {
+                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            }
+                        }
+                        // Handle upgrades from version 1 to 2
+                        if (oldVersion < 2) {
+                            // Add future schema changes here if needed, e.g., indexes
+                            // Example (optional): const store = event.target.transaction.objectStore('transactions');
+                            // store.createIndex('sessionId', 'sessionId', { unique: false });
                         }
                     };
+
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
+                        console.log('Database opened successfully with version:', this.state.db.version);
                         resolve();
                     };
-                    request.onerror = (event) => reject(event.target.error);
+
+                    request.onerror = (event) => {
+                        reject(event.target.error);
+                    };
                 });
             }
 
