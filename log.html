@@ -10,14 +10,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background-color: #121212; color: #e0e0e0; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        .login-container { background-color: #1e1e1e; padding: 20px; border-radius: 5px; text-align: center; }
-        .login-container input { margin: 10px 0; padding: 5px; width: 200px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; }
-        .login-container button { padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .login-container button:hover { background: #026aa7; }
-        .container { display: none; max-width: 800px; margin: 20px auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
         h1 { color: #bb86fc; text-align: center; }
-        #totalCount { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
+        #sessionInfo { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
+        .summary { margin-bottom: 20px; }
+        .summary p { margin: 5px 0; }
         #doorCountChart { margin-bottom: 20px; }
         .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
         .cash { color: #4caf50; }
@@ -29,16 +27,19 @@
     </style>
 </head>
 <body>
-    <div class="login-container" id="loginContainer">
-        <h1>Login</h1>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button id="loginBtn">Login</button>
-        <p id="loginError" style="color: #d32f2f;"></p>
-    </div>
-    <div class="container" id="logContainer">
+    <div class="container">
         <h1>Sales Log</h1>
-        <h2 id="totalCount">Total Thru Door: 0</h2>
+        <div id="sessionInfo"></div>
+        <div class="summary">
+            <p>Total Sales: $<span id="totalSales">0.00</span></p>
+            <p>Total Thru Door: <span id="totalCount">0</span></p>
+            <p>Total Transactions: <span id="transactionCount">0</span></p>
+            <p>Avg Cash per Transaction: $<span id="avgCash">0.00</span></p>
+            <p>CASH: <span id="cashCount">0</span></p>
+            <p>CC TRANS: <span id="ccCount">0</span></p>
+            <p>TICKET: <span id="ticketCount">0</span></p>
+            <p>COMP: <span id="compCount">0</span></p>
+        </div>
         <canvas id="doorCountChart" width="400" height="200"></canvas>
         <div id="log"></div>
         <button id="exportBtn">Export to PDF</button>
@@ -46,45 +47,17 @@
 
     <script>
         let chart;
-        const VALID_USERNAME = 'brad';
-        const VALID_PASSWORD = '12345678';
 
         class SalesLog {
             constructor() {
                 this.db = null;
-                this.checkLoginStatus();
-                document.getElementById('loginBtn').addEventListener('click', () => this.login());
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
-            }
-
-            checkLoginStatus() {
-                if (localStorage.getItem('loggedIn') === 'true') {
-                    this.showLog();
-                } else {
-                    document.getElementById('loginContainer').style.display = 'block';
-                }
-            }
-
-            login() {
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-                    localStorage.setItem('loggedIn', 'true');
-                    this.showLog();
-                } else {
-                    document.getElementById('loginError').textContent = 'Invalid username or password';
-                }
-            }
-
-            showLog() {
-                document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('logContainer').style.display = 'block';
                 this.initDB()
                     .then(() => {
                         this.updateChart();
                         setInterval(() => this.updateChart(), 5000);
                     })
                     .catch((error) => console.error('Database initialization failed:', error));
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
             }
 
             initDB() {
@@ -141,10 +114,23 @@
                         chart.data.datasets.forEach((dataset) => (dataset.data = []));
                         chart.update();
                     }
-                    document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
+                    document.getElementById('totalSales').textContent = '0.00';
+                    document.getElementById('totalCount').textContent = '0';
+                    document.getElementById('transactionCount').textContent = '0';
+                    document.getElementById('avgCash').textContent = '0.00';
+                    document.getElementById('cashCount').textContent = '0';
+                    document.getElementById('ccCount').textContent = '0';
+                    document.getElementById('ticketCount').textContent = '0';
+                    document.getElementById('compCount').textContent = '0';
                     document.getElementById('log').innerHTML = '<p>No active session</p>';
+                    document.getElementById('sessionInfo').innerHTML = '';
                     return;
                 }
+
+                const eventName = localStorage.getItem('eventName') || 'Unnamed Event';
+                const cashierName = localStorage.getItem('cashierName') || 'Unknown Cashier';
+                document.getElementById('sessionInfo').innerHTML = `Event: ${eventName} | Cashier: ${cashierName}`;
+
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
@@ -154,7 +140,8 @@
                     sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
-                    let cumulativeDoorCount = 0;
+                    let totalSales = 0;
+                    let totalDoorCount = 0;
                     let dataPoints = {
                         CASH: [],
                         'CC TRANS': [],
@@ -169,11 +156,22 @@
                             cumulative[type] += counts[type];
                             dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
                         }
-                        cumulativeDoorCount += transaction.doorCount;
-                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: cumulativeDoorCount });
+                        totalSales += transaction.cashTotal;
+                        totalDoorCount += transaction.doorCount;
+                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: totalDoorCount });
                     });
 
-                    document.getElementById('totalCount').textContent = `Total Thru Door: ${cumulativeDoorCount}`;
+                    const transactionCount = sessionTransactions.length;
+                    const avgCash = transactionCount > 0 ? (totalSales / transactionCount) : 0;
+
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+                    document.getElementById('totalCount').textContent = totalDoorCount;
+                    document.getElementById('transactionCount').textContent = transactionCount;
+                    document.getElementById('avgCash').textContent = avgCash.toFixed(2);
+                    document.getElementById('cashCount').textContent = cumulative.CASH;
+                    document.getElementById('ccCount').textContent = cumulative['CC TRANS'];
+                    document.getElementById('ticketCount').textContent = cumulative.TICKET;
+                    document.getElementById('compCount').textContent = cumulative.COMP;
 
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints.CASH;
@@ -213,19 +211,17 @@
                 const log = document.getElementById('log');
                 log.innerHTML = transactions
                     .map((t) => {
-                        const items = t.items
-                            .split('; ')
-                            .map((item) => {
-                                const [key] = item.split(': ');
-                                let className = '';
-                                if (key.startsWith('CASH')) className = 'cash';
-                                else if (key === 'CC TRANS') className = 'cc';
-                                else if (key === 'TICKET') className = 'ticket';
-                                else if (key === 'COMP') className = 'comp';
-                                return `<span class="${className}">${item}</span>`;
-                            })
-                            .join('; ');
-                        return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
+                        const items = t.items.split('; ').map(item => {
+                            const [key] = item.split(': ');
+                            let className = '';
+                            if (key.startsWith('CASH')) className = 'cash';
+                            else if (key === 'CC TRANS') className = 'cc';
+                            else if (key === 'TICKET') className = 'ticket';
+                            else if (key === 'COMP') className = 'comp';
+                            return `<span class="${className}">${item}</span>`;
+                        }).join('; ');
+                        const note = t.note ? `<br>Note: ${t.note}` : '';
+                        return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}<br>Items: ${items}${note}</div>`;
                     })
                     .join('');
             }
@@ -233,19 +229,18 @@
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                const totalThruDoor = document.getElementById('totalCount').textContent;
-                doc.text(totalThruDoor, 10, 10);
-                const canvas = document.getElementById('doorCountChart');
-                const chartImage = await html2canvas(canvas);
-                const imgData = chartImage.toDataURL('image/png');
-                doc.addImage(imgData, 'PNG', 10, 20, 180, 90);
-                const log = document.getElementById('log');
-                doc.text(log.innerText, 10, 120);
+                const content = document.querySelector('.container');
+                const canvas = await html2canvas(content);
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = doc.getImageProperties(imgData);
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 doc.save('sales_log.pdf');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => new SalesLog());
+        new SalesLog();
     </script>
 </body>
 </html>
