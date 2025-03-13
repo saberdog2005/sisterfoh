@@ -1,153 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Sales Log</title>
- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
- <style>
- body {
- font-family: Arial, sans-serif;
- margin: 0;
- padding: 10px;
- background-color: #1e1e1e;
- color: #e0e0e0;
- }
- .container {
- max-width: 85%;
- margin: 0 auto;
- background: #2d2d2d;
- padding: 20px;
- border-radius: 8px;
- box-shadow: 0 0 10px rgba(0,0,0,0.5);
- }
- h1 {
- text-align: center;
- color: #bb86fc;
- margin-bottom: 20px;
- }
- canvas {
- background-color: #3c3c3c;
- border-radius: 4px;
- margin-bottom: 20px;
- }
- #log {
- margin-top: 20px;
- padding: 10px;
- background-color: #3c3c3c;
- border-radius: 4px;
- max-height: 300px;
- overflow-y: auto;
- }
- .transaction { margin: 5px 0; }
- .cash { color: #2e7d32; }
- .cc { color: #d32f2f; }
- .ticket { color: #1a73e8; }
- .comp { color: #ffa500; }
- </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 85%;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+            margin-bottom: 20px;
+        }
+        canvas {
+            background-color: #3c3c3c;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #3c3c3c;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .transaction { margin: 5px 0; }
+        .cash { color: #2e7d32; }
+        .cc { color: #d32f2f; }
+        .ticket { color: #1a73e8; }
+        .comp { color: #ffa500; }
+    </style>
 </head>
 <body>
- <div class="container">
- <h1>Sales Log</h1>
- <canvas id="doorCountChart" width="400" height="200"></canvas>
- <div id="log"></div>
- </div>
+    <div class="container">
+        <h1>Sales Log</h1>
+        <canvas id="doorCountChart" width="400" height="200"></canvas>
+        <div id="log"></div>
+    </div>
 
- <script>
- let chart;
+    <script>
+        let chart;
 
- class SalesLog {
- constructor() {
- this.db = null;
- this.initDB();
- this.initChart();
- }
+        class SalesLog {
+            constructor() {
+                this.db = null;
+                this.initDB();
+            }
 
- initDB() {
- const request = indexedDB.open('SalesDB', 1);
- request.onsuccess = (event) => {
- this.db = event.target.result;
- this.updateChart();
- setInterval(() => this.updateChart(), 5000); // Update every 5 seconds
- };
- request.onerror = (event) => console.error('Database error:', event.target.error);
- }
+            initDB() {
+                const request = indexedDB.open('SalesDB', 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('transactions')) {
+                        db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.updateChart();
+                    setInterval(() => this.updateChart(), 5000);
+                };
+                request.onerror = (event) => console.error('Database error:', event.target.error);
+            }
 
- initChart() {
- const ctx = document.getElementById('doorCountChart').getContext('2d');
- chart = new Chart(ctx, {
- type: 'line',
- data: {
- datasets: [{
- label: 'Thru Door Count',
- data: [],
- borderColor: 'purple',
- backgroundColor: 'rgba(128, 0, 128, 0.1)',
- fill: true
- }]
- },
- options: {
- scales: {
- x: {
- type: 'time',
- time: {
- unit: 'minute'
- }
- },
- y: {
- beginAtZero: true
- }
- }
- }
- });
- }
+            updateChart() {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (!activeSessionId) {
+                    if (chart) {
+                        chart.data.datasets[0].data = [];
+                        chart.update();
+                    }
+                    document.getElementById('log').innerHTML = '<p>No active session</p>';
+                    return;
+                }
+                const tx = this.db.transaction(['transactions'], 'readonly');
+                const store = tx.objectStore('transactions');
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const allTransactions = request.result;
+                    const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    let cumulativeDoorCount = 0;
+                    const dataPoints = sessionTransactions.map(t => {
+                        cumulativeDoorCount = t.doorCount; // Use logged doorCount directly
+                        return { x: t.timestamp, y: cumulativeDoorCount };
+                    });
+                    if (chart) {
+                        chart.data.datasets[0].data = dataPoints;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: {
+                                datasets: [{
+                                    label: 'Thru Door Count',
+                                    data: dataPoints,
+                                    borderColor: 'purple',
+                                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute' } },
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    }
+                    this.displayLog(sessionTransactions);
+                };
+            }
 
- async updateChart() {
- const activeSessionId = localStorage.getItem('activeSessionId');
- if (!activeSessionId) {
- chart.data.datasets[0].data = [];
- chart.update();
- document.getElementById('log').innerHTML = '<p>No active session</p>';
- return;
- }
- const tx = this.db.transaction(['transactions'], 'readonly');
- const store = tx.objectStore('transactions');
- const request = store.getAll();
- request.onsuccess = () => {
- const allTransactions = request.result;
- const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
- sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
- let cumulativeDoorCount = 0;
- const dataPoints = sessionTransactions.map(t => {
- cumulativeDoorCount += t.doorCount;
- return { x: t.timestamp, y: cumulativeDoorCount };
- });
- chart.data.datasets[0].data = dataPoints;
- chart.update();
- this.displayLog(sessionTransactions);
- };
- }
+            displayLog(transactions) {
+                const log = document.getElementById('log');
+                log.innerHTML = transactions.map(t => {
+                    const items = t.items.split(', ').map(item => {
+                        const [key] = item.split(': ');
+                        let className = '';
+                        if (key.startsWith('CASH')) className = 'cash';
+                        else if (key === 'CC TRANS') className = 'cc';
+                        else if (key === 'TICKET') className = 'ticket';
+                        else if (key === 'COMP') className = 'comp';
+                        return `<span class="${className}">${item}</span>`;
+                    }).join(', ');
+                    return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
+                }).join('');
+            }
+        }
 
- displayLog(transactions) {
- const log = document.getElementById('log');
- log.innerHTML = transactions.map(t => {
- const items = t.items.split(', ').map(item => {
- const [key] = item.split(': ');
- let className = '';
- if (key.startsWith('CASH')) className = 'cash';
- else if (key === 'CC TRANS') className = 'cc';
- else if (key === 'TICKET') className = 'ticket';
- else if (key === 'COMP') className = 'comp';
- return `<span class="${className}">${item}</span>`;
- }).join(', ');
- return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
- }).join('');
- }
- }
+        const ctx = document.getElementById('doorCountChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Thru Door Count',
+                    data: [],
+                    borderColor: 'purple',
+                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    x: { type: 'time', time: { unit: 'minute' } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
 
- new SalesLog();
- </script>
+        new SalesLog();
+    </script>
 </body>
 </html>
