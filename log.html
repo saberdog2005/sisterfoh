@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://accounts.google.com https://www.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; object-src 'none';">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,19 +21,32 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1000;
+        }
+        #loginForm {
+            text-align: center;
+        }
+        #loginForm input {
+            padding: 5px;
+            margin: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        #loginForm button {
+            padding: 10px 20px;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
         #loginError {
             color: #ff6b6b;
             display: none;
             margin-top: 10px;
         }
-        #mainContent {
-            display: none;
+        .container {
             max-width: 85%;
             margin: 0 auto;
             background: #2d2d2d;
@@ -56,42 +67,40 @@
         .log-table th {
             background-color: #3c3c3c;
         }
-        .logout-btn {
-            padding: 15px 30px;
-            background-color: #d32f2f;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-top: 20px;
-        }
         canvas {
             max-width: 100%;
             background-color: #3c3c3c;
             padding: 10px;
             border-radius: 5px;
         }
+        .hidden {
+            display: none;
+        }
+        #logoutBtn {
+            padding: 10px 20px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div id="loginScreen">
-        <div style="text-align: center;">
-            <h2>Login to View Sales Log</h2>
-            <div id="g_id_onload"
-                 data-client_id="251850742586-r8lci00j14guero2hd0austoj73jl8mm.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse">
-            </div>
-            <div class="g_id_signin" data-type="standard"></div>
-            <p id="loginError">Login failed. Please try again.</p>
-        </div>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" required><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required><br>
+            <button type="submit">Login</button>
+        </form>
+        <p id="loginError">Invalid credentials</p>
     </div>
-
-    <!-- Main Content -->
-    <div id="mainContent">
-        <h1>Sales Log - Last Closed Session</h1>
+    <div id="mainContent" class="container hidden">
+        <h1>Sales Log</h1>
         <canvas id="thruDoorChart"></canvas>
         <table class="log-table">
             <thead>
@@ -105,140 +114,107 @@
             </thead>
             <tbody id="logTableBody"></tbody>
         </table>
-        <button id="logoutBtn" class="logout-btn">Logout</button>
+        <button id="logoutBtn">Logout</button>
     </div>
-
     <script>
-        const CLIENT_ID = '251850742586-r8lci00j14guero2hd0austoj73jl8mm.apps.googleusercontent.com';
+        const READ_WEB_APP_URL = 'https://script.google.com/macros/s/your_read_web_app_id/exec'; // Replace with your Apps Script web app URL
 
-        class SalesLog {
-            constructor() {
-                this.db = null;
-                this.chart = null;
-                this.initDB();
-                this.bindEvents();
-            }
-
-            async initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 1);
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                        }
-                    };
-                    request.onsuccess = (event) => {
-                        this.db = event.target.result;
-                        resolve();
-                    };
-                    request.onerror = (event) => reject(event.target.error);
-                });
-            }
-
-            bindEvents() {
-                document.getElementById('logoutBtn').addEventListener('click', () => {
-                    localStorage.removeItem('loggedIn');
-                    location.reload();
-                });
-            }
-
-            handleCredentialResponse(response) {
-                if (response.credential) {
+        // Check if already logged in
+        if (localStorage.getItem('loggedIn') === 'true') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            fetchData();
+        } else {
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                if (username === 'admin' && password === 'password') {
                     localStorage.setItem('loggedIn', 'true');
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('mainContent').style.display = 'block';
-                    const salesLog = new SalesLog();
-                    salesLog.loadLastClosedSession();
+                    fetchData();
                 } else {
                     document.getElementById('loginError').style.display = 'block';
                 }
-            }
-
-            async loadLastClosedSession() {
-                if (!this.db) await this.initDB();
-                const tx = this.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-
-                request.onsuccess = () => {
-                    const transactions = request.result;
-                    const sessionIds = [...new Set(transactions.map(t => t.sessionId))].filter(id => id !== null);
-                    const activeSessionId = localStorage.getItem('activeSessionId');
-                    const closedSessions = sessionIds.filter(id => id !== activeSessionId);
-                    const lastClosedSessionId = closedSessions.length > 0 ? closedSessions[closedSessions.length - 1] : null;
-
-                    if (lastClosedSessionId) {
-                        const sessionTransactions = transactions.filter(t => t.sessionId === lastClosedSessionId);
-                        this.displayTransactions(sessionTransactions);
-                        this.renderChart(sessionTransactions);
-                    } else {
-                        document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">No closed sessions found.</td></tr>';
-                    }
-                };
-            }
-
-            displayTransactions(transactions) {
-                const tableBody = document.getElementById('logTableBody');
-                tableBody.innerHTML = '';
-                transactions.forEach(t => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = `
-                        <td>${t.timestamp}</td>
-                        <td>${t.items}</td>
-                        <td>$${t.cashTotal.toFixed(2)}</td>
-                        <td>${t.doorCount}</td>
-                        <td>${t.note}</td>
-                    `;
-                });
-            }
-
-            renderChart(transactions) {
-                const ctx = document.getElementById('thruDoorChart').getContext('2d');
-                const labels = transactions.map(t => new Date(t.timestamp).toLocaleTimeString());
-                const data = transactions.map(t => t.doorCount);
-
-                if (this.chart) this.chart.destroy();
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Thru Door Count Over Time',
-                            data: data,
-                            borderColor: '#1a73e8',
-                            backgroundColor: 'rgba(26, 115, 232, 0.2)',
-                            fill: true,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            x: { title: { display: true, text: 'Time', color: '#e0e0e0' } },
-                            y: { title: { display: true, text: 'Thru Door Count', color: '#e0e0e0' }, beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { labels: { color: '#e0e0e0' } }
-                        }
-                    }
-                });
-            }
+            });
         }
 
-        window.handleCredentialResponse = function(response) {
-            const salesLog = new SalesLog();
-            salesLog.handleCredentialResponse(response);
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('loggedIn') === 'true') {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                new SalesLog().loadLastClosedSession();
-            } else {
-                document.getElementById('loginScreen').style.display = 'flex';
-            }
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('loggedIn');
+            location.reload();
         });
+
+        // Fetch data from Google Apps Script
+        function fetchData() {
+            document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+            fetch(READ_WEB_APP_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const headers = data[0]; // First row is headers
+                        const transactions = data.slice(1).map(row => ({
+                            timestamp: row[0],
+                            items: row[1],
+                            cashTotal: parseFloat(row[2]),
+                            doorCount: parseInt(row[3]),
+                            note: row[4] || '' // Handle empty notes
+                        }));
+                        transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        displayTransactions(transactions);
+                        renderChart(transactions);
+                    } else {
+                        document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">No transactions found.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">Error fetching data.</td></tr>';
+                });
+        }
+
+        // Display transactions in table
+        function displayTransactions(transactions) {
+            const tableBody = document.getElementById('logTableBody');
+            tableBody.innerHTML = '';
+            transactions.forEach(t => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${t.timestamp}</td>
+                    <td>${t.items}</td>
+                    <td>$${t.cashTotal.toFixed(2)}</td>
+                    <td>${t.doorCount}</td>
+                    <td>${t.note}</td>
+                `;
+            });
+        }
+
+        // Render Thru Door count chart
+        function renderChart(transactions) {
+            const ctx = document.getElementById('thruDoorChart').getContext('2d');
+            const labels = transactions.map(t => new Date(t.timestamp).toLocaleTimeString());
+            const data = transactions.map(t => t.doorCount);
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Thru Door Count',
+                        data: data,
+                        borderColor: '#1a73e8',
+                        backgroundColor: 'rgba(26, 115, 232, 0.2)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Thru Door Count' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
