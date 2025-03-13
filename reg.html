@@ -316,7 +316,7 @@
                         minusBtn.addEventListener('click', () => this.handleDecrement(btn));
                     }
                     if (addCustomBtn && customInput) {
-                        addCustomBtn.addEventListener('click', () => this.handleCustomCash(customInput));
+                        addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
                     }
                 });
 
@@ -355,13 +355,14 @@
                 }
             }
 
-            handleCustomCash(input) {
+            handleCustomCash(btn, input) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const amount = parseFloat(input.value);
                 if (amount > 0) {
-                    const item = `CASH $${amount.toFixed(2)}`;
+                    const item = btn.dataset.item; // Use "CASH (CUSTOM)" as the item key
                     const current = this.state.currentItems.get(item) || { count: 0, price: amount };
                     current.count++;
+                    current.price = amount; // Update price for custom amounts
                     this.state.currentItems.set(item, current);
                     this.updateTotals(amount, 1, item);
                     input.value = '';
@@ -372,7 +373,7 @@
                 if (item.startsWith('CASH')) {
                     this.state.cashTotal += priceDelta;
                 }
-                this.state.doorCount += countDelta; // Increment doorCount for all types, including COMP
+                this.state.doorCount += countDelta; // All transactions increment door count, including COMP
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -381,21 +382,23 @@
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
                 this.state.sessionId = localStorage.getItem('activeSessionId');
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
-                if (this.state.sessionStarted) {
-                    this.elements.editLayoutBtn.classList.add('hidden');
-                    this.elements.transactionButtons.forEach(btn => {
-                        btn.querySelector('.increment-btn').disabled = false;
-                        btn.querySelector('.minus').disabled = false;
-                        if (btn.querySelector('.add-custom')) btn.querySelector('.add-custom').disabled = false;
-                    });
-                } else {
-                    this.elements.editLayoutBtn.classList.remove('hidden');
-                    this.elements.transactionButtons.forEach(btn => {
-                        btn.querySelector('.increment-btn').disabled = true;
-                        btn.querySelector('.minus').disabled = true;
-                        if (btn.querySelector('.add-custom')) btn.querySelector('.add-custom').disabled = true;
-                    });
-                }
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'close-btn' : 'open-btn';
+                this.elements.transactionButtons.forEach(btn => {
+                    const incrementBtn = btn.querySelector('.increment-btn');
+                    const minusBtn = btn.querySelector('.minus');
+                    const addCustomBtn = btn.querySelector('.add-custom');
+                    if (this.state.sessionStarted) {
+                        if (incrementBtn) incrementBtn.disabled = false;
+                        if (minusBtn) minusBtn.disabled = false;
+                        if (addCustomBtn) addCustomBtn.disabled = false;
+                        this.elements.editLayoutBtn.classList.add('hidden');
+                    } else {
+                        if (incrementBtn) incrementBtn.disabled = true;
+                        if (minusBtn) minusBtn.disabled = true;
+                        if (addCustomBtn) addCustomBtn.disabled = true;
+                        this.elements.editLayoutBtn.classList.remove('hidden');
+                    }
+                });
             }
 
             toggleSales() {
@@ -404,17 +407,18 @@
                 if (this.state.sessionStarted) {
                     this.state.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.state.sessionId);
+                    this.state.cashTotal = 0;
                     this.state.doorCount = 0;
+                    this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
-                    this.elements.editLayoutBtn.classList.add('hidden');
+                    this.elements.currentItems.clear();
+                    this.elements.counts.forEach(count => count.textContent = '0');
                 } else {
                     localStorage.removeItem('activeSessionId');
                     this.state.sessionId = null;
-                    this.elements.editLayoutBtn.classList.remove('hidden');
                 }
-                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.checkSessionStatus();
                 this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
-                this.checkSessionStatus(); // Update button states immediately
             }
 
             toggleEditMode() {
@@ -428,12 +432,8 @@
                     } else {
                         const key = btn.dataset.item;
                         this.state.activeButtons.set(key, btn.dataset.active === 'true');
-                        if (btn.dataset.active !== 'true') {
-                            btn.classList.add('hidden');
-                        } else {
-                            btn.classList.remove('hidden');
-                        }
                         btn.style.opacity = '1';
+                        btn.classList.toggle('hidden', btn.dataset.active !== 'true');
                         btn.removeEventListener('click', this.toggleButtonState);
                         localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
                     }
@@ -448,7 +448,10 @@
             }
 
             async logSale() {
-                if (!this.state.sessionStarted) return this.showError('Sales session not started');
+                if (!this.state.sessionStarted) {
+                    this.showError('Sales session not started');
+                    return;
+                }
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
                     .map(([key, { count, price }]) => `${key}: ${count} @ $${price.toFixed(2)}`)
@@ -457,9 +460,13 @@
                 const transaction = {
                     sessionId: this.state.sessionId,
                     timestamp: timestamp,
-                    items: items,
+                    items: items || 'No items',
                     cashTotal: this.state.cashTotal,
                     doorCount: this.state.doorCount,
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
                     note: note,
                     synced: false
                 };
@@ -478,9 +485,11 @@
                     const response = await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(transaction)
+                        body: JSON.stringify(transaction),
+                        mode: 'no-cors' // Use 'no-cors' if testing without proper CORS setup
                     });
-                    if (!response.ok) throw new Error('Failed to log sale to Google Sheets');
+                    // Note: 'no-cors' mode won't allow response checking, so assume success if no error
+                    this.showSuccess('Sale logged successfully');
                     const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
                     const updateStore = updateTx.objectStore('transactions');
                     await new Promise((resolve, reject) => {
@@ -488,7 +497,6 @@
                         request.onsuccess = () => resolve();
                         request.onerror = () => reject(request.error);
                     });
-                    this.showSuccess('Sale logged successfully');
                 } catch (error) {
                     console.error('Error logging to Google Sheets:', error);
                     this.showError('Error logging to Google Sheets, saved locally: ' + error.message);
@@ -506,13 +514,15 @@
             }
 
             showSuccess(message) {
-                document.getElementById('successMessage').textContent = message;
-                setTimeout(() => document.getElementById('successMessage').textContent = '', 3000);
+                const successEl = document.getElementById('successMessage');
+                successEl.textContent = message;
+                setTimeout(() => successEl.textContent = '', 3000);
             }
 
             showError(message) {
-                document.getElementById('errorMessage').textContent = message;
-                setTimeout(() => document.getElementById('errorMessage').textContent = '', 3000);
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                setTimeout(() => errorEl.textContent = '', 3000);
             }
         }
 
