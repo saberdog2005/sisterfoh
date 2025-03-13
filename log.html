@@ -10,8 +10,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
-        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #121212; color: #e0e0e0; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .login-container { background-color: #1e1e1e; padding: 20px; border-radius: 5px; text-align: center; }
+        .login-container input { margin: 10px 0; padding: 5px; width: 200px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; }
+        .login-container button { padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .login-container button:hover { background: #026aa7; }
+        .container { display: none; max-width: 800px; margin: 20px auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
         h1 { color: #bb86fc; text-align: center; }
         #totalCount { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
         #doorCountChart { margin-bottom: 20px; }
@@ -25,7 +29,14 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="login-container" id="loginContainer">
+        <h1>Login</h1>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="loginBtn">Login</button>
+        <p id="loginError" style="color: #d32f2f;"></p>
+    </div>
+    <div class="container" id="logContainer">
         <h1>Sales Log</h1>
         <h2 id="totalCount">Total Thru Door: 0</h2>
         <canvas id="doorCountChart" width="400" height="200"></canvas>
@@ -35,17 +46,45 @@
 
     <script>
         let chart;
+        const VALID_USERNAME = 'brad';
+        const VALID_PASSWORD = '12345678';
 
         class SalesLog {
             constructor() {
                 this.db = null;
+                this.checkLoginStatus();
+                document.getElementById('loginBtn').addEventListener('click', () => this.login());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+            }
+
+            checkLoginStatus() {
+                if (localStorage.getItem('loggedIn') === 'true') {
+                    this.showLog();
+                } else {
+                    document.getElementById('loginContainer').style.display = 'block';
+                }
+            }
+
+            login() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+                    localStorage.setItem('loggedIn', 'true');
+                    this.showLog();
+                } else {
+                    document.getElementById('loginError').textContent = 'Invalid username or password';
+                }
+            }
+
+            showLog() {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('logContainer').style.display = 'block';
                 this.initDB()
                     .then(() => {
                         this.updateChart();
                         setInterval(() => this.updateChart(), 5000);
                     })
                     .catch((error) => console.error('Database initialization failed:', error));
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
             }
 
             initDB() {
