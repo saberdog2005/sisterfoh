@@ -1,651 +1,684 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
- <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://apis.google.com https://www.googleapis.com https://www.gstatic.com 'unsafe-inline'; object-src 'none';">
- <title>Sister Bar Register</title>
- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
- <script src="https://apis.google.com/js/api.js"></script>
- <style>
- body {
- font-family: Arial, sans-serif;
- background: #1e1e1e;
- color: #e0e0e0;
- margin: 0;
- padding: 10px;
- font-size: 18px;
- overflow-x: hidden;
- touch-action: manipulation; /* Improves touch on iPad */
- }
- .header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- background: #2d2d2d;
- padding: 10px;
- border-radius: 8px;
- margin-bottom: 10px;
- flex-wrap: wrap;
- }
- .header label {
- margin-right: 5px;
- font-weight: bold;
- }
- .header input {
- padding: 8px;
- background: #3c3c3c;
- border: 1px solid #555;
- color: #e0e0e0;
- border-radius: 4px;
- font-size: 1em;
- width: 22%;
- margin: 0 5px;
- }
- .header input.locked {
- background: #555;
- color: #888;
- }
- .container {
- max-width: 85%;
- margin: 0 auto;
- background: #2d2d2d;
- padding: 20px;
- border-radius: 8px;
- box-shadow: 0 0 10px rgba(0,0,0,0.5);
- min-height: 600px;
- }
- .button-container {
- display: grid;
- grid-template-columns: repeat(4, 1fr);
- gap: 15px;
- margin-top: 20px;
- }
- .product-item {
- background: #3c3c3c;
- padding: 10px;
- border-radius: 4px;
- text-align: center;
- }
- .increment-btn {
- width: 100%;
- height: 100px;
- border: none;
- border-radius: 4px;
- cursor: pointer;
- font-size: 1.5em;
- color: white;
- touch-action: manipulation; /* Ensures clickability on iPad */
- }
- .increment-btn.cash { background: #2e7d32; }
- .increment-btn.cc { background: #d32f2f; }
- .increment-btn.ticket { background: #1a73e8; }
- .increment-btn.comp { background: #ffa500; }
- .control-row {
- display: flex;
- justify-content: flex-end;
- align-items: center;
- gap: 10px;
- margin-top: 5px;
- }
- .count {
- font-size: 1.5em;
- width: 40px;
- font-weight: bold;
- }
- .minus {
- width: 30px;
- height: 30px;
- font-size: 1.2em;
- background: #d32f2f;
- color: white;
- border: none;
- border-radius: 4px;
- cursor: pointer;
- }
- .custom-input {
- display: flex;
- gap: 10px;
- justify-content: center;
- margin-top: 10px;
- }
- .custom-input input {
- width: 100px;
- padding: 8px;
- background: #444;
- color: #e0e0e0;
- border: 1px solid #666;
- border-radius: 4px;
- font-size: 1em;
- }
- .add-custom {
- padding: 8px 16px;
- background: #1a73e8;
- color: white;
- border: none;
- border-radius: 4px;
- cursor: pointer;
- font-size: 1em;
- }
- .totals-container {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin: 20px 0;
- }
- .cash-total {
- font-size: 2em;
- color: #2e7d32;
- font-weight: bold;
- }
- .door-count {
- font-size: 1.5em;
- color: purple;
- font-weight: bold;
- }
- #logSaleBtn {
- display: block;
- margin: 20px auto;
- padding: 15px 30px;
- font-size: 1.5em;
- background: #388e3c;
- color: white;
- border: none;
- border-radius: 4px;
- cursor: pointer;
- }
- #logSaleBtn.flash {
- animation: flash 0.5s;
- }
- @keyframes flash {
- 0% { background: #388e3c; }
- 50% { background: #66bb6a; }
- 100% { background: #388e3c; }
- }
- .note-section {
- margin: 20px 0;
- text-align: center;
- }
- #noteInput {
- width: 80%;
- padding: 10px;
- background: #444;
- border: 1px solid #666;
- color: #e0e0e0;
- border-radius: 4px;
- font-size: 1em;
- }
- .footer {
- background: #2d2d2d;
- padding: 10px;
- border-radius: 8px;
- margin-top: 20px;
- display: flex;
- justify-content: space-between;
- align-items: center;
- }
- #errorMessage, #successMessage {
- text-align: center;
- margin-top: 10px;
- font-size: 1.1em;
- display: none;
- }
- #errorMessage { color: #ff6b6b; }
- #successMessage { color: #2e7d32; }
- .edit-btn { background: #555; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
- .open -btn { background: #1a73e8; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
- .close-btn { background: #d32f2f; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
- .disabled { opacity: 0.5; pointer-events: none; }
- .hidden { display: none; }
- .layout-toggle { margin-right: 5px; }
- #saveLayoutBtn {
- background: #1a73e8;
- color: white;
- padding: 8px 16px;
- border-radius: 4px;
- cursor: pointer;
- margin-left: 10px;
- }
- .cash-group {
- display: flex;
- flex-direction: column;
- gap: 10px;
- padding: 10px;
- border: 1px solid #555;
- border-radius: 4px;
- margin-bottom: 10px;
- }
- .cash-group label {
- font-weight: bold;
- color: #2e7d32;
- margin-bottom: 5px;
- }
- </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://apis.google.com https://accounts.google.com https://www.googleapis.com https://www.gstatic.com 'unsafe-inline'; object-src 'none'; frame-src 'self' https://accounts.google.com;">
+    <title>Sister Bar Register</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 10px;
+            font-size: 18px;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .header label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .header input {
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+            width: 22%;
+            margin: 0 5px;
+        }
+        .header input.locked {
+            background: #555;
+            color: #888;
+        }
+        .container {
+            max-width: 85%;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            min-height: 600px;
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-item {
+            background: #3c3c3c;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .increment-btn {
+            width: 100%;
+            height: 100px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: white;
+            touch-action: manipulation;
+        }
+        .increment-btn.cash { background: #2e7d32; }
+        .increment-btn.cc { background: #d32f2f; }
+        .increment-btn.ticket { background: #1a73e8; }
+        .increment-btn.comp { background: #ffa500; }
+        .control-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .count {
+            font-size: 1.5em;
+            width: 40px;
+            font-weight: bold;
+        }
+        .minus {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .custom-input input {
+            width: 100px;
+            padding: 8px;
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .add-custom {
+            padding: 8px 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .totals-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .cash-total {
+            font-size: 2em;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .door-count {
+            font-size: 1.5em;
+            color: purple;
+            font-weight: bold;
+        }
+        #logSaleBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #logSaleBtn.flash {
+            animation: flash 0.5s;
+        }
+        @keyframes flash {
+            0% { background: #388e3c; }
+            50% { background: #66bb6a; }
+            100% { background: #388e3c; }
+        }
+        .note-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #noteInput {
+            width: 80%;
+            padding: 10px;
+            background: #444;
+            border: 1px solid #666;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .footer {
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #errorMessage, #successMessage {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.1em;
+            display: none;
+        }
+        #errorMessage { color: #ff6b6b; }
+        #successMessage { color: #2e7d32; }
+        .edit-btn { background: #555; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .open-btn { background: #1a73e8; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .close-btn { background: #d32f2f; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .disabled { opacity: 0.5; pointer-events: none; }
+        .hidden { display: none; }
+        .layout-toggle { margin-right: 5px; }
+        #saveLayoutBtn {
+            background: #1a73e8;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .cash-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .cash-group label {
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
- <div class="header" id="sessionHeader">
- <label for="eventDate">Date:</label>
- <input type="date" id="eventDate">
- <label for="eventVenue">Venue:</label>
- <input type="text" id="eventVenue" value="Sister Bar">
- <label for="eventName">Event Name:</label>
- <input type="text" id="eventName" placeholder="Event Name">
- <label for="cashierName">Cashier Name:</label>
- <input type="text" id="cashierName" placeholder="Cashier">
- </div>
- <div class="container">
- <div class="button-container">
- <div class="cash-group">
- <label>Cash Transactions</label>
- <div class="product-item" data-item="CASH $20" data-price="20">
- <button class="increment-btn cash">CASH $20</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="CASH $15" data-price="15">
- <button class="increment-btn cash">CASH $15</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="CASH $12" data-price="12">
- <button class="increment-btn cash">CASH $12</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="CASH $10" data-price="10">
- <button class="increment-btn cash">CASH $10</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="CASH (CUSTOM)">
- <div class="product-controls cash">
- <h4>CASH (CUSTOM)</h4>
- <div class="custom-input">
- <input type="number" step="0.01" min="0.01" placeholder="Amount">
- <button class="add-custom">Add</button>
- </div>
- </div>
- </div>
- </div>
- <div class="product-item" data-item="CC TRANS" data-price="0">
- <button class="increment-btn cc">CC TRANS</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="TICKET" data-price="0">
- <button class="increment-btn ticket">TICKET</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- <div class="product-item" data-item="COMP" data-price="0">
- <button class="increment-btn comp">COMP</button>
- <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
- </div>
- </div>
- <div class="totals-container">
- <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
- <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
- </div>
- <div class="note-section">
- <label for="noteInput">Add a note...</label>
- <textarea id="noteInput" placeholder="Add a note..."></textarea>
- </div>
- <button id="logSaleBtn">Log Sale</button>
- </div>
- <div class="footer">
- <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
- <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
- <div id="successMessage"></div>
- <div id="errorMessage"></div>
- </div>
+    <div class="header" id="sessionHeader">
+        <label for="eventDate">Date:</label>
+        <input type="date" id="eventDate">
+        <label for="eventVenue">Venue:</label>
+        <input type="text" id="eventVenue" value="Sister Bar">
+        <label for="eventName">Event Name:</label>
+        <input type="text" id="eventName" placeholder="Event Name">
+        <label for="cashierName">Cashier Name:</label>
+        <input type="text" id="cashierName" placeholder="Cashier">
+    </div>
+    <div class="container">
+        <div class="button-container">
+            <div class="cash-group">
+                <label>Cash Transactions</label>
+                <div class="product-item" data-item="CASH $20" data-price="20">
+                    <button class="increment-btn cash">CASH $20</button>
+                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                </div>
+                <div class="product-item" data-item="CASH $15" data-price="15">
+                    <button class="increment-btn cash">CASH $15</button>
+                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                </div>
+                <div class="product-item" data-item="CASH $12" data-price="12">
+                    <button class="increment-btn cash">CASH $12</button>
+                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                </div>
+                <div class="product-item" data-item="CASH $10" data-price="10">
+                    <button class="increment-btn cash">CASH $10</button>
+                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+                </div>
+                <div class="product-item" data-item="CASH (CUSTOM)">
+                    <div class="product-controls cash">
+                        <h4>CASH (CUSTOM)</h4>
+                        <div class="custom-input">
+                            <input type="number" step="0.01" min="0.01" placeholder="Amount">
+                            <button class="add-custom">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="product-item" data-item="CC TRANS" data-price="0">
+                <button class="increment-btn cc">CC TRANS</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="TICKET" data-price="0">
+                <button class="increment-btn ticket">TICKET</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="COMP" data-price="0">
+                <button class="increment-btn comp">COMP</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+        </div>
+        <div class="totals-container">
+            <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
+            <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
+        </div>
+        <div class="note-section">
+            <label for="noteInput">Add a note...</label>
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
+        </div>
+        <button id="logSaleBtn">Log Sale</button>
+    </div>
+    <div class="footer">
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
+        <div id="successMessage"></div>
+        <div id="errorMessage"></div>
+    </div>
 
- <script>
- const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
- const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+    <script>
+        const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
+        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
+        const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com'; // Replace with your OAuth 2.0 Client ID
 
- function handleClientLoad() {
- gapi.load('client', () => {
- gapi.client.init({
- apiKey: API_KEY,
- discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
- }).then(() => {
- console.log('Google Sheets API loaded');
- const app = new SalesApp();
- }).catch(err => {
- console.error('Google API initialization failed:', err);
- document.getElementById('errorMessage').textContent = 'Google API error: ' + err.message;
- });
- });
- }
+        function handleClientLoad() {
+            gapi.load('client:auth2', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    clientId: CLIENT_ID,
+                    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                    scope: 'https://www.googleapis.com/auth/spreadsheets'
+                }).then(() => {
+                    console.log('Google Sheets API loaded');
+                    const app = new SalesApp();
+                }).catch(err => {
+                    console.error('Google API initialization failed:', err);
+                    document.getElementById('errorMessage').textContent = 'Google API error: ' + err.message;
+                });
+            });
+        }
 
- class SalesApp {
- constructor() {
- this.db = null;
- this.sessionStarted = false;
- this.sessionId = null;
- this.currentItems = [];
- this.cashTotal = 0;
- this.doorCount = 0;
- this.isEditingLayout = false;
- this.activeButtons = JSON.parse(localStorage.getItem('activeButtons')) || {};
- this.transactionButtons = $('.product-item');
+        class SalesApp {
+            constructor() {
+                this.db = null;
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.currentItems = [];
+                this.cashTotal = 0;
+                this.doorCount = 0;
+                this.isEditingLayout = false;
+                this.activeButtons = JSON.parse(localStorage.getItem('activeButtons')) || {};
+                this.transactionButtons = $('.product-item');
 
- $('#eventDate').val(new Date().toISOString().split('T')[0]);
- this.transactionButtons.each((_, btn) => {
- const key = $(btn).data('item');
- if (this.activeButtons[key] === undefined) this.activeButtons[key] = true;
- });
- localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+                $('#eventDate').val(new Date().toISOString().split('T')[0]);
+                this.transactionButtons.each((_, btn) => {
+                    const key = $(btn).data('item');
+                    if (this.activeButtons[key] === undefined) this.activeButtons[key] = true;
+                });
+                localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
 
- this.applyLayout();
- this.updateEditLayoutButton();
- this.bindEvents();
- this.initDB();
- handleClientLoad(); // Initialize Google API without popup
- }
+                this.applyLayout();
+                this.updateEditLayoutButton();
+                this.bindEvents();
+                this.initDB();
+            }
 
- initDB() {
- const request = indexedDB.open('SalesDB', 3);
- request.onupgradeneeded = (event) => {
- this.db = event.target.result;
- if (!this.db.objectStoreNames.contains('sessions')) {
- this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
- }
- if (!this.db.objectStoreNames.contains('transactions')) {
- const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
- transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
- }
- };
- request.onsuccess = (event) => {
- this.db = event.target.result;
- this.checkSessionStatus();
- };
- request.onerror = () => this.showError('Failed to open database.');
- }
+            initDB() {
+                const request = indexedDB.open('SalesDB', 3);
+                request.onupgradeneeded = (event) => {
+                    this.db = event.target.result;
+                    if (!this.db.objectStoreNames.contains('sessions')) {
+                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!this.db.objectStoreNames.contains('transactions')) {
+                        const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
+                    }
+                };
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.checkSessionStatus();
+                };
+                request.onerror = () => this.showError('Failed to open database.');
+            }
 
- bindEvents() {
- $('#toggleSalesBtn').on('click', () => this.toggleSales());
- $('#editLayoutBtn').on('click', () => this.toggleEditLayout());
- $(document).on('click', '.increment-btn', (event) => {
- if (this.isEditingLayout || !this.sessionStarted) return;
- const $item = $(event.target).closest('.product-item');
- this.incrementItem($item.data('item'), parseFloat($item.data('price')));
- });
- $(document).on('click', '.minus', (event) => {
- if (this.isEditingLayout || !this.sessionStarted) return;
- const $item = $(event.target).closest('.product-item');
- this.decrementItem($item.data('item'));
- });
- $(document).on('click', '.add-custom', () => {
- if (this.isEditingLayout || !this.sessionStarted) return;
- const $item = $('.product-item[data-item="CASH (CUSTOM)"]');
- const amount = parseFloat($item.find('input').val());
- if (isNaN(amount) || amount <= 0) {
- this.showError('Please enter a valid amount.');
- return;
- }
- this.incrementItem(`CASH $${amount.toFixed(2)}`, amount);
- $item.find('input').val('');
- });
- $('#logSaleBtn').on('click', () => this.logSale());
- }
+            bindEvents() {
+                $('#toggleSalesBtn').on('click', () => this.toggleSales());
+                $('#editLayoutBtn').on('click', () => this.toggleEditLayout());
+                $(document).on('click', '.increment-btn', (event) => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $(event.target).closest('.product-item');
+                    this.incrementItem($item.data('item'), parseFloat($item.data('price')));
+                });
+                $(document).on('click', '.minus', (event) => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $(event.target).closest('.product-item');
+                    this.decrementItem($item.data('item'));
+                });
+                $(document).on('click', '.add-custom', () => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $('.product-item[data-item="CASH (CUSTOM)"]');
+                    const amount = parseFloat($item.find('input').val());
+                    if (isNaN(amount) || amount <= 0) {
+                        this.showError('Please enter a valid amount.');
+                        return;
+                    }
+                    this.incrementItem(`CASH $${amount.toFixed(2)}`, amount);
+                    $item.find('input').val('');
+                });
+                $('#logSaleBtn').on('click', () => this.logSale());
+            }
 
- toggleEditLayout() {
- if (this.sessionStarted) {
- this.showError('Cannot edit layout while sales are open.');
- return;
- }
- this.isEditingLayout = !this.isEditingLayout;
- if (this.isEditingLayout) this.enterEditMode();
- else this.exitEditMode();
- }
+            toggleEditLayout() {
+                if (this.sessionStarted) {
+                    this.showError('Cannot edit layout while sales are open.');
+                    return;
+                }
+                this.isEditingLayout = !this.isEditingLayout;
+                if (this.isEditingLayout) this.enterEditMode();
+                else this.exitEditMode();
+            }
 
- enterEditMode() {
- this.applyLayout();
- this.transactionButtons.each((_, btn) => {
- const $btn = $(btn);
- const key = $btn.data('item');
- const isActive = this.activeButtons[key] !== false;
- $btn.find('.control-row, .custom-input').first().prepend(`<input type="checkbox" class="layout-toggle" data-key="${key}" ${isActive ? 'checked' : ''}>`);
- });
- $('.footer').append('<button id="saveLayoutBtn">Save Layout</button>');
- $('#saveLayoutBtn').on('click', () => this.saveLayout());
- }
+            enterEditMode() {
+                this.applyLayout();
+                this.transactionButtons.each((_, btn) => {
+                    const $btn = $(btn);
+                    const key = $btn.data('item');
+                    const isActive = this.activeButtons[key] !== false;
+                    $btn.find('.control-row, .custom-input').first().prepend(`<input type="checkbox" class="layout-toggle" data-key="${key}" ${isActive ? 'checked' : ''}>`);
+                });
+                $('.footer').append('<button id="saveLayoutBtn">Save Layout</button>');
+                $('#saveLayoutBtn').on('click', () => this.saveLayout());
+            }
 
- exitEditMode() {
- this.isEditingLayout = false;
- this.transactionButtons.find('.layout-toggle').remove();
- $('#saveLayoutBtn').remove();
- this.applyLayout();
- }
+            exitEditMode() {
+                this.isEditingLayout = false;
+                this.transactionButtons.find('.layout-toggle').remove();
+                $('#saveLayoutBtn').remove();
+                this.applyLayout();
+            }
 
- saveLayout() {
- this.transactionButtons.each((_, btn) => {
- const $btn = $(btn);
- const key = $btn.data('item');
- this.activeButtons[key] = $btn.find('.layout-toggle').is(':checked');
- });
- localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
- this.exitEditMode();
- }
+            saveLayout() {
+                this.transactionButtons.each((_, btn) => {
+                    const $btn = $(btn);
+                    const key = $btn.data('item');
+                    this.activeButtons[key] = $btn.find('.layout-toggle').is(':checked');
+                });
+                localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+                this.exitEditMode();
+            }
 
- applyLayout() {
- this.transactionButtons.each((_, btn) => {
- const $btn = $(btn);
- const key = $btn.data('item');
- const isActive = this.isEditingLayout || this.activeButtons[key] !== false;
- $btn.toggleClass('hidden', !isActive);
- });
- }
+            applyLayout() {
+                this.transactionButtons.each((_, btn) => {
+                    const $btn = $(btn);
+                    const key = $btn.data('item');
+                    const isActive = this.isEditingLayout || this.activeButtons[key] !== false;
+                    $btn.toggleClass('hidden', !isActive);
+                });
+            }
 
- updateEditLayoutButton() {
- $('#editLayoutBtn').toggle(!this.sessionStarted);
- }
+            updateEditLayoutButton() {
+                $('#editLayoutBtn').toggle(!this.sessionStarted);
+            }
 
- checkSessionStatus() {
- const activeSessionId = localStorage.getItem('activeSessionId');
- if (activeSessionId) {
- const tx = this.db.transaction(['sessions'], 'readonly');
- const store = tx.objectStore('sessions');
- const request = store.get(Number(activeSessionId));
- request.onsuccess = (event) => {
- const session = event.target.result;
- if (session && session.status === 'open') {
- this.sessionStarted = true;
- this.sessionId = session.id;
- $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
- $('#eventDate').val(session.date);
- $('#eventVenue').val(session.venue);
- $('#eventName').val(session.eventName);
- $('#cashierName').val(session.cashier);
- $('#sessionHeader input').prop('disabled', true).addClass('locked');
- this.loadSessionTransactions();
- } else {
- this.resetSession();
- }
- this.updateEditLayoutButton();
- };
- } else {
- this.resetSession();
- }
- }
+            checkSessionStatus() {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (activeSessionId) {
+                    const tx = this.db.transaction(['sessions'], 'readonly');
+                    const store = tx.objectStore('sessions');
+                    const request = store.get(Number(activeSessionId));
+                    request.onsuccess = (event) => {
+                        const session = event.target.result;
+                        if (session && session.status === 'open') {
+                            this.sessionStarted = true;
+                            this.sessionId = session.id;
+                            $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            $('#eventDate').val(session.date);
+                            $('#eventVenue').val(session.venue);
+                            $('#eventName').val(session.eventName);
+                            $('#cashierName').val(session.cashier);
+                            $('#sessionHeader input').prop('disabled', true).addClass('locked');
+                            this.loadSessionTransactions();
+                        } else {
+                            this.resetSession();
+                        }
+                        this.updateEditLayoutButton();
+                    };
+                } else {
+                    this.resetSession();
+                }
+            }
 
- loadSessionTransactions() {
- const tx = this.db.transaction(['transactions'], 'readonly');
- const store = tx.objectStore('transactions');
- const index = store.index('sessionId');
- const request = index.getAll(this.sessionId);
- request.onsuccess = (event) => {
- const transactions = event.target.result;
- this.doorCount = transactions.reduce((sum, t) => sum + t.itemList.reduce((acc, i) => acc + i.quantity, 0), 0);
- this.cashTotal = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
- this.updateTotals();
- };
- }
+            loadSessionTransactions() {
+                const tx = this.db.transaction(['transactions'], 'readonly');
+                const store = tx.objectStore('transactions');
+                const index = store.index('sessionId');
+                const request = index.getAll(this.sessionId);
+                request.onsuccess = (event) => {
+                    const transactions = event.target.result;
+                    this.doorCount = transactions.reduce((sum, t) => sum + t.itemList.reduce((acc, i) => acc + i.quantity, 0), 0);
+                    this.cashTotal = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
+                    this.updateTotals();
+                };
+            }
 
- resetSession() {
- this.sessionStarted = false;
- this.sessionId = null;
- this.currentItems = [];
- this.cashTotal = 0;
- this.doorCount = 0;
- localStorage.removeItem('activeSessionId');
- $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
- $('#sessionHeader input').prop('disabled', false).removeClass('locked');
- $('#eventDate').val(new Date().toISOString().split('T')[0]);
- $('.count').text('0');
- this.updateTotals();
- this.updateEditLayoutButton();
- }
+            resetSession() {
+                this.sessionStarted = false;
+                this.sessionId = null;
+                this.currentItems = [];
+                this.cashTotal = 0;
+                this.doorCount = 0;
+                localStorage.removeItem('activeSessionId');
+                $('#toggleSalesBtn').text('Open Sales').addClass('open-btn').removeClass('close-btn');
+                $('#sessionHeader input').prop('disabled', false).removeClass('locked');
+                $('#eventDate').val(new Date().toISOString().split('T')[0]);
+                $('.count').text('0');
+                this.updateTotals();
+                this.updateEditLayoutButton();
+            }
 
- toggleSales() {
- if (!this.sessionStarted) {
- const date = $('#eventDate').val().trim();
- const venue = $('#eventVenue').val().trim();
- const eventName = $('#eventName').val().trim();
- const cashier = $('#cashierName').val().trim();
- if (!date || !venue || !cashier) {
- this.showError('Please fill in date, venue, and cashier name.');
- return;
- }
- const session = {
- date,
- venue,
- eventName,
- cashier,
- status: 'open',
- startTime: new Date().toISOString()
- };
- const tx = this.db.transaction(['sessions'], 'readwrite');
- const store = tx.objectStore('sessions');
- const request = store.add(session);
- request.onsuccess = (event) => {
- this.sessionId = event.target.result;
- localStorage.setItem('activeSessionId', this.sessionId);
- this.sessionStarted = true;
- $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
- $('#sessionHeader input').prop('disabled', true).addClass('locked');
- this.updateEditLayoutButton();
- gapi.client.sheets.spreadsheets.values.append({
- spreadsheetId: SPREADSHEET_ID,
- range: 'Sheet1!A1',
- valueInputOption: 'RAW',
- resource: { values: [['SALES OPEN', this.sessionId, session.startTime, date, venue, eventName, cashier]] }
- }).catch(err => this.showError('Google Sheet error: ' + err.message));
- };
- } else {
- const pin = prompt('Enter PIN to close sales (default: 1234)');
- if (pin === '1234') {
- const tx = this.db.transaction(['sessions'], 'readwrite');
- const store = tx.objectStore('sessions');
- const request = store.get(this.sessionId);
- request.onsuccess = (event) => {
- const session = event.target.result;
- session.status = 'closed';
- session.endTime = new Date().toISOString();
- store.put(session);
- gapi.client.sheets.spreadsheets.values.append({
- spreadsheetId: SPREADSHEET_ID,
- range: 'Sheet1!A1',
- valueInputOption: 'RAW',
- resource: { values: [['SALES CLOSED', this.sessionId, session.endTime]] }
- }).then(() => this.resetSession())
- .catch(err => this.showError('Google Sheet error: ' + err.message));
- };
- } else {
- this.showError('Incorrect PIN.');
- }
- }
- }
+            ensureAuthenticated() {
+                const authInstance = gapi.auth2.getAuthInstance();
+                if (!authInstance.isSignedIn.get()) {
+                    return authInstance.signIn().then(() => true).catch(() => false);
+                }
+                return Promise.resolve(true);
+            }
 
- incrementItem(itemName, price) {
- const $count = $(`.product-item[data-item="${itemName}"] .count`);
- let count = $count.length ? parseInt($count.text()) + 1 : 1;
- if ($count.length) $count.text(count);
- const existingItem = this.currentItems.find(i => i.item === itemName);
- if (existingItem) {
- existingItem.quantity++;
- this.doorCount++; // Increment door count for every item addition
- } else {
- this.currentItems.push({ item: itemName, price: price, quantity: 1 });
- this.doorCount++; // Increment door count for every new item
- }
- if (itemName.includes('CASH')) this.cashTotal += price;
- this.updateTotals();
- }
+            toggleSales() {
+                this.ensureAuthenticated().then((signedIn) => {
+                    if (!signedIn) {
+                        this.showError('Authentication required to proceed.');
+                        return;
+                    }
+                    if (!this.sessionStarted) {
+                        const date = $('#eventDate').val().trim();
+                        const venue = $('#eventVenue').val().trim();
+                        const eventName = $('#eventName').val().trim();
+                        const cashier = $('#cashierName').val().trim();
+                        if (!date || !venue || !cashier) {
+                            this.showError('Please fill in date, venue, and cashier name.');
+                            return;
+                        }
+                        const session = {
+                            date,
+                            venue,
+                            eventName,
+                            cashier,
+                            status: 'open',
+                            startTime: new Date().toISOString()
+                        };
+                        const tx = this.db.transaction(['sessions'], 'readwrite');
+                        const store = tx.objectStore('sessions');
+                        const request = store.add(session);
+                        request.onsuccess = (event) => {
+                            this.sessionId = event.target.result;
+                            localStorage.setItem('activeSessionId', this.sessionId);
+                            this.sessionStarted = true;
+                            $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            $('#sessionHeader input').prop('disabled', true).addClass('locked');
+                            this.updateEditLayoutButton();
+                            gapi.client.sheets.spreadsheets.values.append({
+                                spreadsheetId: SPREADSHEET_ID,
+                                range: 'Sheet1!A1',
+                                valueInputOption: 'RAW',
+                                resource: { values: [['SALES OPEN', this.sessionId, session.startTime, date, venue, eventName, cashier]] }
+                            }).then(() => {
+                                console.log('Sales opened and logged to Google Sheets');
+                            }).catch(err => {
+                                console.error('Google Sheet error:', err);
+                                this.showError('Failed to log to Google Sheets: ' + err.message);
+                            });
+                        };
+                    } else {
+                        const pin = prompt('Enter PIN to close sales (default: 1234)');
+                        if (pin === '1234') {
+                            const tx = this.db.transaction(['sessions'], 'readwrite');
+                            const store = tx.objectStore('sessions');
+                            const request = store.get(this.sessionId);
+                            request.onsuccess = (event) => {
+                                const session = event.target.result;
+                                session.status = 'closed';
+                                session.endTime = new Date().toISOString();
+                                store.put(session);
+                                gapi.client.sheets.spreadsheets.values.append({
+                                    spreadsheetId: SPREADSHEET_ID,
+                                    range: 'Sheet1!A1',
+                                    valueInputOption: 'RAW',
+                                    resource: { values: [['SALES CLOSED', this.sessionId, session.endTime]] }
+                                }).then(() => {
+                                    this.resetSession();
+                                }).catch(err => {
+                                    console.error('Google Sheet error:', err);
+                                    this.showError('Failed to log to Google Sheets: ' + err.message);
+                                });
+                            };
+                        } else {
+                            this.showError('Incorrect PIN.');
+                        }
+                    }
+                });
+            }
 
- decrementItem(itemName) {
- const $count = $(`.product-item[data-item="${itemName}"] .count`);
- let count = parseInt($count.text());
- if (count > 0) {
- count--;
- $count.text(count);
- const existingItem = this.currentItems.find(i => i.item === itemName);
- if (existingItem) {
- existingItem.quantity--;
- this.doorCount--; // Decrement door count for every item removal
- if (existingItem.quantity <= 0) {
- this.currentItems = this.currentItems.filter(i => i.item !== itemName);
- }
- if (itemName.includes('CASH')) this.cashTotal -= existingItem.price;
- }
- this.updateTotals();
- }
- }
+            incrementItem(itemName, price) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = $count.length ? parseInt($count.text()) + 1 : 1;
+                if ($count.length) $count.text(count);
+                const existingItem = this.currentItems.find(i => i.item === itemName);
+                if (existingItem) {
+                    existingItem.quantity++;
+                    this.doorCount++;
+                } else {
+                    this.currentItems.push({ item: itemName, price: price, quantity: 1 });
+                    this.doorCount++;
+                }
+                if (itemName.includes('CASH')) this.cashTotal += price;
+                this.updateTotals();
+            }
 
- updateTotals() {
- $('#cashTotal').text(this.cashTotal.toFixed(2));
- $('#doorCount').text(this.doorCount);
- }
+            decrementItem(itemName) {
+                const $count = $(`.product-item[data-item="${itemName}"] .count`);
+                let count = parseInt($count.text());
+                if (count > 0) {
+                    count--;
+                    $count.text(count);
+                    const existingItem = this.currentItems.find(i => i.item === itemName);
+                    if (existingItem) {
+                        existingItem.quantity--;
+                        this.doorCount--;
+                        if (existingItem.quantity <= 0) {
+                            this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                        }
+                        if (itemName.includes('CASH')) this.cashTotal -= existingItem.price;
+                    }
+                    this.updateTotals();
+                }
+            }
 
- logSale() {
- if (!this.sessionStarted) {
- this.showError('Please open sales first .');
- return;
- }
- if (this.currentItems.length === 0 && !$('#noteInput').val()) {
- this.showError('No items or note to log.');
- return;
- }
- const transaction = {
- sessionId: this.sessionId,
- timestamp: new Date().toISOString(),
- time: new Date().toLocaleTimeString(),
- itemList: this.currentItems.map(item => ({ ...item })),
- total: this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
- note: $('#noteInput').val()
- };
- const tx = this.db.transaction(['transactions'], 'readwrite');
- const store = tx.objectStore('transactions');
- const request = store.add(transaction);
- request.onsuccess = (event) => {
- transaction.id = event.target.result;
- gapi.client.sheets.spreadsheets.values.append({
- spreadsheetId: SPREADSHEET_ID,
- range: 'Sheet1!A1',
- valueInputOption: 'RAW',
- resource: {
- values: [['TRANSACTION', this.sessionId, transaction.id, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note, this.doorCount]]
- }
- }).then(() => {
- this.currentItems = [];
- $('.count').text('0');
- $('#noteInput').val('');
- this.updateTotals();
- $('#logSaleBtn').addClass('flash');
- setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
- this.showSuccess('Sale logged successfully.');
- }).catch(err => this.showError('Google Sheet error: ' + err.message));
- };
- }
+            updateTotals() {
+                $('#cashTotal').text(this.cashTotal.toFixed(2));
+                $('#doorCount').text(this.doorCount);
+            }
 
- showError(message) {
- $('#errorMessage').text(message).show();
- setTimeout(() => $('#errorMessage').hide(), 3000);
- }
+            logSale() {
+                if (!this.sessionStarted) {
+                    this.showError('Please open sales first.');
+                    return;
+                }
+                if (this.currentItems.length === 0 && !$('#noteInput').val()) {
+                    this.showError('No items or note to log.');
+                    return;
+                }
+                this.ensureAuthenticated().then((signedIn) => {
+                    if (!signedIn) {
+                        this.showError('Authentication required to log sale.');
+                        return;
+                    }
+                    const transaction = {
+                        sessionId: this.sessionId,
+                        timestamp: new Date().toISOString(),
+                        time: new Date().toLocaleTimeString(),
+                        itemList: this.currentItems.map(item => ({ ...item })),
+                        total: this.currentItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                        note: $('#noteInput').val()
+                    };
+                    const tx = this.db.transaction(['transactions'], 'readwrite');
+                    const store = tx.objectStore('transactions');
+                    const request = store.add(transaction);
+                    request.onsuccess = (event) => {
+                        transaction.id = event.target.result;
+                        gapi.client.sheets.spreadsheets.values.append({
+                            spreadsheetId: SPREADSHEET_ID,
+                            range: 'Sheet1!A1',
+                            valueInputOption: 'RAW',
+                            resource: {
+                                values: [['TRANSACTION', this.sessionId, transaction.id, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note, this.doorCount]]
+                            }
+                        }).then(() => {
+                            this.currentItems = [];
+                            $('.count').text('0');
+                            $('#noteInput').val('');
+                            this.updateTotals();
+                            $('#logSaleBtn').addClass('flash');
+                            setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+                            this.showSuccess('Sale logged successfully.');
+                        }).catch(err => {
+                            console.error('Google Sheet error:', err);
+                            this.showError('Failed to log to Google Sheets: ' + err.message);
+                        });
+                    };
+                });
+            }
 
- showSuccess(message) {
- $('#successMessage').text(message).show();
- setTimeout(() => $('#successMessage').hide(), 2000);
- }
- }
+            showError(message) {
+                $('#errorMessage').text(message).show();
+                setTimeout(() => $('#errorMessage').hide(), 3000);
+            }
 
- // Call handleClientLoad immediately since it's not tied to GIS popup anymore
- handleClientLoad();
- </script>
+            showSuccess(message) {
+                $('#successMessage').text(message).show();
+                setTimeout(() => $('#successMessage').hide(), 2000);
+            }
+        }
+
+        handleClientLoad();
+    </script>
 </body>
 </html>
