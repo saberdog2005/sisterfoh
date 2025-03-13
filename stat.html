@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sister Bar Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         body {
@@ -60,6 +61,23 @@
         .local-table th {
             background: #d32f2f;
         }
+        #transactionGraph {
+            margin-top: 40px;
+            background: #3c3c3c;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        #exportBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
@@ -95,6 +113,10 @@
             </thead>
             <tbody></tbody>
         </table>
+        <div id="transactionGraph">
+            <canvas id="transactionChart"></canvas>
+        </div>
+        <button id="exportBtn">Export to Google Sheets</button>
         <div id="errorMessage" class="error-message"></div>
     </div>
 
@@ -108,6 +130,10 @@
         class LogApp {
             constructor() {
                 this.db = null;
+                this.transactionData = {
+                    labels: [],
+                    datasets: []
+                };
                 this.initGoogleAPI();
                 this.initDB();
             }
@@ -171,8 +197,66 @@
                                 </tr>
                             `);
                         });
+                        this.prepareGraphData(values);
+                        this.renderGraph();
                     }).catch(err => this.showError('Error fetching data: ' + err.message));
                 }
+            }
+
+            prepareGraphData(values) {
+                const transactionTypes = ['CASH', 'CC', 'TICKET', 'COMP'];
+                const dataMap = {};
+                transactionTypes.forEach(type => {
+                    dataMap[type] = {};
+                });
+
+                values.forEach(row => {
+                    const [action, , timestamp, , items] = row;
+                    if (action === 'TRANSACTION') {
+                        const itemsParsed = items ? JSON.parse(items) : [];
+                        itemsParsed.forEach(item => {
+                            const type = item.item.split(' ')[0];
+                            if (transactionTypes.includes(type)) {
+                                if (!dataMap[type][timestamp]) {
+                                    dataMap[type][timestamp] = 0;
+                                }
+                                dataMap[type][timestamp] += item.quantity;
+                            }
+                        });
+                    }
+                });
+
+                this.transactionData.labels = Array.from(new Set(values.map(row => row[2]))).sort();
+                this.transactionData.datasets = transactionTypes.map(type => ({
+                    label: type,
+                    data: this.transactionData.labels.map(label => dataMap[type][label] || 0),
+                    borderColor: this.getColorForType(type),
+                    fill: false
+                }));
+            }
+
+            getColorForType(type) {
+                switch (type) {
+                    case 'CASH': return '#2e7d32';
+                    case 'CC': return '#d32f2f';
+                    case 'TICKET': return '#1a73e8';
+                    case 'COMP': return '#ffa500';
+                    default: return '#fff';
+                }
+            }
+
+            renderGraph() {
+                const ctx = document.getElementById('transactionChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: this.transactionData,
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Timestamp' } },
+                            y: { title: { display: true, text: 'Transaction Count' } }
+                        }
+                    }
+                });
             }
 
             loadLocalTransactions() {
@@ -208,9 +292,32 @@
                 $('#errorMessage').text(message).show();
                 setTimeout(() => $('#errorMessage').hide(), 3000);
             }
+
+            exportToSheets() {
+                gapi.client.sheets.spreadsheets.create({
+                    properties: { title: 'Sister Bar Transactions Export' }
+                }).then(response => {
+                    const newSpreadsheetId = response.result.spreadsheetId;
+                    gapi.client.sheets.spreadsheets.values.get({
+                        spreadsheetId: SPREADSHEET_ID,
+                        range: 'Sheet1!A:H'
+                    }).then(dataResponse => {
+                        const values = dataResponse.result.values || [];
+                        gapi.client.sheets.spreadsheets.values.append({
+                            spreadsheetId: newSpreadsheetId,
+                            range: 'Sheet1!A1',
+                            valueInputOption: 'RAW',
+                            resource: { values }
+                        }).then(() => {
+                            alert(`Data exported to new sheet: https://docs.google.com/spreadsheets/d/${newSpreadsheetId}`);
+                        }).catch(err => this.showError('Failed to append data: ' + err.message));
+                    }).catch(err => this.showError('Failed to fetch data: ' + err.message));
+                }).catch(err => this.showError('Failed to create new sheet: ' + err.message));
+            }
         }
 
         const logApp = new LogApp();
+        $('#exportBtn').on('click', () => logApp.exportToSheets());
     </script>
 </body>
 </html>
