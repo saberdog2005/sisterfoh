@@ -15,39 +15,6 @@
             background-color: #1e1e1e;
             color: #e0e0e0;
         }
-        #loginScreen {
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1000;
-        }
-        #loginScreen input {
-            padding: 10px;
-            margin: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        #loginBtn {
-            padding: 10px 20px;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-        #mainContent {
-            display: none;
-        }
         .header {
             display: flex;
             flex-wrap: wrap;
@@ -158,8 +125,10 @@
             background-color: #2d2d2d;
             padding: 10px;
             border-radius: 5px;
+            justify-content: space-between;
+            align-items: center;
         }
-        .edit-btn, .open-btn, .close-btn, .logout-btn {
+        .edit-btn, .open-btn, .close-btn {
             padding: 15px 30px;
             border: none;
             border-radius: 5px;
@@ -170,7 +139,6 @@
         .edit-btn { background-color: #555; color: white; }
         .open-btn { background-color: #0288d1; color: white; }
         .close-btn { background-color: #d32f2f; color: white; }
-        .logout-btn { background-color: #d32f2f; color: white; }
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
         .hidden { display: none; }
@@ -182,83 +150,71 @@
     </style>
 </head>
 <body>
-    <div id="loginScreen">
-        <div style="text-align: center;">
-            <h2>Login</h2>
-            <input type="text" id="username" placeholder="Username"><br>
-            <input type="password" id="password" placeholder="Password"><br>
-            <button id="loginBtn">Login</button>
-            <p id="loginError" style="color: #ff6b6b; display: none;">Invalid credentials</p>
-        </div>
+    <div class="header" id="sessionHeader">
+        <label for="eventDate">Date:</label>
+        <input type="date" id="eventDate" required>
+        <label for="eventVenue">Venue:</label>
+        <input type="text" id="eventVenue" value="Sister Bar" required>
+        <label for="eventName">Event Name:</label>
+        <input type="text" id="eventName" placeholder="Event Name">
+        <label for="cashierName">Cashier Name:</label>
+        <input type="text" id="cashierName" placeholder="Cashier" required>
     </div>
-    <div id="mainContent">
-        <div class="header" id="sessionHeader">
-            <label for="eventDate">Date:</label>
-            <input type="date" id="eventDate" required>
-            <label for="eventVenue">Venue:</label>
-            <input type="text" id="eventVenue" value="Sister Bar" required>
-            <label for="eventName">Event Name:</label>
-            <input type="text" id="eventName" placeholder="Event Name">
-            <label for="cashierName">Cashier Name:</label>
-            <input type="text" id="cashierName" placeholder="Cashier" required>
-        </div>
-        <div class="container">
-            <div class="button-container">
-                <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
-                    <div class="product-controls cash">
-                        <h4>CASH (CUSTOM)</h4>
-                        <div class="custom-input">
-                            <input type="number" step="0.01" min="0.01" placeholder="Amount">
-                            <button class="add-custom">Add</button>
-                        </div>
+    <div class="container">
+        <div class="button-container">
+            <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
+                <div class="product-controls cash">
+                    <h4>CASH (CUSTOM)</h4>
+                    <div class="custom-input">
+                        <input type="number" step="0.01" min="0.01" placeholder="Amount">
+                        <button class="add-custom">Add</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
-                    <button class="increment-btn cash">CASH $20</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
-                    <button class="increment-btn cash">CASH $15</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="CASH $12" data-price="12" data-active="true">
-                    <button class="increment-btn cash">CASH $12</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
-                    <button class="increment-btn cash">CASH $10</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
-                    <button class="increment-btn cc">CC TRANS</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
-                    <button class="increment-btn ticket">TICKET</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
-                <div class="product-item" data-item="COMP" data-price="0" data-active="true">
-                    <button class="increment-btn comp">COMP</button>
-                    <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
-                </div>
             </div>
-            <div class="totals-container">
-                <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
-                <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
+            <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
+                <button class="increment-btn cash">CASH $20</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <div class="note-section">
-                <label for="noteInput">Add a note...</label>
-                <textarea id="noteInput" placeholder="Add a note..."></textarea>
+            <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
+                <button class="increment-btn cash">CASH $15</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
             </div>
-            <button id="logSaleBtn">Log Sale</button>
+            <div class="product-item" data-item="CASH $12" data-price="12" data-active="true">
+                <button class="increment-btn cash">CASH $12</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
+                <button class="increment-btn cash">CASH $10</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
+                <button class="increment-btn cc">CC TRANS</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
+                <button class="increment-btn ticket">TICKET</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
+            <div class="product-item" data-item="COMP" data-price="0" data-active="true">
+                <button class="increment-btn comp">COMP</button>
+                <div class="control-row"><span class="count">0</span><button class="minus">-</button></div>
+            </div>
         </div>
-        <div class="footer">
-            <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
-            <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-            <div id="successMessage"></div>
-            <div id="errorMessage"></div>
+        <div class="totals-container">
+            <div class="cash-total">Cash Total: $<span id="cashTotal">0.00</span></div>
+            <div class="door-count">Thru Door: <span id="doorCount">0</span></div>
         </div>
+        <div class="note-section">
+            <label for="noteInput">Add a note...</label>
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
+        </div>
+        <button id="logSaleBtn">Log Sale</button>
+    </div>
+    <div class="footer">
+        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+        <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
+        <div id="successMessage"></div>
+        <div id="errorMessage"></div>
     </div>
 
     <script>
@@ -289,8 +245,7 @@
                     logSaleBtn: document.getElementById('logSaleBtn'),
                     cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
-                    noteInput: document.getElementById('noteInput'),
-                    logoutBtn: document.getElementById('logoutBtn')
+                    noteInput: document.getElementById('noteInput')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.initDB().then(() => {
@@ -299,30 +254,6 @@
                     this.bindEvents();
                     this.initGoogleAPI();
                 }).catch(error => this.showError('Database initialization failed: ' + error));
-
-                // Login logic
-                if (localStorage.getItem('loggedIn') === 'true') {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                } else {
-                    document.getElementById('loginBtn').addEventListener('click', () => {
-                        const username = document.getElementById('username').value;
-                        const password = document.getElementById('password').value;
-                        if (username === 'admin' && password === 'password') {
-                            localStorage.setItem('loggedIn', 'true');
-                            document.getElementById('loginScreen').style.display = 'none';
-                            document.getElementById('mainContent').style.display = 'block';
-                        } else {
-                            document.getElementById('loginError').style.display = 'block';
-                        }
-                    });
-                }
-
-                // Logout logic
-                this.elements.logoutBtn.addEventListener('click', () => {
-                    localStorage.removeItem('loggedIn');
-                    location.reload();
-                });
             }
 
             async initDB() {
@@ -632,9 +563,9 @@
 
             resetForm() {
                 this.state.currentItems.clear();
-                this.state.cashTotal = 0;
+                this.state.cashTotal = 0; // Reset cash total after each sale
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.doorCount;
+                this.elements.doorCount.textContent = this.state.doorCount; // Keep door count persistent
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
