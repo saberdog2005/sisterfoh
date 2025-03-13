@@ -7,258 +7,81 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .header label {
-            margin-right: 5px;
-            color: #e0e0e0;
-        }
-        .header input {
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .button-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .product-item {
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .product-item.hidden {
-            display: none;
-        }
-        .increment-btn, .minus, .add-custom {
-            padding: 1em;
-            margin: 0.5em 0;
-            width: 100%;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.5em;
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-        .increment-btn:hover, .minus:hover, .add-custom:hover {
-            background-color: #444;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        button[disabled] {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .cash { background-color: #2e7d32; color: white; }
-        .cc { background-color: #d32f2f; color: white; }
-        .ticket { background-color: #1a73e8; color: white; }
-        .comp { background-color: #ffa500; color: white; }
-        .minus { background-color: #555; color: white; }
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .count { font-weight: bold; color: #e0e0e0; }
-        .custom-input {
-            display: flex;
-            gap: 5px;
-        }
-        .custom-input input {
-            width: 70%;
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        .add-custom { background-color: #2e7d32; color: white; width: 30%; }
-        .totals-container {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.2em;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .note-section {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 10px;
-        }
-        .note-section textarea {
-            width: 100%;
-            height: 60px;
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        #logSaleBtn {
-            padding: 1em;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.5em;
-        }
-        #logSaleBtn:hover {
-            background-color: #026aa7;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .footer {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .edit-btn, .open-btn, .close-btn {
-            padding: 0.8em 1.5em;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        .edit-btn { background-color: #555; color: white; }
-        .open-btn { background-color: #0288d1; color: white; }
-        .close-btn { background-color: #d32f2f; color: white; }
-        #successMessage { color: #2e7d32; font-weight: bold; }
-        #errorMessage { color: #d32f2f; font-weight: bold; }
-        .hidden { display: none; }
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            margin: -1px;
-            padding: 0;
-            overflow: hidden;
-            clip: rect(0,0,0,0);
-            border: 0;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f0f0f0; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .product-item { padding: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .product-item.hidden { display: none; }
+        .increment-btn, .minus, .add-custom { margin: 5px; padding: 5px 10px; cursor: pointer; }
+        .open-btn { background-color: #4CAF50; color: white; }
+        .close-btn { background-color: #f44336; color: white; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 15% auto; padding: 20px; width: 70%; max-width: 400px; }
+        #errorMessage, #successMessage { margin: 10px 0; padding: 10px; }
+        #errorMessage { background-color: #ffebee; color: #c62828; }
+        #successMessage { background-color: #e8f5e9; color: #2e7d32; }
     </style>
 </head>
 <body>
-    <header class="header">
-        <label for="eventDate">Date:</label>
+    <div class="container">
+        <h1>Sister Bar Register</h1>
         <input type="date" id="eventDate" required>
-        <label for="eventVenue">Venue:</label>
-        <input type="text" id="eventVenue" value="Sister Bar" required>
-        <label for="eventName">Event Name:</label>
+        <input type="text" id="eventVenue" placeholder="Venue" required>
         <input type="text" id="eventName" placeholder="Event Name">
-        <label for="cashierName">Cashier Name:</label>
-        <input type="text" id="cashierName" placeholder="Cashier" required>
-    </header>
-    <main class="container">
-        <div class="button-container">
-            <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
-                <div class="product-controls cash">
-                    <h4>CASH (CUSTOM)</h4>
-                    <div class="custom-input">
-                        <label for="customCashInput" class="visually-hidden">Custom Cash Amount</label>
-                        <input type="number" step="0.01" min="0.01" id="customCashInput" placeholder="Amount">
-                        <button class="add-custom">Add</button>
-                    </div>
-                </div>
-            </div>
-            <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
-                <button class="increment-btn cash">CASH $20</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
-            </div>
-            <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
-                <button class="increment-btn cash">CASH $15</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
-            </div>
-            <div class="product-item" data-item="CASH $12" data-price="12" data-active="true">
-                <button class="increment-btn cash">CASH $12</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
-            </div>
-            <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
-                <button class="increment-btn cash">CASH $10</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
+        <input type="text" id="cashierName" placeholder="Cashier Name" required>
+        <button id="toggleSalesBtn">Open Sales</button>
+        <button id="editLayoutBtn">Edit Layout</button>
+        <button id="logSaleBtn">Log Sale</button>
+        <div>Cash Total: $<span id="cashTotal">0.00</span></div>
+        <div>Door Count: <span id="doorCount">0</span></div>
+        <textarea id="noteInput" placeholder="Notes"></textarea>
+        <div class="product-grid">
+            <div class="product-item" data-item="CASH $5" data-price="5" data-active="true">
+                <div>CASH $5</div>
+                <button class="increment-btn">+</button>
+                <span class="count">0</span>
+                <button class="minus">-</button>
             </div>
             <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
-                <button class="increment-btn cc">CC TRANS</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
+                <div>CC TRANS</div>
+                <button class="increment-btn">+</button>
+                <span class="count">0</span>
+                <button class="minus">-</button>
             </div>
             <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
-                <button class="increment-btn ticket">TICKET</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
+                <div>TICKET</div>
+                <button class="increment-btn">+</button>
+                <span class="count">0</span>
+                <button class="minus">-</button>
             </div>
             <div class="product-item" data-item="COMP" data-price="0" data-active="true">
-                <button class="increment-btn comp">COMP</button>
-                <div class="control-row">
-                    <span class="count">0</span>
-                    <button class="minus">-</button>
-                </div>
+                <div>COMP</div>
+                <button class="increment-btn">+</button>
+                <span class="count">0</span>
+                <button class="minus">-</button>
+            </div>
+            <div class="product-item" data-item="CASH (CUSTOM)" data-price="0" data-active="true">
+                <div>CASH (CUSTOM)</div>
+                <input type="number" step="0.01" min="0" placeholder="Amount">
+                <button class="add-custom">Add</button>
             </div>
         </div>
-        <div class="totals-container">
-            <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-            <div>Thru Door: <span id="doorCount">0</span></div>
+        <div id="errorMessage"></div>
+        <div id="successMessage"></div>
+        <div id="pinModal" class="modal">
+            <div class="modal-content">
+                <h2>Enter PIN to Close Sales</h2>
+                <input type="password" id="pinInput" placeholder="PIN">
+                <button id="submitPinBtn">Submit</button>
+                <div id="pinError" style="color: red;"></div>
+            </div>
         </div>
-        <div class="note-section">
-            <label for="noteInput">Add a note...</label>
-            <textarea id="noteInput" placeholder="Add a note..."></textarea>
-        </div>
-        <button id="logSaleBtn">Log Sale</button>
-    </main>
-    <footer class="footer">
-        <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
-        <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
-        <div id="successMessage" aria-live="polite"></div>
-        <div id="errorMessage" aria-live="polite"></div>
-    </footer>
+    </div>
 
     <script>
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
+        const channel = new BroadcastChannel('transaction_channel');
+        const DEFAULT_PIN = '0000';
 
         class SalesApp {
             constructor() {
@@ -284,7 +107,11 @@
                     logSaleBtn: document.getElementById('logSaleBtn'),
                     cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
-                    noteInput: document.getElementById('noteInput')
+                    noteInput: document.getElementById('noteInput'),
+                    pinModal: document.getElementById('pinModal'),
+                    pinInput: document.getElementById('pinInput'),
+                    submitPinBtn: document.getElementById('submitPinBtn'),
+                    pinError: document.getElementById('pinError')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.initDB().then(() => {
@@ -299,20 +126,16 @@
                     const request = indexedDB.open('SalesDB', 2);
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        const oldVersion = event.oldVersion;
-                        if (oldVersion < 1) {
+                        if (!db.objectStoreNames.contains('transactions')) {
                             db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
-                        if (oldVersion < 2) {
-                            const store = event.target.transaction.objectStore('transactions');
-                            if (!store.indexNames.contains('sessionId')) {
-                                store.createIndex('sessionId', 'sessionId', { unique: false });
-                            }
+                        const store = event.target.transaction.objectStore('transactions');
+                        if (!store.indexNames.contains('sessionId')) {
+                            store.createIndex('sessionId', 'sessionId', { unique: false });
                         }
                     };
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
-                        console.log('Database opened successfully');
                         resolve();
                     };
                     request.onerror = (event) => reject(event.target.error);
@@ -336,24 +159,17 @@
                     const minusBtn = btn.querySelector('.minus');
                     const addCustomBtn = btn.querySelector('.add-custom');
                     const customInput = btn.querySelector('input[type="number"]');
-
-                    if (incrementBtn) {
-                        incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
-                    }
-                    if (minusBtn) {
-                        minusBtn.addEventListener('click', () => this.handleDecrement(btn));
-                    }
-                    if (addCustomBtn && customInput) {
-                        addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
-                    }
+                    if (incrementBtn) incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
+                    if (minusBtn) minusBtn.addEventListener('click', () => this.handleDecrement(btn));
+                    if (addCustomBtn && customInput) addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
                 });
-
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
                 this.elements.editLayoutBtn.addEventListener('click', () => {
                     if (!this.state.sessionStarted) this.toggleEditMode();
                     else this.showError('Cannot edit layout while sales are open');
                 });
                 this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
             }
 
             handleIncrement(btn) {
@@ -396,7 +212,7 @@
 
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
-                this.state.doorCount += countDelta; // 1 item = 1 thru door
+                this.state.doorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -425,9 +241,9 @@
             }
 
             toggleSales() {
-                this.state.sessionStarted = !this.state.sessionStarted;
-                localStorage.setItem('sessionActive', this.state.sessionStarted);
-                if (this.state.sessionStarted) {
+                if (!this.state.sessionStarted) {
+                    this.state.sessionStarted = true;
+                    localStorage.setItem('sessionActive', true);
                     this.state.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.state.sessionId);
                     this.state.cashTotal = 0;
@@ -436,12 +252,30 @@
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
+                    this.showSuccess('Sales session started');
+                    this.checkSessionStatus();
                 } else {
-                    localStorage.removeItem('activeSessionId');
-                    this.state.sessionId = null;
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.value = '';
+                    this.elements.pinError.textContent = '';
                 }
-                this.checkSessionStatus();
-                this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
+            }
+
+            confirmCloseSales() {
+                const pin = this.elements.pinInput.value;
+                if (pin === DEFAULT_PIN) {
+                    this.state.sessionStarted = false;
+                    localStorage.removeItem('activeSessionId');
+                    localStorage.setItem('sessionActive', false);
+                    this.elements.pinModal.style.display = 'none';
+                    this.showSuccess('Sales session ended');
+                    this.checkSessionStatus();
+                    this.elements.toggleSalesBtn.textContent = 'Open Sales';
+                    this.elements.toggleSalesBtn.className = 'open-btn';
+                    this.elements.editLayoutBtn.classList.remove('hidden');
+                } else {
+                    this.elements.pinError.textContent = 'Incorrect PIN';
+                }
             }
 
             toggleEditMode() {
@@ -471,28 +305,18 @@
             }
 
             async logSale() {
-                if (!this.state.sessionStarted) {
-                    this.showError('Sales session not started');
-                    return;
-                }
+                if (!this.state.sessionStarted) return this.showError('Sales session not started');
                 if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.cashierName.value) {
-                    this.showError('Please fill in all required fields (Date, Venue, Cashier)');
-                    return;
+                    return this.showError('Please fill in all required fields (Date, Venue, Cashier)');
                 }
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => {
-                        if (key === "CASH (CUSTOM)") {
-                            return `CASH (CUSTOM): ${value.amounts.map(a => `$${a.toFixed(2)}`).join(', ')}`;
-                        } else {
-                            return `${key}: ${value.count} @ $${value.price.toFixed(2)}`;
-                        }
-                    }).join('; ');
-                if (!items) {
-                    this.showError('No items to log');
-                    return;
-                }
+                    .map(([key, value]) => key === "CASH (CUSTOM)" ? 
+                        `CASH (CUSTOM): ${value.amounts.map(a => `$${a.toFixed(2)}`).join(', ')}` : 
+                        `${key}: ${value.count} @ $${value.price.toFixed(2)}`
+                    ).join('; ');
+                if (!items) return this.showError('No items to log');
                 const transaction = {
                     sessionId: this.state.sessionId,
                     timestamp,
@@ -506,17 +330,14 @@
                     note: this.elements.noteInput.value,
                     synced: false
                 };
-
-                this.elements.logSaleBtn.disabled = true;
+                const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                await new Promise((resolve, reject) => {
+                    const request = store.add(transaction);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
                 try {
-                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                    const store = tx.objectStore('transactions');
-                    await new Promise((resolve, reject) => {
-                        const request = store.add(transaction);
-                        request.onsuccess = () => resolve();
-                        request.onerror = () => reject(request.error);
-                    });
-
                     await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -533,21 +354,19 @@
                     });
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
-                    console.error('Error logging sale:', error);
-                    this.showError('Saved locally, failed to sync: ' + error.message);
+                    console.error('Error logging to Google Sheets:', error);
+                    this.showError('Saved locally, failed to sync to Google Sheets: ' + error.message);
                     localStorage.setItem('transactionLogged', Date.now().toString());
-                } finally {
-                    this.elements.logSaleBtn.disabled = false;
                 }
                 this.resetForm();
+                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = '0';
+                this.elements.doorCount.textContent = this.state.doorCount;
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
