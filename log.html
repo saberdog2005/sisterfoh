@@ -150,6 +150,7 @@
                 <label>From: <input type="date" id="fromDate"></label><br>
                 <label>To: <input type="date" id="toDate"></label><br>
                 <input type="text" id="search" placeholder="Search..."><br>
+                <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
                 <button id="applyFilters">Apply</button>
             </div>
             <div class="col-2">
@@ -215,6 +216,7 @@
                 this.db = null;
                 this.updateInterval = null;
                 this.showAllTransactions = false;
+                this.selectedSessionId = null;
                 this.initDB().then(() => {
                     this.updateLog();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
@@ -234,6 +236,11 @@
 
                 document.getElementById('moreBtn').addEventListener('click', () => {
                     this.showAllTransactions = !this.showAllTransactions;
+                    this.updateLog();
+                });
+
+                document.getElementById('sessionSelect').addEventListener('change', (event) => {
+                    this.selectedSessionId = event.target.value || null;
                     this.updateLog();
                 });
             }
@@ -290,31 +297,37 @@
 
             async updateLog() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
-                if (!activeSessionId) {
-                    document.getElementById('sessionInfo').innerHTML = '<p>No active session</p>';
-                    if (chart) {
-                        chart.data.datasets.forEach(dataset => dataset.data = []);
-                        chart.update();
-                    }
-                    if (paymentChart) {
-                        paymentChart.data.datasets[0].data = [0, 0, 0, 0];
-                        paymentChart.update();
-                    }
-                    document.getElementById('logBody').innerHTML = '';
-                    document.getElementById('totalTransactions').textContent = '0';
-                    document.getElementById('totalSales').textContent = '0.00';
-                    document.getElementById('avgTransaction').textContent = '0.00';
-                    document.getElementById('totalDoorCount').textContent = '0';
-                    document.getElementById('moreBtn').style.display = 'none';
-                    return;
-                }
-
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
                 request.onsuccess = () => {
                     const allTransactions = request.result;
-                    let sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
+                    const sessionSelect = document.getElementById('sessionSelect');
+                    sessionSelect.innerHTML = `<option value="">Select Session</option>` + allSessionIds.map(id => `<option value="${id}">${id}</option>`).join('');
+                    sessionSelect.value = this.selectedSessionId || activeSessionId || '';
+
+                    const displaySessionId = this.selectedSessionId || activeSessionId;
+                    if (!displaySessionId) {
+                        document.getElementById('sessionInfo').innerHTML = '<p>No session selected</p>';
+                        if (chart) {
+                            chart.data.datasets.forEach(dataset => dataset.data = []);
+                            chart.update();
+                        }
+                        if (paymentChart) {
+                            paymentChart.data.datasets[0].data = [0, 0, 0, 0];
+                            paymentChart.update();
+                        }
+                        document.getElementById('logBody').innerHTML = '';
+                        document.getElementById('totalTransactions').textContent = '0';
+                        document.getElementById('totalSales').textContent = '0.00';
+                        document.getElementById('avgTransaction').textContent = '0.00';
+                        document.getElementById('totalDoorCount').textContent = '0';
+                        document.getElementById('moreBtn').style.display = 'none';
+                        return;
+                    }
+
+                    let sessionTransactions = allTransactions.filter(t => t.sessionId === displaySessionId);
                     let filteredTransactions = sessionTransactions;
 
                     const now = new Date();
@@ -337,6 +350,10 @@
                     }
 
                     filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    const uniqueCashiers = [...new Set(filteredTransactions.map(t => t.cashierName))];
+                    const cashierText = uniqueCashiers.length > 0 ? uniqueCashiers.join(', ') : 'None';
+                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${displaySessionId}</p><p>Cashiers: ${cashierText}</p>`;
 
                     let lastTransactionTime = filteredTransactions.length > 0
                         ? new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime()
@@ -364,7 +381,6 @@
 
                     const totalTransactions = filteredTransactions.length;
                     const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p>`;
                     document.getElementById('totalTransactions').textContent = totalTransactions;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
@@ -508,7 +524,7 @@
                     format: 'letter' // 8.5 x 11 inches
                 });
                 const content = document.querySelector('.container');
-                const canvas = await html2canvas(content, { scale: 2 }); // Higher scale for better quality
+                const canvas = await html2canvas(content, { scale: 2 });
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
