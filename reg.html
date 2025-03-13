@@ -55,13 +55,13 @@
             display: none;
         }
         .increment-btn, .minus, .add-custom {
-            padding: 15px;
+            padding: 20px;
             margin: 5px 0;
             width: 100%;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 24px;
         }
         .cash {
             background-color: #2e7d32;
@@ -132,13 +132,13 @@
             border-radius: 3px;
         }
         #logSaleBtn {
-            padding: 15px;
+            padding: 20px;
             background-color: #0288d1;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 24px;
         }
         .footer {
             display: flex;
@@ -149,11 +149,11 @@
             border-radius: 5px;
         }
         .edit-btn, .open-btn {
-            padding: 10px;
+            padding: 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 20px;
         }
         .edit-btn {
             background-color: #555;
@@ -175,12 +175,12 @@
                 grid-template-columns: repeat(4, 1fr);
             }
             .increment-btn, .minus, .add-custom {
-                padding: 20px;
-                font-size: 24px;
+                padding: 25px;
+                font-size: 28px;
             }
             #logSaleBtn {
-                padding: 20px;
-                font-size: 24px;
+                padding: 25px;
+                font-size: 28px;
             }
         }
     </style>
@@ -265,6 +265,7 @@
                 this.state = {
                     token: null,
                     sessionStarted: false,
+                    sessionId: null,
                     currentItems: new Map(),
                     cashTotal: 0,
                     doorCount: 0,
@@ -293,7 +294,6 @@
                 this.bindEvents();
             }
 
-            /** Initializes button states from localStorage or defaults */
             initializeButtonStates() {
                 this.elements.transactionButtons.forEach(btn => {
                     const key = btn.dataset.item;
@@ -305,7 +305,6 @@
                 });
             }
 
-            /** Binds all event listeners */
             bindEvents() {
                 this.elements.transactionButtons.forEach(btn => {
                     const incrementBtn = btn.querySelector('.increment-btn');
@@ -325,11 +324,16 @@
                 });
 
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
-                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.editLayoutBtn.addEventListener('click', () => {
+                    if (!this.state.sessionStarted) {
+                        this.toggleEditMode();
+                    } else {
+                        this.showError('Cannot edit layout while sales are open');
+                    }
+                });
                 this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
             }
 
-            /** Handles incrementing item counts */
             handleIncrement(btn) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
@@ -341,7 +345,6 @@
                 this.updateTotals(price, item);
             }
 
-            /** Handles decrementing item counts */
             handleDecrement(btn) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
@@ -355,7 +358,6 @@
                 }
             }
 
-            /** Handles custom cash input */
             handleCustomCash(input) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const amount = parseFloat(input.value);
@@ -369,7 +371,6 @@
                 }
             }
 
-            /** Updates cash and door totals */
             updateTotals(amount, item) {
                 if (item.startsWith('CASH')) {
                     this.state.cashTotal += amount;
@@ -381,21 +382,24 @@
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
 
-            /** Checks session status from localStorage */
             checkSessionStatus() {
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
             }
 
-            /** Toggles sales session state */
             toggleSales() {
                 this.state.sessionStarted = !this.state.sessionStarted;
                 localStorage.setItem('sessionActive', this.state.sessionStarted);
+                if (this.state.sessionStarted) {
+                    const sessionId = Date.now();
+                    localStorage.setItem('activeSessionId', sessionId);
+                } else {
+                    localStorage.removeItem('activeSessionId');
+                }
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
                 this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
             }
 
-            /** Toggles edit mode for button layout */
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
@@ -419,7 +423,6 @@
                 });
             }
 
-            /** Toggles button active state in edit mode */
             toggleButtonState = (e) => {
                 const btn = e.currentTarget;
                 const currentActive = btn.dataset.active === 'true';
@@ -427,7 +430,6 @@
                 btn.style.opacity = !currentActive ? '1' : '0.5';
             }
 
-            /** Requests Google API access token */
             async getToken() {
                 return new Promise((resolve, reject) => {
                     this.tokenClient.callback = (response) => {
@@ -442,7 +444,6 @@
                 });
             }
 
-            /** Logs sale to Google Sheet */
             async logSale() {
                 if (!this.state.sessionStarted) return this.showError('Sales session not started');
                 if (!this.state.token) {
@@ -479,7 +480,6 @@
                 }
             }
 
-            /** Resets the form after logging a sale */
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
@@ -490,13 +490,11 @@
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
 
-            /** Displays success message */
             showSuccess(message) {
                 document.getElementById('successMessage').textContent = message;
                 setTimeout(() => document.getElementById('successMessage').textContent = '', 3000);
             }
 
-            /** Displays error message */
             showError(message) {
                 document.getElementById('errorMessage').textContent = message;
                 setTimeout(() => document.getElementById('errorMessage').textContent = '', 3000);
