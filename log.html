@@ -4,184 +4,186 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-        #loginScreen {
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        #loginForm {
-            text-align: center;
-        }
-        #loginForm input {
-            padding: 5px;
-            margin: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        #loginForm button {
-            padding: 10px 20px;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #loginError {
-            color: #ff6b6b;
-            display: none;
-            margin-top: 10px;
+            padding: 20px;
+            background-color: #f0f0f0;
         }
         .container {
-            max-width: 85%;
+            max-width: 1000px;
             margin: 0 auto;
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        .log-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .log-table th, .log-table td {
-            padding: 10px;
-            border: 1px solid #555;
-            text-align: left;
-        }
-        .log-table th {
-            background-color: #3c3c3c;
-        }
-        canvas {
-            max-width: 100%;
-            background-color: #3c3c3c;
-            padding: 10px;
-            border-radius: 5px;
         }
         .hidden {
             display: none;
         }
-        #logoutBtn {
-            padding: 10px 20px;
-            background-color: #d32f2f;
+        #loginScreen {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        #loginScreen h1 {
+            margin-top: 0;
+        }
+        #loginScreen input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        #loginScreen button {
+            width: 100%;
+            padding: 10px;
+            background-color: #1a73e8;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 1em;
-            margin-top: 20px;
+        }
+        #loginScreen button:hover {
+            background-color: #1557b0;
+        }
+        #mainContent {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        canvas {
+            max-width: 100%;
+            margin-bottom: 20px;
+        }
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .log-table th, .log-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .log-table th {
+            background-color: #f8f9fa;
+        }
+        #logoutBtn {
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #logoutBtn:hover {
+            background-color: #c82333;
         }
     </style>
 </head>
 <body>
-    <div id="loginScreen">
-        <form id="loginForm">
-            <label for="username">Username:</label>
-            <input type="text" id="username" required><br>
-            <label for="password">Password:</label>
-            <input type="password" id="password" required><br>
-            <button type="submit">Login</button>
-        </form>
-        <p id="loginError">Invalid credentials</p>
+    <div class="container">
+        <div id="loginScreen">
+            <h1>Login</h1>
+            <form id="loginForm">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <p id="loginError" style="color: red;"></p>
+        </div>
+        <div id="mainContent" class="hidden">
+            <h1>Sales Log</h1>
+            <canvas id="thruDoorChart"></canvas>
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Items</th>
+                        <th>Cash Total</th>
+                        <th>Thru Door</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
+            <button id="logoutBtn">Logout</button>
+        </div>
     </div>
-    <div id="mainContent" class="container hidden">
-        <h1>Sales Log</h1>
-        <canvas id="thruDoorChart"></canvas>
-        <table class="log-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Items</th>
-                    <th>Cash Total</th>
-                    <th>Thru Door</th>
-                    <th>Note</th>
-                </tr>
-            </thead>
-            <tbody id="logTableBody"></tbody>
-        </table>
-        <button id="logoutBtn">Logout</button>
-    </div>
+
     <script>
-        const READ_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec'; // Replace with your Apps Script web app URL
+        let chart;
+        let pollingInterval;
 
         // Check if already logged in
         if (localStorage.getItem('loggedIn') === 'true') {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            fetchData();
-        } else {
-            document.getElementById('loginForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                if (username === 'admin' && password === 'password') {
-                    localStorage.setItem('loggedIn', 'true');
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    fetchData();
-                } else {
-                    document.getElementById('loginError').style.display = 'block';
-                }
-            });
+            showMainContent();
+            startPolling();
         }
 
-        // Logout functionality
-        document.getElementById('logoutBtn').addEventListener('click', function() {
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === 'admin' && password === 'password') {
+                localStorage.setItem('loggedIn', 'true');
+                showMainContent();
+                startPolling();
+            } else {
+                document.getElementById('loginError').textContent = 'Invalid credentials';
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('loggedIn');
             location.reload();
         });
 
-        // Fetch data from Google Apps Script
-        function fetchData() {
-            document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-            fetch(READ_WEB_APP_URL)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        const headers = data[0]; // First row is headers
-                        const transactions = data.slice(1).map(row => ({
-                            timestamp: row[0],
-                            items: row[1],
-                            cashTotal: parseFloat(row[2]),
-                            doorCount: parseInt(row[3]),
-                            note: row[4] || '' // Handle empty notes
-                        }));
-                        transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                        displayTransactions(transactions);
-                        renderChart(transactions);
-                    } else {
-                        document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">No transactions found.</td></tr>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching data:', error);
-                    document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">Error fetching data.</td></tr>';
-                });
+        function showMainContent() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
         }
 
-        // Display transactions in table
-        function displayTransactions(transactions) {
+        async function fetchData() {
+            try {
+                const response = await fetch('YOUR_WEB_APP_URL', { method: 'GET' });
+                if (!response.ok) throw new Error('Failed to fetch data');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return [];
+            }
+        }
+
+        function processData(rawData) {
+            if (!rawData || rawData.length === 0) return [];
+            const headers = rawData[0];
+            const dataRows = rawData.slice(1);
+            return dataRows.map(row => ({
+                timestamp: row[0],
+                items: row[1],
+                cashTotal: parseFloat(row[2]),
+                doorCount: parseInt(row[3]),
+                note: row[4] || ''
+            })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        }
+
+        function updateTable(transactions) {
             const tableBody = document.getElementById('logTableBody');
             tableBody.innerHTML = '';
+            if (transactions.length === 0) {
+                const row = tableBody.insertRow();
+                row.innerHTML = '<td colspan="5">No transactions found</td>';
+                return;
+            }
             transactions.forEach(t => {
                 const row = tableBody.insertRow();
                 row.innerHTML = `
-                    <td>${t.timestamp}</td>
+                    <td>${new Date(t.timestamp).toLocaleString()}</td>
                     <td>${t.items}</td>
                     <td>$${t.cashTotal.toFixed(2)}</td>
                     <td>${t.doorCount}</td>
@@ -190,18 +192,15 @@
             });
         }
 
-        // Render Thru Door count chart
-        function renderChart(transactions) {
+        function createChart(transactions) {
             const ctx = document.getElementById('thruDoorChart').getContext('2d');
-            const labels = transactions.map(t => new Date(t.timestamp).toLocaleTimeString());
-            const data = transactions.map(t => t.doorCount);
-            new Chart(ctx, {
+            return new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: transactions.map(t => t.timestamp),
                     datasets: [{
                         label: 'Thru Door Count',
-                        data: data,
+                        data: transactions.map(t => t.doorCount),
                         borderColor: '#1a73e8',
                         backgroundColor: 'rgba(26, 115, 232, 0.2)',
                         fill: true
@@ -209,11 +208,36 @@
                 },
                 options: {
                     scales: {
-                        x: { title: { display: true, text: 'Time' } },
-                        y: { title: { display: true, text: 'Thru Door Count' }, beginAtZero: true }
+                        x: {
+                            type: 'time',
+                            time: { unit: 'minute' }
+                        },
+                        y: { beginAtZero: true }
                     }
                 }
             });
+        }
+
+        function updateChart(chart, transactions) {
+            chart.data.labels = transactions.map(t => t.timestamp);
+            chart.data.datasets[0].data = transactions.map(t => t.doorCount);
+            chart.update();
+        }
+
+        async function fetchAndUpdate() {
+            const data = await fetchData();
+            const transactions = processData(data);
+            updateTable(transactions);
+            if (!chart) {
+                chart = createChart(transactions);
+            } else {
+                updateChart(chart, transactions);
+            }
+        }
+
+        function startPolling() {
+            fetchAndUpdate(); // Initial fetch
+            pollingInterval = setInterval(fetchAndUpdate, 5000); // Poll every 5 seconds
         }
     </script>
 </body>
