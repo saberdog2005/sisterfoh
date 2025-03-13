@@ -11,95 +11,76 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        /* General Styles */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #1e1e1e; /* Dark background for dark mode */
-            color: #e0e0e0; /* Light text for contrast */
+            background-color: #1e1e1e;
+            color: #e0e0e0;
         }
-
-        /* Container Styles */
         .container {
-            width: 100%; /* Full width for full-screen layout */
-            background: #2d2d2d; /* Slightly lighter dark background */
+            width: 100%;
+            background: #2d2d2d;
             padding: 20px;
             box-sizing: border-box;
-            display: none; /* Hidden until login */
+            display: none;
         }
-
-        /* Grid Layout for Four Columns */
         .grid {
             display: grid;
-            grid-template-columns: 15% 15% 35% 35%; /* Four columns with proportional widths */
-            gap: 20px; /* Spacing between columns */
+            grid-template-columns: 15% 15% 35% 35%;
+            gap: 20px;
         }
-
-        /* Header Spanning All Columns */
         .header {
-            grid-column: 1 / -1; /* Span all columns */
+            grid-column: 1 / -1;
             text-align: center;
         }
-
-        /* Column Padding */
         .col-1, .col-2, .col-3, .col-4 {
             padding: 10px;
         }
-
-        /* Canvas (Charts) Styles */
         canvas {
-            max-width: 100%; /* Responsive within column */
-            background-color: #3c3c3c; /* Dark background for charts */
+            max-width: 100%;
+            background-color: #3c3c3c;
             padding: 10px;
             box-sizing: border-box;
         }
-
-        /* Table Styles */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
         th, td {
-            border: 1px solid #555; /* Dark border */
+            border: 1px solid #555;
             padding: 8px;
             text-align: left;
-            background-color: #3c3c3c; /* Dark cell background */
+            background-color: #3c3c3c;
         }
         th {
-            background-color: #4c4c4c; /* Slightly lighter for headers */
+            background-color: #4c4c4c;
         }
-
-        /* Export Button Styles */
         #exportBtn {
             margin-top: 10px;
             padding: 10px;
-            background-color: #0288d1; /* Blue accent */
+            background-color: #0288d1;
             color: white;
             border: none;
             cursor: pointer;
         }
         #exportBtn:hover {
-            background-color: #026aa7; /* Darker blue on hover */
+            background-color: #026aa7;
         }
-
-        /* Payment Type Color Coding */
-        .cash { color: #4caf50; } /* Green */
-        .cc { color: #f44336; } /* Red */
-        .ticket { color: #2196f3; } /* Blue */
-        .comp { color: #ff9800; } /* Orange */
-
-        /* Modal Styles */
+        .cash { color: #4caf50; }
+        .cc { color: #f44336; }
+        .ticket { color: #2196f3; }
+        .comp { color: #ff9800; }
         .modal {
-            display: block; /* Show modal by default */
+            display: block;
             position: fixed;
             z-index: 1;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            background-color: rgba(0, 0, 0, 0.5);
         }
         .modal-content {
             background-color: #2d2d2d;
@@ -135,7 +116,6 @@
     </style>
 </head>
 <body>
-    <!-- Admin Login Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Admin Login</h2>
@@ -146,13 +126,9 @@
         </div>
     </div>
 
-    <!-- Sales Log Container (Hidden Initially) -->
     <div class="container" id="salesLogContainer">
         <div class="grid">
-            <!-- Header -->
             <h1 class="header">Sales Log</h1>
-
-            <!-- Column 1: Filters -->
             <div class="col-1">
                 <h2>Filters</h2>
                 <label>From: <input type="date" id="fromDate"></label><br>
@@ -160,8 +136,6 @@
                 <input type="text" id="search" placeholder="Search..."><br>
                 <button id="applyFilters">Apply</button>
             </div>
-
-            <!-- Column 2: Summary and Pie Chart -->
             <div class="col-2">
                 <h2>Summary</h2>
                 <div id="sessionInfo"></div>
@@ -171,14 +145,10 @@
                 <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
                 <canvas id="paymentChart"></canvas>
             </div>
-
-            <!-- Column 3: Door Count Chart -->
             <div class="col-3">
                 <h2>Door Count Over Time</h2>
                 <canvas id="doorCountChart"></canvas>
             </div>
-
-            <!-- Column 4: Transaction Log -->
             <div class="col-4">
                 <h2>Transaction Log</h2>
                 <div style="overflow-x: auto;">
@@ -189,7 +159,7 @@
                                 <th>Cashier</th>
                                 <th>Items</th>
                                 <th>Cash Total</th>
-                                <th>Thru Door (Transaction)</th>
+                                <th>Thru Door</th>
                                 <th>Note</th>
                             </tr>
                         </thead>
@@ -202,21 +172,19 @@
     </div>
 
     <script>
-        // Admin Credentials (Hardcoded for simplicity; use secure methods in production)
         const adminUsername = "admin";
         const adminPassword = "password123";
+        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+        const JPG_EXPORT_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
-        // Modal and Container Elements
         const loginModal = document.getElementById('loginModal');
         const salesLogContainer = document.getElementById('salesLogContainer');
         const errorMsg = document.getElementById('errorMsg');
 
-        // Session Timeout Configuration
-        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
         let sessionTimeoutId;
+        let jpgExportIntervalId;
         let salesLogInstance;
 
-        // Helper Functions for Session Management
         function isLoggedIn() {
             return localStorage.getItem('isLoggedIn') === 'true';
         }
@@ -248,28 +216,24 @@
 
         function logout() {
             setLoggedIn(false);
-            if (salesLogInstance) {
-                salesLogInstance.stop();
-            }
+            if (salesLogInstance) salesLogInstance.stop();
+            clearInterval(jpgExportIntervalId);
             salesLogContainer.style.display = 'none';
             loginModal.style.display = 'block';
         }
 
-        // Page Load Logic
         const now = Date.now();
         const lastSessionEnd = getLastSessionEndTime();
         if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
             salesLogContainer.style.display = 'block';
             loginModal.style.display = 'none';
             salesLogInstance = new SalesLog();
-            // Session timeout will be set after first updateLog based on last transaction
         } else {
             setLoggedIn(false);
             salesLogContainer.style.display = 'none';
             loginModal.style.display = 'block';
         }
 
-        // Login Functionality
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -283,7 +247,6 @@
             }
         });
 
-        // Global Variables
         const channel = new BroadcastChannel('transaction_channel');
         let chart;
         let paymentChart;
@@ -297,13 +260,13 @@
                 this.updateInterval = null;
                 this.initDB().then(() => {
                     this.updateLog();
-                    this.updateInterval = setInterval(() => this.updateLog(), 5000); // Auto-update every 5 seconds
+                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
+                    jpgExportIntervalId = setInterval(() => this.exportJPG(), JPG_EXPORT_INTERVAL);
                     channel.onmessage = (event) => {
                         if (event.data.type === 'new_transaction') this.updateLog();
                     };
                 }).catch(error => console.error('Database initialization failed:', error));
 
-                // Event Listeners
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
                     fromDate = document.getElementById('fromDate').value;
@@ -314,9 +277,7 @@
             }
 
             stop() {
-                if (this.updateInterval) {
-                    clearInterval(this.updateInterval);
-                }
+                if (this.updateInterval) clearInterval(this.updateInterval);
             }
 
             async initDB() {
@@ -393,25 +354,19 @@
                     let sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     let filteredTransactions = sessionTransactions;
 
-                    // Get current date and time
                     const now = new Date();
-
-                    // Handle fromDate (start of the day)
                     let startDate = null;
                     if (fromDate) {
                         startDate = new Date(fromDate);
-                        startDate.setHours(0, 0, 0, 0); // Set to midnight of fromDate
+                        startDate.setHours(0, 0, 0, 0);
                     }
-
-                    // Handle toDate (end of the day, capped at current time)
-                    let endDate = now; // Default to current date and time
+                    let endDate = now;
                     if (toDate) {
                         const selectedTo = new Date(toDate);
-                        selectedTo.setHours(23, 59, 59, 999); // Set to end of toDate
-                        endDate = selectedTo < now ? selectedTo : now; // Cap at now if toDate is today/future
+                        selectedTo.setHours(23, 59, 59, 999);
+                        endDate = selectedTo < now ? selectedTo : now;
                     }
 
-                    // Apply date range filter
                     filteredTransactions = filteredTransactions.filter(t => {
                         const ts = new Date(t.timestamp);
                         return ts instanceof Date && !isNaN(ts) &&
@@ -419,7 +374,6 @@
                                ts <= endDate;
                     });
 
-                    // Apply search filter
                     if (searchTerm) {
                         filteredTransactions = filteredTransactions.filter(t =>
                             (t.cashierName && t.cashierName.toLowerCase().includes(searchTerm)) ||
@@ -429,28 +383,24 @@
 
                     filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    // Determine last session end time for timeout
                     let lastTransactionTime = 0;
                     if (filteredTransactions.length > 0) {
                         lastTransactionTime = new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime();
                         setLastSessionEndTime(lastTransactionTime);
                         resetSessionTimeout(lastTransactionTime);
                     } else if (getLastSessionEndTime() === 0) {
-                        // No transactions yet, set to now on first load after login
                         setLastSessionEndTime(now.getTime());
                         resetSessionTimeout(now.getTime());
                     } else {
                         resetSessionTimeout(getLastSessionEndTime());
                     }
 
-                    // Initialize Data Accumulators
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
                     let totalSales = 0;
                     let totalDoorCount = 0;
                     let paymentAmounts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
 
-                    // Process Transactions
                     filteredTransactions.forEach(transaction => {
                         const parsed = this.parseItems(transaction.items);
                         for (const type in parsed) {
@@ -463,7 +413,6 @@
                         dataPoints.TOTAL.push({ x: transaction.timestamp, y: totalDoorCount });
                     });
 
-                    // Update Summary
                     const totalTransactions = filteredTransactions.length;
                     const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p>`;
@@ -472,7 +421,6 @@
                     document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
 
-                    // Update Line Chart
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints.CASH;
                         chart.data.datasets[1].data = dataPoints['CC TRANS'];
@@ -502,7 +450,6 @@
                         });
                     }
 
-                    // Update Pie Chart
                     if (paymentChart) {
                         paymentChart.data.datasets[0].data = [
                             paymentAmounts.CASH,
@@ -536,7 +483,16 @@
 
                     this.displayLog(filteredTransactions);
                 };
-                request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
+            }
+
+            async exportJPG() {
+                const content = document.querySelector('.container');
+                const canvas = await html2canvas(content);
+                const imgData = canvas.toDataURL('image/jpeg');
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = `sales_log_${new Date().toISOString().replace(/:/g, '-')}.jpg`;
+                link.click();
             }
 
             displayLog(transactions) {
