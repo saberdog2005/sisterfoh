@@ -68,7 +68,7 @@
         th {
             background-color: #4c4c4c;
         }
-        #exportBtn {
+        #exportBtn, #moreBtn {
             margin-top: 10px;
             padding: 10px;
             background-color: #0288d1;
@@ -76,7 +76,7 @@
             border: none;
             cursor: pointer;
         }
-        #exportBtn:hover {
+        #exportBtn:hover, #moreBtn:hover {
             background-color: #026aa7;
         }
         .cash { color: #4caf50; }
@@ -182,6 +182,7 @@
                         <tbody id="logBody"></tbody>
                     </table>
                 </div>
+                <button id="moreBtn" style="display: none;">More</button>
                 <button id="exportBtn">Export to PDF</button>
             </div>
         </div>
@@ -208,11 +209,12 @@
         let searchTerm = '';
         const channel = new BroadcastChannel('transaction_channel');
 
-        // Define SalesLog class first
+        // Define SalesLog class
         class SalesLog {
             constructor() {
                 this.db = null;
                 this.updateInterval = null;
+                this.showAllTransactions = false; // Track whether to show all transactions
                 this.initDB().then(() => {
                     this.updateLog();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
@@ -227,6 +229,12 @@
                     fromDate = document.getElementById('fromDate').value;
                     toDate = document.getElementById('toDate').value;
                     searchTerm = document.getElementById('search').value.toLowerCase();
+                    this.updateLog();
+                });
+
+                // More button event listener
+                document.getElementById('moreBtn').addEventListener('click', () => {
+                    this.showAllTransactions = !this.showAllTransactions;
                     this.updateLog();
                 });
             }
@@ -298,6 +306,7 @@
                     document.getElementById('totalSales').textContent = '0.00';
                     document.getElementById('avgTransaction').textContent = '0.00';
                     document.getElementById('totalDoorCount').textContent = '0';
+                    document.getElementById('moreBtn').style.display = 'none';
                     return;
                 }
 
@@ -310,17 +319,9 @@
                     let filteredTransactions = sessionTransactions;
 
                     const now = new Date();
-                    let startDate = null;
-                    if (fromDate) {
-                        startDate = new Date(fromDate);
-                        startDate.setHours(0, 0, 0, 0);
-                    }
-                    let endDate = now;
-                    if (toDate) {
-                        const selectedTo = new Date(toDate);
-                        selectedTo.setHours(23, 59, 59, 999);
-                        endDate = selectedTo < now ? selectedTo : now;
-                    }
+                    let startDate = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
+                    let endDate = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : now;
+                    endDate = endDate < now ? endDate : now;
 
                     filteredTransactions = filteredTransactions.filter(t => {
                         const ts = new Date(t.timestamp);
@@ -338,18 +339,14 @@
 
                     filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    let lastTransactionTime = 0;
-                    if (filteredTransactions.length > 0) {
-                        lastTransactionTime = new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime();
-                        setLastSessionEndTime(lastTransactionTime);
-                        resetSessionTimeout(lastTransactionTime);
-                    } else if (getLastSessionEndTime() === 0) {
-                        setLastSessionEndTime(now.getTime());
-                        resetSessionTimeout(now.getTime());
-                    } else {
-                        resetSessionTimeout(getLastSessionEndTime());
-                    }
+                    // Session timeout logic
+                    let lastTransactionTime = filteredTransactions.length > 0
+                        ? new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime()
+                        : getLastSessionEndTime() || now.getTime();
+                    setLastSessionEndTime(lastTransactionTime);
+                    resetSessionTimeout(lastTransactionTime);
 
+                    // Aggregate data for charts and summaries
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
                     let totalSales = 0;
@@ -376,6 +373,7 @@
                     document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
 
+                    // Update line chart (door count over time)
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints.CASH;
                         chart.data.datasets[1].data = dataPoints['CC TRANS'];
@@ -405,13 +403,16 @@
                         });
                     }
 
+                    // Update pie chart with transaction type amounts
+                    const pieData = [
+                        paymentAmounts.CASH,
+                        paymentAmounts['CC TRANS'],
+                        paymentAmounts.TICKET,
+                        paymentAmounts.COMP
+                    ];
+
                     if (paymentChart) {
-                        paymentChart.data.datasets[0].data = [
-                            paymentAmounts.CASH,
-                            paymentAmounts['CC TRANS'],
-                            paymentAmounts.TICKET,
-                            paymentAmounts.COMP
-                        ];
+                        paymentChart.data.datasets[0].data = pieData;
                         paymentChart.update();
                     } else {
                         paymentChart = new Chart(document.getElementById('paymentChart'), {
@@ -419,35 +420,34 @@
                             data: {
                                 labels: ['CASH', 'CC TRANS', 'TICKET', 'COMP'],
                                 datasets: [{
-                                    data: [
-                                        paymentAmounts.CASH,
-                                        paymentAmounts['CC TRANS'],
-                                        paymentAmounts.TICKET,
-                                        paymentAmounts.COMP
-                                    ],
+                                    data: pieData,
                                     backgroundColor: ['#4caf50', '#f44336', '#2196f3', '#ff9800']
                                 }]
                             },
                             options: {
-                                plugins: { legend: { display: true } }
+                                plugins: {
+                                    legend: { display: true }
+                                }
                             }
                         });
                     }
 
-                    // Display only the last 20 transactions
-                    const last20Transactions = filteredTransactions.slice(-20);
-                    this.displayLog(last20Transactions);
-                };
-            }
+                    // Determine transactions to display
+                    const displayTransactions = this.showAllTransactions
+                        ? filteredTransactions.slice().reverse() // All, newest first
+                        : filteredTransactions.slice(-20).reverse(); // Last 20, newest first
 
-            async exportJPG() {
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
-                const imgData = canvas.toDataURL('image/jpeg');
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = `sales_log_${new Date().toISOString().replace(/:/g, '-')}.jpg`;
-                link.click();
+                    this.displayLog(displayTransactions);
+
+                    // Show/hide "More" button and set text
+                    const moreBtn = document.getElementById('moreBtn');
+                    if (totalTransactions > 20) {
+                        moreBtn.style.display = 'block';
+                        moreBtn.textContent = this.showAllTransactions ? 'Show Less' : 'More';
+                    } else {
+                        moreBtn.style.display = 'none';
+                    }
+                };
             }
 
             displayLog(transactions) {
@@ -473,6 +473,16 @@
                         </tr>
                     `;
                 }).join('');
+            }
+
+            async exportJPG() {
+                const content = document.querySelector('.container');
+                const canvas = await html2canvas(content);
+                const imgData = canvas.toDataURL('image/jpeg');
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = `sales_log_${new Date().toISOString().replace(/:/g, '-')}.jpg`;
+                link.click();
             }
 
             async exportPDF() {
