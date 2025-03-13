@@ -51,7 +51,7 @@
             box-sizing: border-box;
         }
         .transaction-log {
-            max-height: 400px; /* Approx height for 20 rows */
+            max-height: 400px;
             overflow-y: auto;
             overflow-x: auto;
         }
@@ -214,7 +214,7 @@
             constructor() {
                 this.db = null;
                 this.updateInterval = null;
-                this.showAllTransactions = false; // Track whether to show all transactions
+                this.showAllTransactions = false;
                 this.initDB().then(() => {
                     this.updateLog();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
@@ -232,7 +232,6 @@
                     this.updateLog();
                 });
 
-                // More button event listener
                 document.getElementById('moreBtn').addEventListener('click', () => {
                     this.showAllTransactions = !this.showAllTransactions;
                     this.updateLog();
@@ -339,14 +338,12 @@
 
                     filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    // Session timeout logic
                     let lastTransactionTime = filteredTransactions.length > 0
                         ? new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime()
                         : getLastSessionEndTime() || now.getTime();
                     setLastSessionEndTime(lastTransactionTime);
                     resetSessionTimeout(lastTransactionTime);
 
-                    // Aggregate data for charts and summaries
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
                     let totalSales = 0;
@@ -373,7 +370,6 @@
                     document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
 
-                    // Update line chart (door count over time)
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints.CASH;
                         chart.data.datasets[1].data = dataPoints['CC TRANS'];
@@ -403,7 +399,6 @@
                         });
                     }
 
-                    // Update pie chart with transaction type amounts
                     const pieData = [
                         paymentAmounts.CASH,
                         paymentAmounts['CC TRANS'],
@@ -431,10 +426,7 @@
                                     legend: {
                                         display: true,
                                         position: 'bottom',
-                                        labels: {
-                                            color: '#e0e0e0',
-                                            font: { size: 14 }
-                                        }
+                                        labels: { color: '#e0e0e0', font: { size: 14 } }
                                     },
                                     title: {
                                         display: true,
@@ -447,9 +439,7 @@
                                         callbacks: {
                                             label: function(context) {
                                                 let label = context.label || '';
-                                                if (label) {
-                                                    label += ': ';
-                                                }
+                                                if (label) label += ': ';
                                                 label += '$' + context.raw.toFixed(2);
                                                 return label;
                                             }
@@ -460,14 +450,11 @@
                         });
                     }
 
-                    // Determine transactions to display
                     const displayTransactions = this.showAllTransactions
-                        ? filteredTransactions.slice().reverse() // All, newest first
-                        : filteredTransactions.slice(-20).reverse(); // Last 20, newest first
-
+                        ? filteredTransactions.slice().reverse()
+                        : filteredTransactions.slice(-20).reverse();
                     this.displayLog(displayTransactions);
 
-                    // Show/hide "More" button and set text
                     const moreBtn = document.getElementById('moreBtn');
                     if (totalTransactions > 20) {
                         moreBtn.style.display = 'block';
@@ -582,7 +569,6 @@
             loginModal.style.display = 'block';
         }
 
-        // Login button event listener
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
