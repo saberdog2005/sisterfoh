@@ -303,17 +303,12 @@
                     const request = indexedDB.open('SalesDB', 2);
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        const oldVersion = event.oldVersion;
-                        if (oldVersion < 1) {
-                            if (!db.objectStoreNames.contains('transactions')) {
-                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                            }
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
-                        if (oldVersion < 2) {
-                            const store = event.target.transaction.objectStore('transactions');
-                            if (!store.indexNames.contains('sessionId')) {
-                                store.createIndex('sessionId', 'sessionId', { unique: false });
-                            }
+                        const store = event.target.transaction.objectStore('transactions');
+                        if (!store.indexNames.contains('sessionId')) {
+                            store.createIndex('sessionId', 'sessionId', { unique: false });
                         }
                     };
                     request.onsuccess = (event) => {
@@ -427,44 +422,28 @@
                         this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
-                if (this.state.sessionStarted) {
-                    this.elements.eventDate.disabled = true;
-                    this.elements.eventVenue.disabled = true;
-                    this.elements.eventName.disabled = true;
-                    this.elements.cashierName.disabled = true;
-                } else {
-                    this.elements.eventDate.disabled = false;
-                    this.elements.eventVenue.disabled = false;
-                    this.elements.eventName.disabled = false;
-                    this.elements.cashierName.disabled = false;
-                }
             }
 
             toggleSales() {
-                if (!this.state.sessionStarted) {
-                    if (!this.elements.cashierName.value) {
-                        this.showError('Please enter cashier name');
-                        return;
-                    }
-                    this.state.sessionId = this.elements.cashierName.value;
+                this.state.sessionStarted = !this.state.sessionStarted;
+                localStorage.setItem('sessionActive', this.state.sessionStarted);
+                if (this.state.sessionStarted) {
+                    this.state.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.state.sessionId);
-                    this.state.sessionStarted = true;
-                    localStorage.setItem('sessionActive', true);
+                    localStorage.setItem('eventName', this.elements.eventName.value);
+                    localStorage.setItem('cashierName', this.elements.cashierName.value);
                     this.state.cashTotal = 0;
                     this.state.doorCount = 0;
                     this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
-                    this.showSuccess('Sales session started');
                 } else {
                     localStorage.removeItem('activeSessionId');
                     this.state.sessionId = null;
-                    this.state.sessionStarted = false;
-                    localStorage.setItem('sessionActive', false);
-                    this.showSuccess('Sales session ended');
                 }
                 this.checkSessionStatus();
+                this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
             }
 
             toggleEditMode() {
@@ -502,6 +481,7 @@
                     this.showError('Please fill in all required fields (Date, Venue, Cashier)');
                     return;
                 }
+                this.elements.logSaleBtn.disabled = true;
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
@@ -514,6 +494,7 @@
                     }).join('; ');
                 if (!items) {
                     this.showError('No items to log');
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
                 const transaction = {
@@ -556,10 +537,11 @@
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
                     console.error('Error logging to Google Sheets:', error);
-                    this.showError('Saved locally, failed to sync to Google Sheets: ' + error.message);
+                    this.showError('Saved locally, failed to sync: ' + error.message);
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 }
                 this.resetForm();
+                this.elements.logSaleBtn.disabled = false;
             }
 
             resetForm() {
