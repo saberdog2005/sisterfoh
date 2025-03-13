@@ -3,185 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transaction Log</title>
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 10px;
-        }
-        .container {
-            display: flex;
-            justify-content: space-between;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .left-column, .right-column {
-            width: 48%;
-        }
-        #transactionList {
-            max-height: 400px;
-            overflow-y: scroll;
-            background-color: #1e1e1e;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .transaction {
-            margin-bottom: 5px;
-        }
-        .transaction.cash { color: #4caf50; }
-        .transaction.cc-trans { color: #f44336; }
-        .transaction.ticket { color: #2196f3; }
-        .transaction.comp { color: #ff9800; }
-        canvas {
-            max-width: 100%;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
+        h1 { color: #bb86fc; text-align: center; }
+        #totalCount { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
+        #doorCountChart { margin-bottom: 20px; }
+        .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
+        .cash { color: #4caf50; }
+        .cc { color: #f44336; }
+        .ticket { color: #2196f3; }
+        .comp { color: #ff9800; }
+        #exportBtn { margin-top: 20px; padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #exportBtn:hover { background: #026aa7; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="left-column">
-            <canvas id="thruDoorChart"></canvas>
-        </div>
-        <div class="right-column">
-            <div id="transactionList"></div>
-        </div>
+        <h1>Sales Log</h1>
+        <h2 id="totalCount">Total Thru Door: 0</h2>
+        <canvas id="doorCountChart" width="400" height="200"></canvas>
+        <div id="log"></div>
+        <button id="exportBtn">Export to PDF</button>
     </div>
 
     <script>
         let chart;
-        let db;
 
-        // Open IndexedDB
-        async function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('SalesDB', 2);
-                request.onsuccess = (event) => {
-                    resolve(event.target.result);
-                };
-                request.onerror = (event) => {
-                    reject(event.target.error);
-                };
-            });
-        }
+        class SalesLog {
+            constructor() {
+                this.db = null;
+                this.initDB()
+                    .then(() => {
+                        this.updateChart();
+                        setInterval(() => this.updateChart(), 5000);
+                    })
+                    .catch((error) => console.error('Database initialization failed:', error));
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+            }
 
-        // Fetch all transactions from IndexedDB
-        async function fetchTransactions(db) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction('transactions', 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        // Render the top 20 transactions in the scrolling list
-        function renderTransactionList(transactions) {
-            const listContainer = document.getElementById('transactionList');
-            listContainer.innerHTML = '';
-            transactions.forEach(tx => {
-                const item = document.createElement('div');
-                item.className = `transaction ${tx.type.toLowerCase().replace(' ', '-')}`;
-                item.textContent = `[${new Date(tx.timestamp).toLocaleString()}] ${tx.type}`;
-                listContainer.appendChild(item);
-            });
-        }
-
-        // Update the real-time graph with cumulative counts
-        function updateGraph(transactions) {
-            transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            const types = ['CASH', 'CC TRANS', 'TICKET', 'COMP'];
-            const datasets = types.map(type => ({
-                label: type,
-                data: [],
-                borderColor: getColor(type),
-                fill: false
-            }));
-            const totalData = { label: 'Total', data: [], borderColor: '#ffff00', fill: false };
-            let counts = { 'CASH': 0, 'CC TRANS': 0, 'TICKET': 0, 'COMP': 0, 'Total': 0 };
-
-            transactions.forEach(tx => {
-                if (types.includes(tx.type)) {
-                    counts[tx.type]++;
-                    datasets.find(ds => ds.label === tx.type).data.push({ x: tx.timestamp, y: counts[tx.type] });
-                }
-                counts.Total++;
-                totalData.data.push({ x: tx.timestamp, y: counts.Total });
-            });
-
-            if (chart) {
-                chart.data.datasets = [...datasets, totalData];
-                chart.update();
-            } else {
-                const ctx = document.getElementById('thruDoorChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [...datasets, totalData]
-                    },
-                    options: {
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: { unit: 'minute' },
-                                title: { display: true, text: 'Time', color: '#e0e0e0' },
-                                ticks: { color: '#e0e0e0' }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'Count', color: '#e0e0e0' },
-                                ticks: { color: '#e0e0e0' }
+            initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('SalesDB', 2);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        const oldVersion = event.oldVersion;
+                        if (oldVersion < 1) {
+                            if (!db.objectStoreNames.contains('transactions')) {
+                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                             }
-                        },
-                        plugins: {
-                            legend: { labels: { color: '#e0e0e0' } }
+                        }
+                    };
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+                    request.onerror = (event) => {
+                        reject(event.target.error);
+                    };
+                });
+            }
+
+            parseItems(itemsString) {
+                const counts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+                const items = itemsString.split(', ');
+                items.forEach((item) => {
+                    const [keyPart, valuePart] = item.split(': ');
+                    if (keyPart && valuePart) {
+                        const count = parseInt(valuePart.split(' @')[0], 10);
+                        if (keyPart.startsWith('CASH')) {
+                            counts.CASH += count;
+                        } else if (keyPart === 'CC TRANS') {
+                            counts['CC TRANS'] += count;
+                        } else if (keyPart === 'TICKET') {
+                            counts.TICKET += count;
+                        } else if (keyPart === 'COMP') {
+                            counts.COMP += count;
                         }
                     }
                 });
+                return counts;
             }
-        }
 
-        // Assign colors for transaction types and graph lines
-        function getColor(type) {
-            const colors = {
-                'CASH': '#4caf50',     // Green
-                'CC TRANS': '#f44336', // Red
-                'TICKET': '#2196f3',   // Blue
-                'COMP': '#ff9800'      // Orange
-            };
-            return colors[type] || 'gray';
-        }
-
-        // Update the display (graph and transaction list)
-        async function updateDisplay() {
-            try {
-                const transactions = await fetchTransactions(db);
-                transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                const top20 = transactions.slice(0, 20);
-                renderTransactionList(top20);
-                updateGraph(transactions);
-            } catch (error) {
-                console.error('Update failed:', error);
-            }
-        }
-
-        // Initialize the page and set up real-time updates
-        async function init() {
-            db = await openDB();
-            await updateDisplay();
-            // Listen for new transactions via storage events
-            window.addEventListener('storage', (event) => {
-                if (event.key === 'transactionLogged') {
-                    updateDisplay();
+            updateChart() {
+                const activeSessionId = localStorage.getItem('activeSessionId');
+                if (!activeSessionId) {
+                    if (chart) {
+                        chart.data.datasets.forEach((dataset) => (dataset.data = []));
+                        chart.update();
+                    }
+                    document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
+                    document.getElementById('log').innerHTML = '<p>No active session</p>';
+                    return;
                 }
-            });
+                const tx = this.db.transaction(['transactions'], 'readonly');
+                const store = tx.objectStore('transactions');
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const allTransactions = request.result;
+                    const sessionTransactions = allTransactions.filter((t) => t.sessionId === activeSessionId);
+                    sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
+                    let dataPoints = {
+                        CASH: [],
+                        'CC TRANS': [],
+                        TICKET: [],
+                        COMP: [],
+                        TOTAL: [],
+                    };
+
+                    sessionTransactions.forEach((transaction) => {
+                        const counts = this.parseItems(transaction.items);
+                        for (const type in counts) {
+                            cumulative[type] += counts[type];
+                            dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
+                        }
+                        cumulative.TOTAL = transaction.doorCount;
+                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: cumulative.TOTAL });
+                    });
+
+                    const totalThruDoor =
+                        sessionTransactions.length > 0 ? sessionTransactions[sessionTransactions.length - 1].doorCount : 0;
+                    document.getElementById('totalCount').textContent = `Total Thru Door: ${totalThruDoor}`;
+
+                    if (chart) {
+                        chart.data.datasets[0].data = dataPoints.CASH;
+                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
+                        chart.data.datasets[2].data = dataPoints.TICKET;
+                        chart.data.datasets[3].data = dataPoints.COMP;
+                        chart.data.datasets[4].data = dataPoints.TOTAL;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: {
+                                datasets: [
+                                    { label: 'CASH', data: dataPoints.CASH, borderColor: 'green', backgroundColor: 'rgba(0, 255, 0, 0.1)', fill: false },
+                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: 'red', backgroundColor: 'rgba(255, 0, 0, 0.1)', fill: false },
+                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: false },
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', backgroundColor: 'rgba(255, 165, 0, 0.1)', fill: false },
+                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: 'purple', backgroundColor: 'rgba(128, 0, 128, 0.1)', fill: false },
+                                ],
+                            },
+                            options: {
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                                },
+                                plugins: { legend: { display: true } },
+                            },
+                        });
+                    }
+
+                    this.displayLog(sessionTransactions);
+                };
+                request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
+            }
+
+            displayLog(transactions) {
+                const log = document.getElementById('log');
+                log.innerHTML = transactions
+                    .map((t) => {
+                        const items = t.items
+                            .split(', ')
+                            .map((item) => {
+                                const [key] = item.split(': ');
+                                let className = '';
+                                if (key.startsWith('CASH')) className = 'cash';
+                                else if (key === 'CC TRANS') className = 'cc';
+                                else if (key === 'TICKET') className = 'ticket';
+                                else if (key === 'COMP') className = 'comp';
+                                return `<span class="${className}">${item}</span>`;
+                            })
+                            .join(', ');
+                        return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
+                    })
+                    .join('');
+            }
+
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                const totalThruDoor = document.getElementById('totalCount').textContent;
+                doc.text(totalThruDoor, 10, 10);
+
+                const canvas = document.getElementById('doorCountChart');
+                const chartImage = await html2canvas(canvas);
+                const imgData = chartImage.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 10, 20, 180, 90);
+
+                const log = document.getElementById('log');
+                const logText = log.innerText;
+                doc.text(logText, 10, 120);
+
+                doc.save('sales_log.pdf');
+            }
         }
 
-        init().catch(error => console.error('Initialization failed:', error));
+        new SalesLog();
     </script>
 </body>
 </html>
