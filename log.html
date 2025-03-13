@@ -8,44 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 85%;
-            margin: 0 auto;
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        h1 {
-            text-align: center;
-            color: #bb86fc;
-            margin-bottom: 20px;
-        }
-        canvas {
-            background-color: #3c3c3c;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        #log {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #3c3c3c;
-            border-radius: 4px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .transaction { margin: 5px 0; }
-        .cash { color: #2e7d32; }
-        .cc { color: #d32f2f; }
-        .ticket { color: #1a73e8; }
-        .comp { color: #ffa500; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        #doorCountChart { margin-bottom: 20px; }
+        .transaction { padding: 10px; background: #fff; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .cash { color: green; }
+        .cc { color: blue; }
+        .ticket { color: orange; }
+        .comp { color: red; }
     </style>
 </head>
 <body>
@@ -65,7 +35,7 @@
             }
 
             initDB() {
-                const request = indexedDB.open('SalesDB', 1);
+                const request = indexedDB.open('SalesDB', 2);
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     if (!db.objectStoreNames.contains('transactions')) {
@@ -97,11 +67,7 @@
                     const allTransactions = request.result;
                     const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                    let cumulativeDoorCount = 0;
-                    const dataPoints = sessionTransactions.map(t => {
-                        cumulativeDoorCount = t.doorCount; // Use logged doorCount directly
-                        return { x: t.timestamp, y: cumulativeDoorCount };
-                    });
+                    const dataPoints = sessionTransactions.map(t => ({ x: t.timestamp, y: t.doorCount }));
                     if (chart) {
                         chart.data.datasets[0].data = dataPoints;
                         chart.update();
@@ -145,26 +111,6 @@
                 }).join('');
             }
         }
-
-        const ctx = document.getElementById('doorCountChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Thru Door Count',
-                    data: [],
-                    borderColor: 'purple',
-                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
-                    fill: true
-                }]
-            },
-            options: {
-                scales: {
-                    x: { type: 'time', time: { unit: 'minute' } },
-                    y: { beginAtZero: true }
-                }
-            }
-        });
 
         new SalesLog();
     </script>
