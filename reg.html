@@ -3,253 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cash Register</title>
+    <title>Register Interface</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { display: flex; gap: 20px; }
-        .buttons-container { flex: 1; }
-        .button-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        button { padding: 15px; font-size: 16px; cursor: pointer; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        .count { margin-left: 10px; }
-        .totals-container { flex: 1; }
-        .error { color: red; display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .item-btn {
+            padding: 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .item-btn:hover {
+            background-color: #45a049;
+        }
+        .transaction-display {
+            margin-bottom: 20px;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .totals {
+            text-align: right;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .payment-options {
+            display: flex;
+            justify-content: space-around;
+        }
+        .payment-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .payment-btn:hover {
+            background-color: #007B9A;
+        }
     </style>
 </head>
 <body>
-    <h1>Cash Register</h1>
-    <button id="toggleSalesBtn">Start Sales</button>
-    <div id="error" class="error"></div>
-    <div class="container" style="display: none;">
-        <div class="buttons-container">
-            <div class="button-grid">
-                <button data-item="CASH $20" data-price="20.00">CASH $20<span class="count" data-item="CASH $20">0</span></button>
-                <button data-item="CASH $10" data-price="10.00">CASH $10<span class="count" data-item="CASH $10">0</span></button>
-                <button data-item="CASH $5" data-price="5.00">CASH $5<span class="count" data-item="CASH $5">0</span></button>
-                <button data-item="CC TRANS" data-price="0.00">CC TRANS<span class="count" data-item="CC TRANS">0</span></button>
-                <button id="add-custom">Add Custom</button>
-                <button id="editBtn">Edit</button>
-            </div>
-            <input type="text" id="noteInput" placeholder="Add a note">
-            <button id="logSaleBtn">Log Sale</button>
+    <div class="container">
+        <h1>Register</h1>
+        <div class="item-grid">
+            <button class="item-btn" data-item="Item 1" data-price="10.00">Item 1 - $10.00</button>
+            <button class="item-btn" data-item="Item 2" data-price="15.00">Item 2 - $15.00</button>
+            <button class="item-btn" data-item="Item 3" data-price="20.00">Item 3 - $20.00</button>
+            <button class="item-btn" data-item="Item 4" data-price="25.00">Item 4 - $25.00</button>
+            <button class="item-btn" data-item="Item 5" data-price="30.00">Item 5 - $30.00</button>
+            <button class="item-btn" data-item="Item 6" data-price="35.00">Item 6 - $35.00</button>
         </div>
-        <div class="totals-container">
-            <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-            <div>Thru Door (this sale): <span id="transactionDoorCount">0</span></div>
-            <div>Session Thru Door: <span id="sessionDoorCount">0</span></div>
+        <div class="transaction-display">
+            <h2>Current Transaction</h2>
+            <div id="transactionItems"></div>
+            <div class="totals">
+                <p>Subtotal: $<span id="subtotal">0.00</span></p>
+                <p>Tax (10%): $<span id="tax">0.00</span></p>
+                <p>Total: $<span id="total">0.00</span></p>
+            </div>
+        </div>
+        <div class="payment-options">
+            <button class="payment-btn" id="cashBtn">Cash</button>
+            <button class="payment-btn" id="cardBtn">Card</button>
+            <button class="payment-btn" id="otherBtn">Other</button>
         </div>
     </div>
 
     <script>
-        class SalesApp {
-            constructor() {
-                this.elements = {
-                    toggleSalesBtn: document.getElementById('toggleSalesBtn'),
-                    container: document.querySelector('.container'),
-                    buttons: new Map([...document.querySelectorAll('.button-grid button:not(#add-custom):not(#editBtn)')]
-                        .map(btn => [btn.dataset.item, btn])),
-                    counts: new Map([...document.querySelectorAll('.count')]
-                        .map(count => [count.dataset.item, count])),
-                    addCustomBtn: document.getElementById('add-custom'),
-                    editBtn: document.getElementById('editBtn'),
-                    noteInput: document.getElementById('noteInput'),
-                    logSaleBtn: document.getElementById('logSaleBtn'),
-                    cashTotal: document.getElementById('cashTotal'),
-                    transactionDoorCount: document.getElementById('transactionDoorCount'),
-                    sessionDoorCount: document.getElementById('sessionDoorCount'),
-                    error: document.getElementById('error')
-                };
+        const transactionItems = [];
+        let subtotal = 0;
+        let taxRate = 0.10; // 10% tax
 
-                this.state = {
-                    sessionStarted: false,
-                    sessionId: null,
-                    currentItems: new Map(),
-                    cashTotal: 0,
-                    transactionDoorCount: 0,
-                    sessionDoorCount: 0,
-                    isEditing: false,
-                    activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
-                    db: null,
-                    isLogging: false,
-                    lastTransactionTimestamp: null
-                };
+        function updateTransactionDisplay() {
+            const itemsContainer = document.getElementById('transactionItems');
+            itemsContainer.innerHTML = '';
+            transactionItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('transaction-item');
+                itemDiv.innerHTML = `<span>${item.name}</span><span>$${item.price.toFixed(2)}</span>`;
+                itemsContainer.appendChild(itemDiv);
+            });
 
-                this.initDB();
-                this.bindEvents();
-            }
+            const subtotalEl = document.getElementById('subtotal');
+            const taxEl = document.getElementById('tax');
+            const totalEl = document.getElementById('total');
 
-            async initDB() {
-                const request = indexedDB.open('SalesDB', 1);
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    db.createObjectStore('transactions', { autoIncrement: true });
-                };
-                request.onsuccess = (event) => {
-                    this.state.db = event.target.result;
-                };
-            }
+            subtotal = transactionItems.reduce((sum, item) => sum + item.price, 0);
+            const tax = subtotal * taxRate;
+            const total = subtotal + tax;
 
-            bindEvents() {
-                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
-                this.elements.buttons.forEach((btn) =>
-                    btn.addEventListener('click', () => this.state.isEditing ? this.handleDecrement(btn) : this.handleIncrement(btn)));
-                this.elements.addCustomBtn.addEventListener('click', () => this.handleCustomCash());
-                this.elements.editBtn.addEventListener('click', () => this.toggleEdit());
-                this.elements.logSaleBtn.addEventListener('click', () => {
-                    if (!this.state.isLogging) {
-                        this.logSale();
-                    }
-                });
-            }
-
-            toggleSales() {
-                this.state.sessionStarted = !this.state.sessionStarted;
-                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'End Sales' : 'Start Sales';
-                this.elements.container.style.display = this.state.sessionStarted ? 'flex' : 'none';
-                if (this.state.sessionStarted) {
-                    this.state.sessionId = Date.now();
-                    this.state.sessionDoorCount = 0;
-                    this.elements.sessionDoorCount.textContent = '0';
-                } else {
-                    this.resetForm();
-                }
-            }
-
-            handleIncrement(btn) {
-                if (!this.state.sessionStarted || this.state.isEditing) return;
-                const item = btn.dataset.item;
-                const price = parseFloat(btn.dataset.price) || 0;
-                const current = this.state.currentItems.get(item) || { count: 0, price };
-                current.count++;
-                this.state.currentItems.set(item, current);
-                this.elements.counts.get(item).textContent = current.count;
-                this.updateTotals(price);
-            }
-
-            handleDecrement(btn) {
-                if (!this.state.sessionStarted || !this.state.isEditing) return;
-                const item = btn.dataset.item;
-                const price = parseFloat(btn.dataset.price) || 0;
-                const current = this.state.currentItems.get(item);
-                if (current && current.count > 0) {
-                    current.count--;
-                    this.state.currentItems.set(item, current);
-                    this.elements.counts.get(item).textContent = current.count;
-                    this.updateTotals(-price);
-                    if (current.count === 0) this.state.currentItems.delete(item);
-                }
-            }
-
-            updateTotals(priceDelta) {
-                if (this.state.sessionStarted) {
-                    this.state.cashTotal += priceDelta;
-                    this.state.transactionDoorCount = Array.from(this.state.currentItems.values())
-                        .reduce((sum, item) => sum + item.count, 0);
-                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                    this.elements.transactionDoorCount.textContent = this.state.transactionDoorCount;
-                }
-            }
-
-            async handleCustomCash() {
-                if (!this.state.sessionStarted || this.state.isEditing) return;
-                const amount = parseFloat(prompt('Enter custom cash amount:'));
-                if (isNaN(amount) || amount <= 0) {
-                    this.showError('Invalid amount');
-                    return;
-                }
-                const item = `CUSTOM $${amount.toFixed(2)}`;
-                const current = this.state.currentItems.get(item) || { count: 0, price: amount };
-                current.count++;
-                this.state.currentItems.set(item, current);
-                this.updateTotals(amount);
-            }
-
-            toggleEdit() {
-                this.state.isEditing = !this.state.isEditing;
-                this.elements.editBtn.style.backgroundColor = this.state.isEditing ? '#ffcccc' : '';
-            }
-
-            async logSale() {
-                if (!this.state.sessionStarted || this.state.currentItems.size === 0 || this.state.isLogging) return;
-                this.state.isLogging = true;
-                this.elements.logSaleBtn.disabled = true;
-
-                try {
-                    const timestamp = new Date().toISOString();
-                    const transaction = {
-                        sessionId: this.state.sessionId,
-                        timestamp,
-                        items: Object.fromEntries(this.state.currentItems),
-                        cashTotal: this.state.cashTotal,
-                        doorCount: this.state.transactionDoorCount,
-                        note: this.elements.noteInput.value
-                    };
-
-                    const isDuplicate = await new Promise((resolve) => {
-                        const txCheck = this.state.db.transaction(['transactions'], 'readonly');
-                        const storeCheck = txCheck.objectStore('transactions');
-                        const requestCheck = storeCheck.getAll();
-                        requestCheck.onsuccess = () => {
-                            const transactions = requestCheck.result.filter(t => t.sessionId === this.state.sessionId);
-                            resolve(transactions.some(t => t.timestamp === timestamp));
-                        };
-                        requestCheck.onerror = () => resolve(false);
-                    });
-
-                    if (isDuplicate) {
-                        this.showError('Duplicate transaction detected');
-                        return;
-                    }
-
-                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                    const store = tx.objectStore('transactions');
-                    await new Promise((resolve, reject) => {
-                        const request = store.add(transaction);
-                        request.onsuccess = resolve;
-                        request.onerror = () => reject(request.error);
-                    });
-
-                    await fetch('/log-transaction', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(transaction)
-                    });
-
-                    const channel = new BroadcastChannel('sales');
-                    channel.postMessage({ type: 'transaction', data: transaction });
-
-                    this.state.sessionDoorCount += this.state.transactionDoorCount;
-                    this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
-
-                } catch (error) {
-                    this.showError('Failed to log sale: ' + error.message);
-                } finally {
-                    this.resetForm();
-                    this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
-                }
-            }
-
-            resetForm() {
-                this.state.currentItems.clear();
-                this.state.cashTotal = 0;
-                this.state.transactionDoorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
-                this.elements.transactionDoorCount.textContent = '0';
-                this.elements.noteInput.value = '';
-                this.elements.counts.forEach(count => count.textContent = '0');
-                this.state.isEditing = false;
-                this.elements.editBtn.style.backgroundColor = '';
-            }
-
-            showError(message) {
-                this.elements.error.textContent = message;
-                this.elements.error.style.display = 'block';
-                setTimeout(() => this.elements.error.style.display = 'none', 3000);
-            }
+            subtotalEl.textContent = subtotal.toFixed(2);
+            taxEl.textContent = tax.toFixed(2);
+            totalEl.textContent = total.toFixed(2);
         }
 
-        document.addEventListener('DOMContentLoaded', () => new SalesApp());
+        document.querySelectorAll('.item-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const itemName = button.dataset.item;
+                const itemPrice = parseFloat(button.dataset.price);
+                transactionItems.push({ name: itemName, price: itemPrice });
+                updateTransactionDisplay();
+            });
+        });
+
+        document.getElementById('cashBtn').addEventListener('click', () => {
+            alert('Processing cash payment...');
+            // Add cash payment logic here
+        });
+
+        document.getElementById('cardBtn').addEventListener('click', () => {
+            alert('Processing card payment...');
+            // Add card payment logic here
+        });
+
+        document.getElementById('otherBtn').addEventListener('click', () => {
+            alert('Processing other payment...');
+            // Add other payment logic here
+        });
     </script>
 </body>
 </html>
