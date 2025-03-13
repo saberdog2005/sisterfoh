@@ -7,6 +7,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
         .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
@@ -18,6 +20,8 @@
         .cc { color: #f44336; }
         .ticket { color: #2196f3; }
         .comp { color: #ff9800; }
+        #exportBtn { margin-top: 20px; padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #exportBtn:hover { background: #026aa7; }
     </style>
 </head>
 <body>
@@ -26,6 +30,7 @@
         <h2 id="totalCount">Total Thru Door: 0</h2>
         <canvas id="doorCountChart" width="400" height="200"></canvas>
         <div id="log"></div>
+        <button id="exportBtn">Export to PDF</button>
     </div>
 
     <script>
@@ -35,6 +40,7 @@
             constructor() {
                 this.db = null;
                 this.initDB();
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
             }
 
             initDB() {
@@ -93,12 +99,13 @@
                     const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = {
                         CASH: [],
                         'CC TRANS': [],
                         TICKET: [],
-                        COMP: []
+                        COMP: [],
+                        TOTAL: []
                     };
 
                     sessionTransactions.forEach(transaction => {
@@ -107,6 +114,8 @@
                             cumulative[type] += counts[type];
                             dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
                         }
+                        cumulative.TOTAL = transaction.doorCount;
+                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: cumulative.TOTAL });
                     });
 
                     const totalThruDoor = sessionTransactions.length > 0 ? sessionTransactions[sessionTransactions.length - 1].doorCount : 0;
@@ -117,6 +126,7 @@
                         chart.data.datasets[1].data = dataPoints['CC TRANS'];
                         chart.data.datasets[2].data = dataPoints.TICKET;
                         chart.data.datasets[3].data = dataPoints.COMP;
+                        chart.data.datasets[4].data = dataPoints.TOTAL;
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
@@ -126,7 +136,8 @@
                                     { label: 'CASH', data: dataPoints.CASH, borderColor: 'green', backgroundColor: 'rgba(0, 255, 0, 0.1)', fill: false },
                                     { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: 'red', backgroundColor: 'rgba(255, 0, 0, 0.1)', fill: false },
                                     { label: 'TICKET', data: dataPoints.TICKET, borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', backgroundColor: 'rgba(255, 165, 0, 0.1)', fill: false }
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', backgroundColor: 'rgba(255, 165, 0, 0.1)', fill: false },
+                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: 'purple', backgroundColor: 'rgba(128, 0, 128, 0.1)', fill: false }
                                 ]
                             },
                             options: {
@@ -134,9 +145,7 @@
                                     x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
                                     y: { beginAtZero: true, title: { display: true, text: 'Count' } }
                                 },
-                                plugins: {
-                                    legend: { display: true }
-                                }
+                                plugins: { legend: { display: true } }
                             }
                         });
                     }
@@ -160,6 +169,29 @@
                     }).join(', ');
                     return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Session ${t.sessionId}: ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
                 }).join('');
+            }
+
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Add total thru door
+                const totalThruDoor = document.getElementById('totalCount').textContent;
+                doc.text(totalThruDoor, 10, 10);
+
+                // Add chart image
+                const canvas = document.getElementById('doorCountChart');
+                const chartImage = await html2canvas(canvas);
+                const imgData = chartImage.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 10, 20, 180, 90);
+
+                // Add transaction log
+                const log = document.getElementById('log');
+                const logText = log.innerText;
+                doc.text(logText, 10, 120);
+
+                // Save the PDF
+                doc.save('sales_log.pdf');
             }
         }
 
