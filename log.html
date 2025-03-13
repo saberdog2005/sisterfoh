@@ -3,555 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Log</title>
-    <!-- External Libraries -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <title>Sales Log Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #263238;
+            color: #eceff1;
             margin: 0;
             padding: 20px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
         }
         .container {
-            width: 100%;
-            background: #2d2d2d;
-            padding: 20px;
-            box-sizing: border-box;
-            display: none;
-        }
-        .grid {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
-            justify-content: space-between;
         }
-        .header {
-            flex: 1 0 100%;
-            text-align: center;
-        }
-        .col-1, .col-2, .col-3, .col-4 {
-            padding: 10px;
+        .col-4 {
             flex: 1;
-            min-width: 0;
+            min-width: 300px;
         }
-        .col-1 { flex: 0 0 15%; }
-        .col-2 { flex: 0 0 15%; }
-        .col-3 { flex: 0 0 35%; }
-        .col-4 { flex: 0 0 35%; }
-        canvas {
-            max-width: 100%;
-            background-color: #3c3c3c;
-            padding: 10px;
-            box-sizing: border-box;
+        h2 {
+            color: #4fc3f7;
         }
         .transaction-log {
-            max-height: 400px; /* Approx height for 20 rows */
+            background-color: #37474f;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
             overflow-y: auto;
-            overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
         }
         th, td {
-            border: 1px solid #555;
-            padding: 8px;
+            padding: 10px;
             text-align: left;
-            background-color: #3c3c3c;
+            border-bottom: 1px solid #546e7a;
         }
         th {
-            background-color: #4c4c4c;
+            background-color: #455a64;
         }
-        #exportBtn {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #exportBtn:hover {
-            background-color: #026aa7;
-        }
-        .cash { color: #4caf50; }
-        .cc { color: #f44336; }
-        .ticket { color: #2196f3; }
-        .comp { color: #ff9800; }
-        .modal {
-            display: block;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        .modal-content {
-            background-color: #2d2d2d;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #555;
-            width: 300px;
-            text-align: center;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            box-sizing: border-box;
-            background-color: #3c3c3c;
-            border: 1px solid #555;
-            color: #e0e0e0;
-        }
-        .modal-content button {
+        #moreBtn {
             padding: 10px 20px;
             background-color: #0288d1;
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            width: 100%;
         }
-        .modal-content button:hover {
+        #moreBtn:hover {
             background-color: #026aa7;
         }
-        .error {
-            color: #f44336;
+        #exportBtn {
             margin-top: 10px;
+            padding: 10px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
         }
-        @media (max-width: 768px) {
-            .col-1, .col-2, .col-3, .col-4 {
-                flex: 1 0 100%;
-            }
+        #exportBtn:hover {
+            background-color: #388e3c;
         }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p id="errorMsg" class="error"></p>
+    <div class="container">
+        <div class="col-4">
+            <h2>Transaction Log</h2>
+            <div class="transaction-log">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Item</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                        <!-- Transactions will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="moreBtnContainer" style="text-align: center; margin-top: 10px;">
+                <button id="moreBtn" style="display: none;">More</button>
+            </div>
+            <button id="exportBtn">Export to PDF</button>
         </div>
-    </div>
-
-    <div class="container" id="salesLogContainer">
-        <div class="grid">
-            <h1 class="header">Sales Log</h1>
-            <div class="col-1">
-                <h2>Filters</h2>
-                <label>From: <input type="date" id="fromDate"></label><br>
-                <label>To: <input type="date" id="toDate"></label><br>
-                <input type="text" id="search" placeholder="Search..."><br>
-                <button id="applyFilters">Apply</button>
-            </div>
-            <div class="col-2">
-                <h2>Summary</h2>
-                <div id="sessionInfo"></div>
-                <div>Total Transactions: <span id="totalTransactions">0</span></div>
-                <div>Total Sales: $<span id="totalSales">0.00</span></div>
-                <div>Avg Transaction: $<span id="avgTransaction">0.00</span></div>
-                <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
-                <canvas id="paymentChart"></canvas>
-            </div>
-            <div class="col-3">
-                <h2>Door Count Over Time</h2>
-                <canvas id="doorCountChart"></canvas>
-            </div>
-            <div class="col-4">
-                <h2>Transaction Log</h2>
-                <div class="transaction-log">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Cashier</th>
-                                <th>Items</th>
-                                <th>Cash Total</th>
-                                <th>Thru Door</th>
-                                <th>Note</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logBody"></tbody>
-                    </table>
-                </div>
-                <button id="exportBtn">Export to PDF</button>
-            </div>
-        </div>
+        <!-- Other dashboard sections can be added here -->
     </div>
 
     <script>
-        // Constants and variables
-        const adminUsername = "admin";
-        const adminPassword = "password123";
-        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-        const JPG_EXPORT_INTERVAL = 15 * 60 * 1000; // 15 minutes
-
-        const loginModal = document.getElementById('loginModal');
-        const salesLogContainer = document.getElementById('salesLogContainer');
-        const errorMsg = document.getElementById('errorMsg');
-
-        let sessionTimeoutId;
-        let jpgExportIntervalId;
-        let salesLogInstance;
-        let chart;
-        let paymentChart;
-        let fromDate = null;
-        let toDate = null;
-        let searchTerm = '';
-        const channel = new BroadcastChannel('transaction_channel');
-
-        // Define SalesLog class first
         class SalesLog {
             constructor() {
-                this.db = null;
-                this.updateInterval = null;
-                this.initDB().then(() => {
-                    this.updateLog();
-                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
-                    jpgExportIntervalId = setInterval(() => this.exportJPG(), JPG_EXPORT_INTERVAL);
-                    channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') this.updateLog();
-                    };
-                }).catch(error => console.error('Database initialization failed:', error));
-
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
-                document.getElementById('applyFilters').addEventListener('click', () => {
-                    fromDate = document.getElementById('fromDate').value;
-                    toDate = document.getElementById('toDate').value;
-                    searchTerm = document.getElementById('search').value.toLowerCase();
+                this.showAllTransactions = false;
+                const moreBtn = document.getElementById('moreBtn');
+                moreBtn.addEventListener('click', () => {
+                    this.showAllTransactions = !this.showAllTransactions;
+                    moreBtn.textContent = this.showAllTransactions ? 'Show Less' : 'More';
                     this.updateLog();
                 });
-            }
-
-            stop() {
-                if (this.updateInterval) clearInterval(this.updateInterval);
-            }
-
-            async initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 2);
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id' });
-                        }
-                    };
-                    request.onsuccess = (event) => {
-                        this.db = event.target.result;
-                        resolve();
-                    };
-                    request.onerror = (event) => reject(event.target.error);
-                });
-            }
-
-            parseItems(itemsString) {
-                const result = {
-                    CASH: { count: 0, amount: 0 },
-                    'CC TRANS': { count: 0, amount: 0 },
-                    TICKET: { count: 0, amount: 0 },
-                    COMP: { count: 0, amount: 0 }
-                };
-                const items = itemsString.split('; ').filter(Boolean);
-                items.forEach((item) => {
-                    const [keyPart, valuePart] = item.split(': ');
-                    if (keyPart && valuePart) {
-                        let type = keyPart;
-                        if (type.startsWith('CASH') && type !== 'CASH (CUSTOM)') type = 'CASH';
-                        if (type === 'CASH (CUSTOM)') {
-                            const amounts = valuePart.split(', ').map(a => parseFloat(a.replace('$', '')));
-                            result.CASH.count += amounts.length;
-                            result.CASH.amount += amounts.reduce((sum, a) => sum + a, 0);
-                        } else if (result[type]) {
-                            const [countStr, amountStr] = valuePart.split(' @ ');
-                            const count = parseInt(countStr, 10) || 0;
-                            const amount = parseFloat(amountStr.replace('$', '')) || 0;
-                            result[type].count += count;
-                            result[type].amount += count * amount;
-                        }
-                    }
-                });
-                return result;
+                this.updateLog(); // Initial call to populate the log
+                // Simulate periodic updates (e.g., every 10 seconds)
+                setInterval(() => this.updateLog(), 10000);
             }
 
             async updateLog() {
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                if (!activeSessionId) {
-                    document.getElementById('sessionInfo').innerHTML = '<p>No active session</p>';
-                    if (chart) {
-                        chart.data.datasets.forEach(dataset => dataset.data = []);
-                        chart.update();
-                    }
-                    if (paymentChart) {
-                        paymentChart.data.datasets[0].data = [0, 0, 0, 0];
-                        paymentChart.update();
-                    }
-                    document.getElementById('logBody').innerHTML = '';
-                    document.getElementById('totalTransactions').textContent = '0';
-                    document.getElementById('totalSales').textContent = '0.00';
-                    document.getElementById('avgTransaction').textContent = '0.00';
-                    document.getElementById('totalDoorCount').textContent = '0';
-                    return;
+                // Simulate fetching transactions (replace with actual data source like IndexedDB)
+                const allTransactions = this.generateSampleTransactions();
+                let filteredTransactions = allTransactions; // Apply filters here if needed
+
+                // Sort transactions by date ascending (for consistency)
+                filteredTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+                const totalTransactions = filteredTransactions.length;
+
+                const moreBtn = document.getElementById('moreBtn');
+                if (totalTransactions > 20) {
+                    moreBtn.style.display = 'block';
+                } else {
+                    moreBtn.style.display = 'none';
+                    this.showAllTransactions = false;
+                    moreBtn.textContent = 'More'; // Reset text
                 }
 
-                const tx = this.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const allTransactions = request.result;
-                    let sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
-                    let filteredTransactions = sessionTransactions;
+                // Determine transactions to display
+                const displayTransactions = this.showAllTransactions 
+                    ? [...filteredTransactions].reverse() // All transactions, newest first
+                    : filteredTransactions.slice(-20).reverse(); // Last 20, newest first
 
-                    const now = new Date();
-                    let startDate = null;
-                    if (fromDate) {
-                        startDate = new Date(fromDate);
-                        startDate.setHours(0, 0, 0, 0);
-                    }
-                    let endDate = now;
-                    if (toDate) {
-                        const selectedTo = new Date(toDate);
-                        selectedTo.setHours(23, 59, 59, 999);
-                        endDate = selectedTo < now ? selectedTo : now;
-                    }
-
-                    filteredTransactions = filteredTransactions.filter(t => {
-                        const ts = new Date(t.timestamp);
-                        return ts instanceof Date && !isNaN(ts) &&
-                               (!startDate || ts >= startDate) &&
-                               ts <= endDate;
-                    });
-
-                    if (searchTerm) {
-                        filteredTransactions = filteredTransactions.filter(t =>
-                            (t.cashierName && t.cashierName.toLowerCase().includes(searchTerm)) ||
-                            (t.note && t.note.toLowerCase().includes(searchTerm))
-                        );
-                    }
-
-                    filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                    let lastTransactionTime = 0;
-                    if (filteredTransactions.length > 0) {
-                        lastTransactionTime = new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime();
-                        setLastSessionEndTime(lastTransactionTime);
-                        resetSessionTimeout(lastTransactionTime);
-                    } else if (getLastSessionEndTime() === 0) {
-                        setLastSessionEndTime(now.getTime());
-                        resetSessionTimeout(now.getTime());
-                    } else {
-                        resetSessionTimeout(getLastSessionEndTime());
-                    }
-
-                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
-                    let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
-                    let totalSales = 0;
-                    let totalDoorCount = 0;
-                    let paymentAmounts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
-
-                    filteredTransactions.forEach(transaction => {
-                        const parsed = this.parseItems(transaction.items);
-                        for (const type in parsed) {
-                            cumulative[type] += parsed[type].count;
-                            paymentAmounts[type] += parsed[type].amount;
-                            dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
-                        }
-                        totalSales += transaction.cashTotal;
-                        totalDoorCount += transaction.doorCount;
-                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: totalDoorCount });
-                    });
-
-                    const totalTransactions = filteredTransactions.length;
-                    const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p>`;
-                    document.getElementById('totalTransactions').textContent = totalTransactions;
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
-                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
-
-                    if (chart) {
-                        chart.data.datasets[0].data = dataPoints.CASH;
-                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
-                        chart.data.datasets[2].data = dataPoints.TICKET;
-                        chart.data.datasets[3].data = dataPoints.COMP;
-                        chart.data.datasets[4].data = dataPoints.TOTAL;
-                        chart.update();
-                    } else {
-                        chart = new Chart(document.getElementById('doorCountChart'), {
-                            type: 'line',
-                            data: {
-                                datasets: [
-                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
-                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
-                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
-                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
-                                ]
-                            },
-                            options: {
-                                scales: {
-                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                                },
-                                plugins: { legend: { display: true } }
-                            }
-                        });
-                    }
-
-                    if (paymentChart) {
-                        paymentChart.data.datasets[0].data = [
-                            paymentAmounts.CASH,
-                            paymentAmounts['CC TRANS'],
-                            paymentAmounts.TICKET,
-                            paymentAmounts.COMP
-                        ];
-                        paymentChart.update();
-                    } else {
-                        paymentChart = new Chart(document.getElementById('paymentChart'), {
-                            type: 'pie',
-                            data: {
-                                labels: ['CASH', 'CC TRANS', 'TICKET', 'COMP'],
-                                datasets: [{
-                                    data: [
-                                        paymentAmounts.CASH,
-                                        paymentAmounts['CC TRANS'],
-                                        paymentAmounts.TICKET,
-                                        paymentAmounts.COMP
-                                    ],
-                                    backgroundColor: ['#4caf50', '#f44336', '#2196f3', '#ff9800']
-                                }]
-                            },
-                            options: {
-                                plugins: { legend: { display: true } }
-                            }
-                        });
-                    }
-
-                    // Display only the last 20 transactions
-                    const last20Transactions = filteredTransactions.slice(-20);
-                    this.displayLog(last20Transactions);
-                };
-            }
-
-            async exportJPG() {
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
-                const imgData = canvas.toDataURL('image/jpeg');
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = `sales_log_${new Date().toISOString().replace(/:/g, '-')}.jpg`;
-                link.click();
+                this.displayLog(displayTransactions);
             }
 
             displayLog(transactions) {
-                const logBody = document.getElementById('logBody');
-                logBody.innerHTML = transactions.map(t => {
-                    const items = t.items.split('; ').map(item => {
-                        const [key] = item.split(': ');
-                        let className = '';
-                        if (key.startsWith('CASH')) className = 'cash';
-                        else if (key === 'CC TRANS') className = 'cc';
-                        else if (key === 'TICKET') className = 'ticket';
-                        else if (key === 'COMP') className = 'comp';
-                        return `<span class="${className}">${item}</span>`;
-                    }).join('; ');
-                    return `
-                        <tr>
-                            <td>${new Date(t.timestamp).toLocaleString()}</td>
-                            <td>${t.cashierName || 'Unknown'}</td>
-                            <td>${items}</td>
-                            <td>$${t.cashTotal.toFixed(2)}</td>
-                            <td>${t.doorCount}</td>
-                            <td>${t.note || ''}</td>
-                        </tr>
+                const tbody = document.getElementById('transactionTableBody');
+                tbody.innerHTML = ''; // Clear existing rows
+                transactions.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${t.date}</td>
+                        <td>${t.item}</td>
+                        <td>$${t.amount.toFixed(2)}</td>
                     `;
-                }).join('');
+                    tbody.appendChild(row);
+                });
             }
 
-            async exportPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = doc.getImageProperties(imgData);
-                const pdfWidth = doc.internal.pageSize.getWidth();
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                doc.save('sales_log.pdf');
-            }
-        }
-
-        // Helper functions
-        function isLoggedIn() {
-            return localStorage.getItem('isLoggedIn') === 'true';
-        }
-
-        function setLoggedIn(value) {
-            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
-        }
-
-        function getLastSessionEndTime() {
-            const time = localStorage.getItem('lastSessionEndTime');
-            return time ? parseInt(time, 10) : 0;
-        }
-
-        function setLastSessionEndTime(time) {
-            localStorage.setItem('lastSessionEndTime', time.toString());
-        }
-
-        function resetSessionTimeout(lastTransactionTime) {
-            clearTimeout(sessionTimeoutId);
-            const now = Date.now();
-            const timeSinceLastTransaction = now - lastTransactionTime;
-            const remainingTime = SESSION_TIMEOUT - timeSinceLastTransaction;
-            if (remainingTime > 0) {
-                sessionTimeoutId = setTimeout(logout, remainingTime);
-            } else {
-                logout();
+            // Sample data generator (replace with actual data fetching)
+            generateSampleTransactions() {
+                const transactions = [];
+                for (let i = 1; i <= 25; i++) { // Generate 25 transactions to test "more" button
+                    transactions.push({
+                        date: `2023-10-${String(i).padStart(2, '0')} 10:00:00`,
+                        item: `Item ${i}`,
+                        amount: 10 + i * 5
+                    });
+                }
+                return transactions;
             }
         }
 
-        function logout() {
-            setLoggedIn(false);
-            if (salesLogInstance) salesLogInstance.stop();
-            clearInterval(jpgExportIntervalId);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        // Check login status on load
-        const now = Date.now();
-        const lastSessionEnd = getLastSessionEndTime();
-        if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
-            salesLogContainer.style.display = 'block';
-            loginModal.style.display = 'none';
-            salesLogInstance = new SalesLog();
-        } else {
-            setLoggedIn(false);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        // Login button event listener
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username === adminUsername && password === adminPassword) {
-                setLoggedIn(true);
-                loginModal.style.display = 'none';
-                salesLogContainer.style.display = 'block';
-                salesLogInstance = new SalesLog();
-            } else {
-                errorMsg.textContent = 'Invalid username or password';
-            }
+        // Initialize the sales log
+        document.addEventListener('DOMContentLoaded', () => {
+            new SalesLog();
         });
     </script>
 </body>
