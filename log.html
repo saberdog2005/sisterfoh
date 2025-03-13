@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://accounts.google.com https://www.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; object-src 'none';">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,31 +29,13 @@
             width: 100%;
             z-index: 1000;
         }
-        #loginScreen input {
-            padding: 10px;
-            margin: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        #loginBtn {
-            padding: 10px 20px;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-        }
         #loginError {
             color: #ff6b6b;
             display: none;
+            margin-top: 10px;
         }
         #mainContent {
             display: none;
-        }
-        .container {
             max-width: 85%;
             margin: 0 auto;
             background: #2d2d2d;
@@ -61,6 +46,7 @@
         .log-table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
         .log-table th, .log-table td {
             padding: 10px;
@@ -81,6 +67,12 @@
             font-weight: bold;
             margin-top: 20px;
         }
+        canvas {
+            max-width: 100%;
+            background-color: #3c3c3c;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -88,16 +80,19 @@
     <div id="loginScreen">
         <div style="text-align: center;">
             <h2>Login to View Sales Log</h2>
-            <input type="text" id="username" placeholder="Username"><br>
-            <input type="password" id="password" placeholder="Password"><br>
-            <button id="loginBtn">Login</button>
-            <p id="loginError">Invalid credentials</p>
+            <div id="g_id_onload"
+                 data-client_id="251850742586-r8lci00j14guero2hd0austoj73jl8mm.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse">
+            </div>
+            <div class="g_id_signin" data-type="standard"></div>
+            <p id="loginError">Login failed. Please try again.</p>
         </div>
     </div>
 
     <!-- Main Content -->
-    <div id="mainContent" class="container">
-        <h1>Sales Log</h1>
+    <div id="mainContent">
+        <h1>Sales Log - Last Closed Session</h1>
+        <canvas id="thruDoorChart"></canvas>
         <table class="log-table">
             <thead>
                 <tr>
@@ -114,70 +109,132 @@
     </div>
 
     <script>
+        const CLIENT_ID = '251850742586-r8lci00j14guero2hd0austoj73jl8mm.apps.googleusercontent.com';
+
         class SalesLog {
             constructor() {
                 this.db = null;
+                this.chart = null;
                 this.initDB();
                 this.bindEvents();
             }
 
-            initDB() {
-                const request = indexedDB.open('SalesDB', 1);
-                request.onsuccess = (event) => {
-                    this.db = event.target.result;
-                };
-                request.onerror = (event) => {
-                    console.error('Database error:', event.target.error);
-                };
+            async initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('SalesDB', 1);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        }
+                    };
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
             }
 
             bindEvents() {
-                document.getElementById('loginBtn').addEventListener('click', () => {
-                    const username = document.getElementById('username').value;
-                    const password = document.getElementById('password').value;
-                    if (username === 'admin' && password === 'password') {
-                        localStorage.setItem('loggedIn', 'true');
-                        document.getElementById('loginScreen').style.display = 'none';
-                        document.getElementById('mainContent').style.display = 'block';
-                        this.loadTransactions();
-                    } else {
-                        document.getElementById('loginError').style.display = 'block';
-                    }
-                });
-
                 document.getElementById('logoutBtn').addEventListener('click', () => {
                     localStorage.removeItem('loggedIn');
                     location.reload();
                 });
             }
 
-            loadTransactions() {
+            handleCredentialResponse(response) {
+                if (response.credential) {
+                    localStorage.setItem('loggedIn', 'true');
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    const salesLog = new SalesLog();
+                    salesLog.loadLastClosedSession();
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            }
+
+            async loadLastClosedSession() {
+                if (!this.db) await this.initDB();
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
-                request.onsuccess = (event) => {
-                    const transactions = event.target.result;
-                    const tableBody = document.getElementById('logTableBody');
-                    tableBody.innerHTML = '';
-                    transactions.forEach(t => {
-                        const row = tableBody.insertRow();
-                        row.innerHTML = `
-                            <td>${t.timestamp}</td>
-                            <td>${t.items}</td>
-                            <td>${t.cashTotal}</td>
-                            <td>${t.doorCount}</td>
-                            <td>${t.note}</td>
-                        `;
-                    });
+
+                request.onsuccess = () => {
+                    const transactions = request.result;
+                    const sessionIds = [...new Set(transactions.map(t => t.sessionId))].filter(id => id !== null);
+                    const activeSessionId = localStorage.getItem('activeSessionId');
+                    const closedSessions = sessionIds.filter(id => id !== activeSessionId);
+                    const lastClosedSessionId = closedSessions.length > 0 ? closedSessions[closedSessions.length - 1] : null;
+
+                    if (lastClosedSessionId) {
+                        const sessionTransactions = transactions.filter(t => t.sessionId === lastClosedSessionId);
+                        this.displayTransactions(sessionTransactions);
+                        this.renderChart(sessionTransactions);
+                    } else {
+                        document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5">No closed sessions found.</td></tr>';
+                    }
                 };
             }
+
+            displayTransactions(transactions) {
+                const tableBody = document.getElementById('logTableBody');
+                tableBody.innerHTML = '';
+                transactions.forEach(t => {
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${t.timestamp}</td>
+                        <td>${t.items}</td>
+                        <td>$${t.cashTotal.toFixed(2)}</td>
+                        <td>${t.doorCount}</td>
+                        <td>${t.note}</td>
+                    `;
+                });
+            }
+
+            renderChart(transactions) {
+                const ctx = document.getElementById('thruDoorChart').getContext('2d');
+                const labels = transactions.map(t => new Date(t.timestamp).toLocaleTimeString());
+                const data = transactions.map(t => t.doorCount);
+
+                if (this.chart) this.chart.destroy();
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Thru Door Count Over Time',
+                            data: data,
+                            borderColor: '#1a73e8',
+                            backgroundColor: 'rgba(26, 115, 232, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Time', color: '#e0e0e0' } },
+                            y: { title: { display: true, text: 'Thru Door Count', color: '#e0e0e0' }, beginAtZero: true }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#e0e0e0' } }
+                        }
+                    }
+                });
+            }
         }
+
+        window.handleCredentialResponse = function(response) {
+            const salesLog = new SalesLog();
+            salesLog.handleCredentialResponse(response);
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('loggedIn') === 'true') {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
-                new SalesLog().loadTransactions();
+                new SalesLog().loadLastClosedSession();
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
             }
