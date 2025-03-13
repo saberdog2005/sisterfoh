@@ -6,9 +6,9 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
-        .header { background: #333; color: white; padding: 10px; text-align: center; }
-        .header input, .header select { margin: 5px; padding: 5px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #1e1e1e; color: #e0e0e0; }
+        .header { background: #2d2d2d; color: white; padding: 10px; text-align: center; }
+        .header input, .header select { margin: 5px; padding: 5px; background: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; }
         .container { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
         .button-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
         .product-item { display: flex; flex-direction: column; align-items: center; }
@@ -22,7 +22,7 @@
         .disabled { opacity: 0.5; }
         .totals-container { display: flex; justify-content: space-between; font-size: 1.2em; }
         .note-section { display: flex; flex-direction: column; }
-        #noteInput { width: 100%; height: 50px; margin-top: 5px; padding: 5px; }
+        #noteInput { width: 100%; height: 50px; margin-top: 5px; padding: 5px; background: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; }
         #logSaleBtn { padding: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; }
         #logSaleBtn:hover { background: #1976D2; }
         .footer { padding: 10px; display: flex; gap: 10px; justify-content: center; }
@@ -90,10 +90,9 @@
                 this.buttonLayout = savedLayout || this.defaultButtonLayout;
                 this.generateButtonGrid();
 
-                $('#eventDate').val(new Date().toISOString().split('T')[0]);
-                this.bindEvents();
                 this.initDB();
                 this.checkActiveSession();
+                this.bindEvents();
             }
 
             generateButtonGrid() {
@@ -142,10 +141,18 @@
                     if (cursor && cursor.value.status === 'open') {
                         this.sessionStarted = true;
                         this.sessionId = cursor.value.id;
+                        this.autofillSessionDetails(cursor.value);
                         $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
                         $('#sessionHeader input').prop('disabled', true);
                     }
                 };
+            }
+
+            autofillSessionDetails(session) {
+                $('#eventDate').val(session.date);
+                $('#venue').val(session.venue);
+                $('#eventName').val(session.eventName);
+                $('#cashier').val(session.cashier);
             }
 
             bindEvents() {
@@ -187,13 +194,14 @@
                     tx.objectStore('sessions').add(session).onsuccess = (event) => {
                         this.sessionId = event.target.result;
                         this.sessionStarted = true;
+                        this.autofillSessionDetails(session);
                         $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
                         $('#sessionHeader input').prop('disabled', true);
                         this.showSuccess('Session started');
                     };
                 } else {
                     const pin = prompt('Enter PIN to close session:');
-                    if (pin !== '1234') { // Simple PIN check; enhance as needed
+                    if (pin !== '1234') {
                         this.showError('Incorrect PIN');
                         return;
                     }
