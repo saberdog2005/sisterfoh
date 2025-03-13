@@ -7,207 +7,48 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .header label {
-            margin-right: 5px;
-            color: #e0e0e0;
-        }
-        .header input {
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        .header input:disabled {
-            background-color: #555;
-            color: #888;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .button-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .product-item {
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .product-item.hidden {
-            display: none;
-        }
-        .increment-btn, .minus, .add-custom {
-            padding: 1em;
-            margin: 0.5em 0;
-            width: 100%;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.5em;
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-        .increment-btn:hover, .minus:hover, .add-custom:hover {
-            background-color: #444;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        button[disabled] {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #1e1e1e; color: #e0e0e0; }
+        .header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background-color: #2d2d2d; padding: 10px; border-radius: 5px; }
+        .header label { margin-right: 5px; color: #e0e0e0; }
+        .header input { padding: 5px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; }
+        .header input:disabled { background-color: #555; color: #888; }
+        .container { display: flex; flex-direction: column; gap: 20px; }
+        .button-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .product-item { background-color: #2d2d2d; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .product-item.hidden { display: none; }
+        .increment-btn, .minus, .add-custom { padding: 1em; margin: 0.5em 0; width: 100%; border: none; border-radius: 5px; cursor: pointer; font-size: 1.5em; transition: background-color 0.3s, box-shadow 0.3s; }
+        .increment-btn:hover, .minus:hover, .add-custom:hover { background-color: #444; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        button[disabled] { opacity: 0.5; cursor: not-allowed; }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
         .ticket { background-color: #1a73e8; color: white; }
         .comp { background-color: #ffa500; color: white; }
         .minus { background-color: #555; color: white; }
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .control-row { display: flex; justify-content: space-between; align-items: center; }
         .count { font-weight: bold; color: #e0e0e0; }
-        .custom-input {
-            display: flex;
-            gap: 5px;
-        }
-        .custom-input input {
-            width: 70%;
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
+        .custom-input { display: flex; gap: 5px; }
+        .custom-input input { width: 70%; padding: 5px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; }
         .add-custom { background-color: #2e7d32; color: white; width: 30%; }
-        .totals-container {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.2em;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .note-section {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 10px;
-        }
-        .note-section textarea {
-            width: 100%;
-            height: 60px;
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        #logSaleBtn {
-            padding: 1em;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.5em;
-        }
-        #logSaleBtn:hover {
-            background-color: #026aa7;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .footer {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            border-radius: 5px;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .edit-btn, .open-btn, .close-btn {
-            padding: 0.8em 1.5em;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
+        .totals-container { display: flex; justify-content: space-between; font-size: 1.2em; background-color: #2d2d2d; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .note-section { display: flex; flex-direction: column; margin-bottom: 10px; }
+        .note-section textarea { width: 100%; height: 60px; padding: 5px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; }
+        #logSaleBtn { padding: 1em; background-color: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.5em; }
+        #logSaleBtn:hover { background-color: #026aa7; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .footer { display: flex; gap: 10px; margin-top: 20px; background-color: #2d2d2d; padding: 10px; border-radius: 5px; justify-content: space-between; align-items: center; }
+        .edit-btn, .open-btn, .close-btn { padding: 0.8em 1.5em; border: none; border-radius: 5px; cursor: pointer; font-size: 1.2em; font-weight: bold; }
         .edit-btn { background-color: #555; color: white; }
         .open-btn { background-color: #0288d1; color: white; }
         .close-btn { background-color: #d32f2f; color: white; }
         #successMessage { color: #2e7d32; font-weight: bold; }
         #errorMessage { color: #d32f2f; font-weight: bold; }
         .hidden { display: none; }
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            margin: -1px;
-            padding: 0;
-            overflow: hidden;
-            clip: rect(0,0,0,0);
-            border: 0;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #2d2d2d;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px;
-            color: #e0e0e0;
-            text-align: center;
-        }
+        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #2d2d2d; margin: 15% auto; padding: 20px; border-radius: 5px; width: 300px; color: #e0e0e0; text-align: center; }
         .modal-content h2 { color: #bb86fc; }
-        .modal-content input {
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 3px;
-            margin: 10px 0;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            background: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .modal-content button:hover {
-            background: #026aa7;
-        }
+        .modal-content input { padding: 5px; background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; border-radius: 3px; margin: 10px 0; }
+        .modal-content button { padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .modal-content button:hover { background: #026aa7; }
     </style>
 </head>
 <body>
@@ -357,17 +198,8 @@
                     const request = indexedDB.open('SalesDB', 2);
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        const oldVersion = event.oldVersion;
-                        if (oldVersion < 1) {
-                            if (!db.objectStoreNames.contains('transactions')) {
-                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                            }
-                        }
-                        if (oldVersion < 2) {
-                            const store = event.target.transaction.objectStore('transactions');
-                            if (!store.indexNames.contains('sessionId')) {
-                                store.createIndex('sessionId', 'sessionId', { unique: false });
-                            }
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
                     };
                     request.onsuccess = (event) => {
@@ -395,18 +227,10 @@
                     const minusBtn = btn.querySelector('.minus');
                     const addCustomBtn = btn.querySelector('.add-custom');
                     const customInput = btn.querySelector('input[type="number"]');
-
-                    if (incrementBtn) {
-                        incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
-                    }
-                    if (minusBtn) {
-                        minusBtn.addEventListener('click', () => this.handleDecrement(btn));
-                    }
-                    if (addCustomBtn && customInput) {
-                        addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
-                    }
+                    if (incrementBtn) incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
+                    if (minusBtn) minusBtn.addEventListener('click', () => this.handleDecrement(btn));
+                    if (addCustomBtn && customInput) addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
                 });
-
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
                 this.elements.editLayoutBtn.addEventListener('click', () => {
                     if (!this.state.sessionStarted) this.toggleEditMode();
@@ -485,9 +309,9 @@
             }
 
             toggleSales() {
-                this.state.sessionStarted = !this.state.sessionStarted;
-                localStorage.setItem('sessionActive', this.state.sessionStarted);
-                if (this.state.sessionStarted) {
+                if (!this.state.sessionStarted) {
+                    this.state.sessionStarted = true;
+                    localStorage.setItem('sessionActive', true);
                     this.state.sessionId = Date.now().toString();
                     localStorage.setItem('activeSessionId', this.state.sessionId);
                     this.state.cashTotal = 0;
@@ -496,12 +320,27 @@
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
                     this.elements.counts.forEach(count => count.textContent = '0');
+                    this.showSuccess('Sales session started');
+                    this.checkSessionStatus();
                 } else {
-                    localStorage.removeItem('activeSessionId');
-                    this.state.sessionId = null;
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.value = '';
+                    this.elements.pinError.textContent = '';
                 }
-                this.checkSessionStatus();
-                this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
+            }
+
+            confirmCloseSales() {
+                const pin = this.elements.pinInput.value;
+                if (pin === DEFAULT_PIN) {
+                    this.state.sessionStarted = false;
+                    localStorage.removeItem('activeSessionId');
+                    localStorage.setItem('sessionActive', false);
+                    this.elements.pinModal.style.display = 'none';
+                    this.showSuccess('Sales session ended');
+                    this.checkSessionStatus();
+                } else {
+                    this.elements.pinError.textContent = 'Incorrect PIN';
+                }
             }
 
             toggleEditMode() {
@@ -590,13 +429,12 @@
                         request.onsuccess = () => resolve();
                         request.onerror = () => reject(request.error);
                     });
-                    localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
                     console.error('Error logging to Google Sheets:', error);
-                    this.showError('Saved locally, failed to sync to Google Sheets: ' + error.message);
-                    localStorage.setItem('transactionLogged', Date.now().toString());
+                    this.showError('Saved locally, failed to sync: ' + error.message);
                 }
                 this.resetForm();
+                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
