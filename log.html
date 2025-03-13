@@ -10,23 +10,25 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
         .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
+        h1 { color: #bb86fc; text-align: center; }
+        #totalCount { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
         #doorCountChart { margin-bottom: 20px; }
         .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
         .cash { color: #4caf50; }
-        .cc { color: #2196f3; }
-        .ticket { color: #ff9800; }
-        .comp { color: #f44336; }
+        .cc { color: #f44336; }
+        .ticket { color: #2196f3; }
+        .comp { color: #ff9800; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sales Log</h1>
+        <h2 id="totalCount">Total Thru Door: 0</h2>
         <canvas id="doorCountChart" width="400" height="200"></canvas>
         <div id="log"></div>
     </div>
 
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
         let chart;
 
         class SalesLog {
@@ -51,76 +53,97 @@
                 request.onerror = (event) => console.error('Database error:', event.target.error);
             }
 
-            async updateChart() {
+            parseItems(itemsString) {
+                const counts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+                const items = itemsString.split(', ');
+                items.forEach(item => {
+                    const [keyPart, valuePart] = item.split(': ');
+                    if (keyPart && valuePart) {
+                        const count = parseInt(valuePart.split(' @')[0], 10);
+                        if (keyPart.startsWith('CASH')) {
+                            counts.CASH += count;
+                        } else if (keyPart === 'CC TRANS') {
+                            counts['CC TRANS'] += count;
+                        } else if (keyPart === 'TICKET') {
+                            counts.TICKET += count;
+                        } else if (keyPart === 'COMP') {
+                            counts.COMP += count;
+                        }
+                    }
+                });
+                return counts;
+            }
+
+            updateChart() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
                 if (!activeSessionId) {
                     if (chart) {
-                        chart.data.datasets[0].data = [];
+                        chart.data.datasets.forEach(dataset => dataset.data = []);
                         chart.update();
                     }
+                    document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
                     document.getElementById('log').innerHTML = '<p>No active session</p>';
                     return;
                 }
-                const allTransactions = await this.getAllTransactions();
-                const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
-                sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                const dataPoints = sessionTransactions.map(t => ({ x: t.timestamp, y: t.doorCount }));
-                if (chart) {
-                    chart.data.datasets[0].data = dataPoints;
-                    chart.update();
-                } else {
-                    chart = new Chart(document.getElementById('doorCountChart'), {
-                        type: 'line',
-                        data: {
-                            datasets: [{
-                                label: 'Thru Door Count',
-                                data: dataPoints,
-                                borderColor: 'purple',
-                                backgroundColor: 'rgba(128, 0, 128, 0.1)',
-                                fill: true
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                x: { type: 'time', time: { unit: 'minute' } },
-                                y: { beginAtZero: true }
-                            }
+                const tx = this.db.transaction(['transactions'], 'readonly');
+                const store = tx.objectStore('transactions');
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const allTransactions = request.result;
+                    const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+                    let dataPoints = {
+                        CASH: [],
+                        'CC TRANS': [],
+                        TICKET: [],
+                        COMP: []
+                    };
+
+                    sessionTransactions.forEach(transaction => {
+                        const counts = this.parseItems(transaction.items);
+                        for (const type in counts) {
+                            cumulative[type] += counts[type];
+                            dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
                         }
                     });
-                }
-                this.displayLog(sessionTransactions);
-                await this.syncToSheets(allTransactions);
-            }
 
-            async getAllTransactions() {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction(['transactions'], 'readonly');
-                    const store = tx.objectStore('transactions');
-                    const request = store.getAll();
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-            }
+                    const totalThruDoor = sessionTransactions.length > 0 ? sessionTransactions[sessionTransactions.length - 1].doorCount : 0;
+                    document.getElementById('totalCount').textContent = `Total Thru Door: ${totalThruDoor}`;
 
-            async syncToSheets(allTransactions) {
-                const unsyncedTransactions = allTransactions.filter(t => !t.synced);
-                for (const transaction of unsyncedTransactions) {
-                    try {
-                        const response = await fetch(APPS_SCRIPT_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(transaction)
+                    if (chart) {
+                        chart.data.datasets[0].data = dataPoints.CASH;
+                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
+                        chart.data.datasets[2].data = dataPoints.TICKET;
+                        chart.data.datasets[3].data = dataPoints.COMP;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: {
+                                datasets: [
+                                    { label: 'CASH', data: dataPoints.CASH, borderColor: 'green', backgroundColor: 'rgba(0, 255, 0, 0.1)', fill: false },
+                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: 'red', backgroundColor: 'rgba(255, 0, 0, 0.1)', fill: false },
+                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: false },
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', backgroundColor: 'rgba(255, 165, 0, 0.1)', fill: false }
+                                ]
+                            },
+                            options: {
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                                },
+                                plugins: {
+                                    legend: { display: true }
+                                }
+                            }
                         });
-                        if (response.ok) {
-                            transaction.synced = true;
-                            const tx = this.db.transaction(['transactions'], 'readwrite');
-                            const store = tx.objectStore('transactions');
-                            store.put(transaction);
-                        }
-                    } catch (error) {
-                        console.error('Error syncing transaction:', error);
                     }
-                }
+
+                    this.displayLog(sessionTransactions);
+                };
+                request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
             }
 
             displayLog(transactions) {
