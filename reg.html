@@ -7,7 +7,6 @@
  <title>Sister Bar Register</title>
  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
  <style>
- /* Original styles preserved */
  body {
  font-family: Arial, sans-serif;
  margin: 0;
@@ -219,7 +218,7 @@
 
  <script>
  // Replace with your Google Apps Script Web App URL
- const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
+ const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 
  class SalesApp {
  constructor() {
@@ -350,6 +349,7 @@
  if (item.startsWith('CASH')) {
  this.state.cashTotal += amount;
  }
+ // Increment doorCount for all transactions except COMP
  if (!item.includes('COMP')) {
  this.state.doorCount += amount >= 0 ? 1 : -1;
  }
