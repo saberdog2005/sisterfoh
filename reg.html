@@ -301,18 +301,21 @@
                         const db = event.target.result;
                         const oldVersion = event.oldVersion;
                         if (oldVersion < 1) {
-                            if (!db.objectStoreNames.contains('transactions')) {
-                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        }
+                        if (oldVersion < 2) {
+                            const store = event.target.transaction.objectStore('transactions');
+                            if (!store.indexNames.contains('sessionId')) {
+                                store.createIndex('sessionId', 'sessionId', { unique: false });
                             }
                         }
                     };
                     request.onsuccess = (event) => {
                         this.state.db = event.target.result;
+                        console.log('Database opened successfully');
                         resolve();
                     };
-                    request.onerror = (event) => {
-                        reject(event.target.error);
-                    };
+                    request.onerror = (event) => reject(event.target.error);
                 });
             }
 
@@ -393,7 +396,7 @@
 
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
-                this.state.doorCount += countDelta;
+                this.state.doorCount += countDelta; // 1 item = 1 thru door
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
             }
@@ -504,15 +507,16 @@
                     synced: false
                 };
 
-                const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                const store = tx.objectStore('transactions');
-                await new Promise((resolve, reject) => {
-                    const request = store.add(transaction);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-
+                this.elements.logSaleBtn.disabled = true;
                 try {
+                    const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                    const store = tx.objectStore('transactions');
+                    await new Promise((resolve, reject) => {
+                        const request = store.add(transaction);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+
                     await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -529,9 +533,11 @@
                     });
                     localStorage.setItem('transactionLogged', Date.now().toString());
                 } catch (error) {
-                    console.error('Error logging to Google Sheets:', error);
-                    this.showError('Saved locally, failed to sync to Google Sheets: ' + error.message);
+                    console.error('Error logging sale:', error);
+                    this.showError('Saved locally, failed to sync: ' + error.message);
                     localStorage.setItem('transactionLogged', Date.now().toString());
+                } finally {
+                    this.elements.logSaleBtn.disabled = false;
                 }
                 this.resetForm();
             }
@@ -539,8 +545,9 @@
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
+                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.doorCount;
+                this.elements.doorCount.textContent = '0';
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
