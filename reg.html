@@ -55,13 +55,13 @@
             display: none;
         }
         .increment-btn, .minus, .add-custom {
-            padding: 20px;
+            padding: 30px;
             margin: 5px 0;
             width: 100%;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 24px;
+            font-size: 28px;
         }
         .cash {
             background-color: #2e7d32;
@@ -132,13 +132,13 @@
             border-radius: 3px;
         }
         #logSaleBtn {
-            padding: 20px;
+            padding: 30px;
             background-color: #0288d1;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 24px;
+            font-size: 28px;
         }
         .footer {
             display: flex;
@@ -149,11 +149,11 @@
             border-radius: 5px;
         }
         .edit-btn, .open-btn {
-            padding: 15px;
+            padding: 20px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 20px;
+            font-size: 24px;
         }
         .edit-btn {
             background-color: #555;
@@ -169,18 +169,17 @@
         #errorMessage {
             color: #d32f2f;
         }
-        /* Media query for iPad landscape */
         @media only screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: landscape) {
             .button-container {
                 grid-template-columns: repeat(4, 1fr);
             }
             .increment-btn, .minus, .add-custom {
-                padding: 25px;
-                font-size: 28px;
+                padding: 35px;
+                font-size: 32px;
             }
             #logSaleBtn {
-                padding: 25px;
-                font-size: 28px;
+                padding: 35px;
+                font-size: 32px;
             }
         }
     </style>
@@ -198,7 +197,6 @@
     </div>
     <div class="container">
         <div class="button-container">
-            <!-- Custom Cash on the left -->
             <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
                 <div class="product-controls cash">
                     <h4>CASH (CUSTOM)</h4>
@@ -270,7 +268,8 @@
                     cashTotal: 0,
                     doorCount: 0,
                     isEditing: false,
-                    activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {}))
+                    activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
+                    db: null
                 };
                 this.elements = {
                     transactionButtons: document.querySelectorAll('.product-item'),
@@ -283,15 +282,54 @@
                     doorCount: document.getElementById('doorCount'),
                     noteInput: document.getElementById('noteInput')
                 };
-                this.tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: '' // Set dynamically in getToken
-                });
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
-                this.checkSessionStatus();
-                this.initializeButtonStates();
-                this.bindEvents();
+                this.initDB().then(() => {
+                    this.checkSessionStatus();
+                    this.initializeButtonStates();
+                    this.bindEvents();
+                    this.initGoogleAPI();
+                }).catch(error => this.showError('Database initialization failed: ' + error));
+            }
+
+            async initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('SalesDB', 1);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                        }
+                    };
+                    request.onsuccess = (event) => {
+                        this.state.db = event.target.result;
+                        resolve();
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            }
+
+            async initGoogleAPI() {
+                const waitForGoogle = () => new Promise(resolve => {
+                    const checkGoogle = () => {
+                        if (typeof google !== 'undefined' && google.accounts) {
+                            resolve();
+                        } else {
+                            setTimeout(checkGoogle, 100);
+                        }
+                    };
+                    checkGoogle();
+                });
+
+                try {
+                    await waitForGoogle();
+                    this.tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: ''
+                    });
+                } catch (error) {
+                    this.showError('Failed to initialize Google API: ' + error);
+                }
             }
 
             initializeButtonStates() {
@@ -384,6 +422,7 @@
 
             checkSessionStatus() {
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
             }
 
@@ -391,10 +430,12 @@
                 this.state.sessionStarted = !this.state.sessionStarted;
                 localStorage.setItem('sessionActive', this.state.sessionStarted);
                 if (this.state.sessionStarted) {
-                    const sessionId = Date.now();
-                    localStorage.setItem('activeSessionId', sessionId);
+                    this.state.sessionId = Date.now().toString();
+                    localStorage.setItem('activeSessionId', this.state.sessionId);
+                    window.open('log.html', '_blank');
                 } else {
                     localStorage.removeItem('activeSessionId');
+                    this.state.sessionId = null;
                 }
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
                 this.showSuccess(this.state.sessionStarted ? 'Sales session started' : 'Sales session ended');
@@ -432,6 +473,10 @@
 
             async getToken() {
                 return new Promise((resolve, reject) => {
+                    if (!this.tokenClient) {
+                        reject(new Error('Google API not initialized'));
+                        return;
+                    }
                     this.tokenClient.callback = (response) => {
                         if (response.error) {
                             reject(response.error);
@@ -446,20 +491,41 @@
 
             async logSale() {
                 if (!this.state.sessionStarted) return this.showError('Sales session not started');
-                if (!this.state.token) {
-                    try {
-                        await this.getToken();
-                    } catch (error) {
-                        this.showError('Authentication failed: ' + error);
-                        return;
-                    }
-                }
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
                     .map(([key, { count, price }]) => `${key}: ${count} @ $${price.toFixed(2)}`)
                     .join(', ');
                 const note = this.elements.noteInput.value;
-                const data = [timestamp, items, this.state.cashTotal, this.state.doorCount, note];
+                const transaction = {
+                    sessionId: this.state.sessionId,
+                    timestamp: timestamp,
+                    items: items,
+                    cashTotal: this.state.cashTotal,
+                    doorCount: this.state.doorCount,
+                    note: note,
+                    synced: false
+                };
+
+                // Store in IndexedDB
+                const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                await new Promise((resolve, reject) => {
+                    const request = store.add(transaction);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Attempt to sync with Google Sheets
+                if (!this.state.token) {
+                    try {
+                        await this.getToken();
+                    } catch (error) {
+                        this.showError('Authentication failed, saved locally: ' + error);
+                        this.resetForm();
+                        this.syncPendingTransactions();
+                        return;
+                    }
+                }
                 try {
                     const response = await fetch(
                         `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Transactions!A1:append?valueInputOption=RAW`,
@@ -469,15 +535,59 @@
                                 'Authorization': `Bearer ${this.state.token}`,
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({ values: [data] })
+                            body: JSON.stringify({ values: [[timestamp, items, this.state.cashTotal, this.state.doorCount, note]] })
                         }
                     );
-                    if (!response.ok) throw new Error('Failed to log sale');
-                    this.resetForm();
+                    if (!response.ok) throw new Error('Failed to log sale to Google Sheets');
+                    const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
+                    const updateStore = updateTx.objectStore('transactions');
+                    await new Promise((resolve, reject) => {
+                        const request = updateStore.put({ ...transaction, synced: true });
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
                     this.showSuccess('Sale logged successfully');
                 } catch (error) {
-                    this.showError('Error logging sale: ' + error.message);
+                    this.showError('Error logging to Google Sheets, saved locally: ' + error.message);
                 }
+                this.resetForm();
+                this.syncPendingTransactions();
+            }
+
+            async syncPendingTransactions() {
+                if (!this.state.token) return;
+                const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const request = store.getAll();
+                request.onsuccess = async () => {
+                    const transactions = request.result.filter(t => !t.synced);
+                    for (const transaction of transactions) {
+                        try {
+                            const response = await fetch(
+                                `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Transactions!A1:append?valueInputOption=RAW`,
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${this.state.token}`,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ values: [[transaction.timestamp, transaction.items, transaction.cashTotal, transaction.doorCount, transaction.note]] })
+                                }
+                            );
+                            if (response.ok) {
+                                const updateTx = this.state.db.transaction(['transactions'], 'readwrite');
+                                const updateStore = updateTx.objectStore('transactions');
+                                await new Promise((resolve, reject) => {
+                                    const request = updateStore.put({ ...transaction, synced: true });
+                                    request.onsuccess = () => resolve();
+                                    request.onerror = () => reject(request.error);
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Sync failed for transaction:', transaction, error);
+                        }
+                    }
+                };
             }
 
             resetForm() {
@@ -501,7 +611,9 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => new SalesApp());
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new SalesApp();
+        });
     </script>
 </body>
 </html>
