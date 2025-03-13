@@ -280,8 +280,7 @@
             </div>
             <div class="totals-container">
                 <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-                <div>Thru Door (Transaction): <span id="doorCount">0</span></div>
-                <div>Thru Door (Session Total): <span id="sessionDoorCount">0</span></div>
+                <div>Thru Door: <span id="doorCount">0</span></div>
             </div>
             <div class="note-section">
                 <label for="noteInput">Add a note...</label>
@@ -328,12 +327,13 @@
                     sessionId: null,
                     currentItems: new Map(),
                     cashTotal: 0,
-                    doorCount: 0, // Transaction-specific
-                    sessionDoorCount: parseInt(localStorage.getItem('sessionDoorCount')) || 0, // Session-wide, persistent
+                    doorCount: 0,
+                    sessionDoorCount: 0, // Grand total for the session
                     isEditing: false,
                     activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
                     db: null,
-                    isLogging: false
+                    isLogging: false,
+                    lastLogTime: 0 // For debounce
                 };
                 this.elements = {
                     transactionButtons: document.querySelectorAll('.product-item'),
@@ -347,7 +347,6 @@
                     logSaleBtn: document.getElementById('logSaleBtn'),
                     cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
-                    sessionDoorCount: document.getElementById('sessionDoorCount'),
                     noteInput: document.getElementById('noteInput'),
                     addButtonForm: document.getElementById('addButtonForm'),
                     newButtonType: document.getElementById('newButtonType'),
@@ -362,9 +361,9 @@
                     pinError: document.getElementById('pinError')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
-                this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
                 this.initDB().then(() => {
                     this.checkSessionStatus();
+                    this.loadSessionDoorCount(); // Load persisted session total
                     this.initializeButtonStates();
                     this.bindEvents();
                 }).catch(error => this.showError('Database initialization failed: ' + error));
@@ -376,7 +375,7 @@
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
                         if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            db.createObjectStore('transactions', { keyPath: 'id' });
                         }
                     };
                     request.onsuccess = (event) => {
@@ -418,11 +417,13 @@
             }
 
             debounceLogSale() {
-                if (this.state.isLogging) return;
+                const now = Date.now();
+                if (this.state.isLogging || (now - this.state.lastLogTime < 1000)) return; // 1-second debounce
                 this.state.isLogging = true;
                 this.elements.logSaleBtn.disabled = true;
                 this.logSale().finally(() => {
                     this.state.isLogging = false;
+                    this.state.lastLogTime = now;
                     this.elements.logSaleBtn.disabled = false;
                 });
             }
@@ -468,8 +469,17 @@
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta; // Increment session total
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                this.elements.doorCount.textContent = this.state.doorCount;
+                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Display session total
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+            }
+
+            loadSessionDoorCount() {
+                if (this.state.sessionId) {
+                    this.state.sessionDoorCount = parseInt(localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`)) || 0;
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                }
             }
 
             checkSessionStatus() {
@@ -493,6 +503,8 @@
                         this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
             toggleSales() {
@@ -508,6 +520,8 @@
                     localStorage.setItem('activeSessionId', this.state.sessionId);
                     this.state.cashTotal = 0;
                     this.state.doorCount = 0;
+                    this.state.sessionDoorCount = 0; // Reset only on new session
+                    localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
                     this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
                     this.state.currentItems.clear();
@@ -527,9 +541,6 @@
                     this.state.sessionStarted = false;
                     localStorage.removeItem('activeSessionId');
                     localStorage.setItem('sessionActive', false);
-                    this.state.sessionDoorCount = 0; // Reset on session close
-                    localStorage.setItem('sessionDoorCount', this.state.sessionDoorCount);
-                    this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
                     this.elements.pinModal.style.display = 'none';
                     this.showSuccess('Sales session ended');
                     this.checkSessionStatus();
@@ -620,6 +631,7 @@
                 }
 
                 const timestamp = new Date().toISOString();
+                const uniqueId = `${this.state.sessionId}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`; // Enhanced unique ID
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
                     .map(([key, value]) => {
@@ -635,11 +647,13 @@
                 }
 
                 const transaction = {
+                    id: uniqueId,
                     sessionId: this.state.sessionId,
                     timestamp,
                     items,
                     cashTotal: this.state.cashTotal,
                     doorCount: this.state.doorCount,
+                    sessionDoorCount: this.state.sessionDoorCount, // Include session total
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
                     eventName: this.elements.eventName.value,
@@ -648,24 +662,17 @@
                     synced: false
                 };
 
-                // Check for duplicate transaction
-                const txCheck = this.state.db.transaction(['transactions'], 'readonly');
-                const storeCheck = txCheck.objectStore('transactions');
-                const existing = await new Promise((resolve) => {
-                    const request = storeCheck.getAll();
+                const tx = this.state.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const existingTransaction = await new Promise((resolve) => {
+                    const request = store.get(uniqueId);
                     request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => resolve([]);
                 });
-                const isDuplicate = existing.some(t => t.sessionId === transaction.sessionId && t.timestamp === transaction.timestamp);
-                if (isDuplicate) {
-                    this.showError('Duplicate transaction detected, not logging again');
-                    this.resetForm();
+                if (existingTransaction) {
+                    this.showError('Duplicate transaction detected');
                     return;
                 }
 
-                // Log the transaction
-                const tx = this.state.db.transaction(['transactions'], 'readwrite');
-                const store = tx.objectStore('transactions');
                 await new Promise((resolve, reject) => {
                     const request = store.add(transaction);
                     request.onsuccess = () => resolve();
@@ -691,11 +698,6 @@
                     console.error('Error logging to Google Sheets:', error);
                     this.showError('Saved locally, failed to sync: ' + error.message);
                 }
-
-                // Update sessionDoorCount and persist it
-                this.state.sessionDoorCount += this.state.doorCount;
-                localStorage.setItem('sessionDoorCount', this.state.sessionDoorCount);
-                this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
                 this.resetForm();
                 channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
@@ -703,9 +705,9 @@
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0;
+                this.state.doorCount = 0; // Reset per-transaction count
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = '0';
+                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Preserve session total
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
