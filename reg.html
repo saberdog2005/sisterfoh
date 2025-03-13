@@ -201,13 +201,13 @@
 <body>
     <div class="header" id="sessionHeader">
         <label for="eventDate">Date:</label>
-        <input type="date" id="eventDate" required>
+        <input type="date" id="eventDate">
         <label for="eventVenue">Venue:</label>
-        <input type="text" id="eventVenue" value="Sister Bar" required>
+        <input type="text" id="eventVenue" value="Sister Bar">
         <label for="eventName">Event Name:</label>
         <input type="text" id="eventName" placeholder="Event Name">
         <label for="cashierName">Cashier Name:</label>
-        <input type="text" id="cashierName" placeholder="Cashier" required>
+        <input type="text" id="cashierName" placeholder="Cashier">
     </div>
     <div class="container">
         <div class="button-container">
@@ -297,7 +297,7 @@
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.initializeButtonStates();
                 this.bindEvents();
-                this.initDB();
+                this.initDB().then(() => this.checkSessionStatus()).catch(() => this.showError('Failed to initialize database'));
                 this.initGoogleAPI();
             }
 
@@ -312,17 +312,18 @@
             }
 
             async initDB() {
-                try {
+                return new Promise((resolve, reject) => {
                     const request = indexedDB.open('SalesDB', 2);
                     request.onupgradeneeded = event => this.setupDB(event.target.result);
                     request.onsuccess = event => {
                         this.state.db = event.target.result;
-                        this.checkSessionStatus();
+                        resolve();
                     };
-                    request.onerror = () => this.showError('Database initialization failed');
-                } catch (error) {
-                    this.showError('Database error: ' + error.message);
-                }
+                    request.onerror = () => {
+                        this.showError('Database initialization failed');
+                        reject();
+                    };
+                });
             }
 
             setupDB(db) {
@@ -363,6 +364,16 @@
                 });
                 
                 document.querySelector('.add-custom').addEventListener('click', () => this.handleCustomAdd());
+                
+                this.elements.transactionButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        if (this.state.isEditing) {
+                            const isActive = btn.dataset.active === 'true';
+                            btn.dataset.active = !isActive;
+                            btn.classList.toggle('disabled', isActive);
+                        }
+                    });
+                });
             }
 
             handleIncrement(event) {
@@ -489,8 +500,9 @@
                         btn.classList.remove('hidden');
                         btn.classList.toggle('disabled', btn.dataset.active === 'false');
                     } else {
-                        this.state.activeButtons.set(btn.dataset.item, btn.dataset.active !== 'false');
-                        btn.classList.toggle('hidden', !this.state.activeButtons.get(btn.dataset.item));
+                        const isActive = btn.dataset.active !== 'false';
+                        this.state.activeButtons.set(btn.dataset.item, isActive);
+                        btn.classList.toggle('hidden', !isActive);
                         btn.classList.remove('disabled');
                         localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
                     }
