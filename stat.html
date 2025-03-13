@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sister Bar Log</title>
+    <title>Transaction Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="handleClientLoad()"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,79 +15,53 @@
             color: #e0e0e0;
             margin: 0;
             padding: 20px;
-            font-size: 18px;
         }
         .container {
-            max-width: 95%;
+            max-width: 90%;
             margin: 0 auto;
             background: #2d2d2d;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        h1 {
-            text-align: center;
-            color: #1a73e8;
-            margin-bottom: 20px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            background: #3c3c3c;
         }
         th, td {
-            padding: 12px;
+            padding: 10px;
+            border: 1px solid #555;
             text-align: left;
-            border-bottom: 1px solid #555;
         }
         th {
-            background: #1a73e8;
-            color: white;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background: #444;
-        }
-        .error-message {
-            color: #ff6b6b;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 1.1em;
-            display: none;
-        }
-        .local-table {
-            margin-top: 40px;
-        }
-        .local-table th {
-            background: #d32f2f;
-        }
-        #transactionGraph {
-            margin-top: 40px;
             background: #3c3c3c;
-            padding: 20px;
-            border-radius: 8px;
         }
-        #exportBtn {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
+        .edit-btn {
             background: #1a73e8;
             color: white;
             border: none;
+            padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 1.2em;
+        }
+        #transactionChart {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        #errorMessage {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sister Bar Transaction Log</h1>
-        <table id="logTable">
+        <h1>Transaction Log</h1>
+        <table id="transactionTable">
             <thead>
                 <tr>
-                    <th>Type</th>
+                    <th>ID</th>
                     <th>Session ID</th>
                     <th>Timestamp</th>
                     <th>Time</th>
@@ -94,71 +69,53 @@
                     <th>Total</th>
                     <th>Note</th>
                     <th>Door Count</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
-        <h1>Local Unsynced Transactions</h1>
-        <table id="localLogTable" class="local-table">
-            <thead>
-                <tr>
-                    <th>Session ID</th>
-                    <th>Timestamp</th>
-                    <th>Time</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Note</th>
-                    <th>Door Count</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <div id="transactionGraph">
-            <canvas id="transactionChart"></canvas>
-        </div>
-        <button id="exportBtn">Export to Google Sheets</button>
-        <div id="errorMessage" class="error-message"></div>
+        <canvas id="transactionChart"></canvas>
+        <div id="errorMessage"></div>
     </div>
 
     <script>
         const SPREADSHEET_ID = '1dJ0NuByJCDgnIRKhsmKrWFyBtCHRgR7ujfGDRb9jhMY';
-        const API_KEY = 'AIzaSyAS_wlduCCcRSDA3Hjt3hMPRg3olegY2Ic';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         const CLIENT_ID = '251850742586-mqcsongr4qc28peshpejmhd5iuiak835.apps.googleusercontent.com';
-        const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+        const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+
+        let tokenClient;
+
+        function handleClientLoad() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPE,
+                callback: (response) => {
+                    if (response.access_token) {
+                        localStorage.setItem('accessToken', response.access_token);
+                        gapi.client.setToken({ access_token: response.access_token });
+                        gapi.client.load('sheets', 'v4', () => {
+                            console.log('Google Sheets API loaded');
+                            const logApp = new LogApp();
+                        });
+                    } else {
+                        console.error('Token retrieval failed:', response);
+                        $('#errorMessage').text('Authentication error: ' + response.error);
+                    }
+                }
+            });
+            tokenClient.requestAccessToken();
+        }
 
         class LogApp {
             constructor() {
                 this.db = null;
-                this.transactionData = {
-                    labels: [],
-                    datasets: []
-                };
-                this.initGoogleAPI();
                 this.initDB();
             }
 
-            initGoogleAPI() {
-                gapi.load('client:auth2', () => {
-                    gapi.client.init({
-                        apiKey: API_KEY,
-                        clientId: CLIENT_ID,
-                        discoveryDocs: DISCOVERY_DOCS,
-                        scope: SCOPE
-                    }).then(() => {
-                        gapi.auth2.getAuthInstance().isSignedIn.listen(() => this.updateUI());
-                        this.updateUI();
-                    }).catch(err => this.showError('Google API initialization failed: ' + err.message));
-                });
-            }
-
             initDB() {
-                const request = indexedDB.open('SalesDB', 2);
+                const request = indexedDB.open('SalesDB', 3);
                 request.onupgradeneeded = (event) => {
                     this.db = event.target.result;
-                    if (!this.db.objectStoreNames.contains('sessions')) {
-                        this.db.createObjectStore('sessions', { keyPath: 'id', autoIncrement: true });
-                    }
                     if (!this.db.objectStoreNames.contains('transactions')) {
                         const transactionStore = this.db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         transactionStore.createIndex('sessionId', 'sessionId', { unique: false });
@@ -166,158 +123,98 @@
                 };
                 request.onsuccess = (event) => {
                     this.db = event.target.result;
-                    this.loadLocalTransactions();
+                    this.loadTransactions();
                 };
-                request.onerror = () => this.showError('Failed to open database.');
+                request.onerror = () => $('#errorMessage').text('Failed to open database.');
             }
 
-            updateUI() {
-                if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                    gapi.client.sheets.spreadsheets.values.get({
-                        spreadsheetId: SPREADSHEET_ID,
-                        range: 'Sheet1!A:H'
-                    }).then(response => {
-                        const values = response.result.values || [];
-                        const tbody = $('#logTable tbody');
-                        tbody.empty();
-                        values.forEach(row => {
-                            const [type, sessionId, timestamp, time, items, total, note, doorCount] = row;
-                            const itemsParsed = items ? JSON.parse(items) : [];
-                            const itemsText = itemsParsed.map(i => `${i.item} (x${i.quantity})`).join(', ');
-                            tbody.append(`
-                                <tr>
-                                    <td>${type || ''}</td>
-                                    <td>${sessionId || ''}</td>
-                                    <td>${timestamp || ''}</td>
-                                    <td>${time || ''}</td>
-                                    <td>${itemsText}</td>
-                                    <td>${total || ''}</td>
-                                    <td>${note || ''}</td>
-                                    <td>${doorCount || ''}</td>
-                                </tr>
-                            `);
-                        });
-                        this.prepareGraphData(values);
-                        this.renderGraph();
-                    }).catch(err => this.showError('Error fetching data: ' + err.message));
-                }
-            }
-
-            prepareGraphData(values) {
-                const transactionTypes = ['CASH', 'CC', 'TICKET', 'COMP'];
-                const dataMap = {};
-                transactionTypes.forEach(type => {
-                    dataMap[type] = {};
-                });
-
-                values.forEach(row => {
-                    const [action, , timestamp, , items] = row;
-                    if (action === 'TRANSACTION') {
-                        const itemsParsed = items ? JSON.parse(items) : [];
-                        itemsParsed.forEach(item => {
-                            const type = item.item.split(' ')[0];
-                            if (transactionTypes.includes(type)) {
-                                if (!dataMap[type][timestamp]) {
-                                    dataMap[type][timestamp] = 0;
-                                }
-                                dataMap[type][timestamp] += item.quantity;
-                            }
-                        });
-                    }
-                });
-
-                this.transactionData.labels = Array.from(new Set(values.map(row => row[2]))).sort();
-                this.transactionData.datasets = transactionTypes.map(type => ({
-                    label: type,
-                    data: this.transactionData.labels.map(label => dataMap[type][label] || 0),
-                    borderColor: this.getColorForType(type),
-                    fill: false
-                }));
-            }
-
-            getColorForType(type) {
-                switch (type) {
-                    case 'CASH': return '#2e7d32';
-                    case 'CC': return '#d32f2f';
-                    case 'TICKET': return '#1a73e8';
-                    case 'COMP': return '#ffa500';
-                    default: return '#fff';
-                }
-            }
-
-            renderGraph() {
-                const ctx = document.getElementById('transactionChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: this.transactionData,
-                    options: {
-                        scales: {
-                            x: { title: { display: true, text: 'Timestamp' } },
-                            y: { title: { display: true, text: 'Transaction Count' } }
-                        }
-                    }
-                });
-            }
-
-            loadLocalTransactions() {
+            loadTransactions() {
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
                 request.onsuccess = (event) => {
                     const transactions = event.target.result;
-                    const tbody = $('#localLogTable tbody');
-                    tbody.empty();
-                    transactions.forEach(t => {
-                        const itemsText = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
-                        tbody.append(`
-                            <tr>
-                                <td>${t.sessionId}</td>
-                                <td>${t.timestamp}</td>
-                                <td>${t.time}</td>
-                                <td>${itemsText}</td>
-                                <td>${t.total.toFixed(2)}</td>
-                                <td>${t.note || ''}</td>
-                                <td>${this.calculateDoorCount(t.itemList)}</td>
-                            </tr>
-                        `);
-                    });
+                    this.renderTransactions(transactions);
+                    this.renderChart(transactions);
                 };
             }
 
-            calculateDoorCount(itemList) {
-                return itemList.reduce((sum, item) => sum + (item.item === 'TICKET' ? item.quantity : 0), 0);
+            renderTransactions(transactions) {
+                const $tbody = $('#transactionTable tbody');
+                $tbody.empty();
+                transactions.forEach(t => {
+                    const items = t.itemList.map(i => `${i.item} (x${i.quantity})`).join(', ');
+                    $tbody.append(`
+                        <tr>
+                            <td>${t.id}</td>
+                            <td>${t.sessionId}</td>
+                            <td>${t.timestamp}</td>
+                            <td>${t.time}</td>
+                            <td>${items}</td>
+                            <td>$${t.total.toFixed(2)}</td>
+                            <td>${t.note || ''}</td>
+                            <td>${t.itemList.some(i => i.item === 'TICKET') ? 1 : 0}</td>
+                            <td><button class="edit-btn" data-id="${t.id}">Edit</button></td>
+                        </tr>
+                    `);
+                });
+                $('.edit-btn').on('click', (e) => this.editTransaction($(e.target).data('id')));
             }
 
-            showError(message) {
-                $('#errorMessage').text(message).show();
-                setTimeout(() => $('#errorMessage').hide(), 3000);
-            }
-
-            exportToSheets() {
-                gapi.client.sheets.spreadsheets.create({
-                    properties: { title: 'Sister Bar Transactions Export' }
-                }).then(response => {
-                    const newSpreadsheetId = response.result.spreadsheetId;
-                    gapi.client.sheets.spreadsheets.values.get({
-                        spreadsheetId: SPREADSHEET_ID,
-                        range: 'Sheet1!A:H'
-                    }).then(dataResponse => {
-                        const values = dataResponse.result.values || [];
+            editTransaction(id) {
+                const pin = prompt('Enter PIN to edit transaction (default: 1234)');
+                if (pin !== '1234') {
+                    $('#errorMessage').text('Incorrect PIN.');
+                    return;
+                }
+                const tx = this.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const request = store.get(id);
+                request.onsuccess = (event) => {
+                    const transaction = event.target.result;
+                    const newNote = prompt('Edit note:', transaction.note);
+                    if (newNote !== null) {
+                        transaction.note = newNote;
+                        store.put(transaction);
                         gapi.client.sheets.spreadsheets.values.append({
-                            spreadsheetId: newSpreadsheetId,
+                            spreadsheetId: SPREADSHEET_ID,
                             range: 'Sheet1!A1',
                             valueInputOption: 'RAW',
-                            resource: { values }
+                            resource: {
+                                values: [['EDITED TRANSACTION', transaction.sessionId, transaction.id, new Date().toISOString(), transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note]]
+                            }
                         }).then(() => {
-                            alert(`Data exported to new sheet: https://docs.google.com/spreadsheets/d/${newSpreadsheetId}`);
-                        }).catch(err => this.showError('Failed to append data: ' + err.message));
-                    }).catch(err => this.showError('Failed to fetch data: ' + err.message));
-                }).catch(err => this.showError('Failed to create new sheet: ' + err.message));
+                            this.loadTransactions();
+                            alert('Transaction updated.');
+                        }).catch(err => $('#errorMessage').text('Google Sheet error: ' + err.message));
+                    }
+                };
+            }
+
+            renderChart(transactions) {
+                const ctx = document.getElementById('transactionChart').getContext('2d');
+                const cashTotals = transactions.map(t => t.total);
+                const labels = transactions.map(t => t.time);
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Cash Total Over Time',
+                            data: cashTotals,
+                            borderColor: '#2e7d32',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
             }
         }
-
-        const logApp = new LogApp();
-        $('#exportBtn').on('click', () => logApp.exportToSheets());
     </script>
 </body>
 </html>
