@@ -79,7 +79,7 @@
                     <th>Cashier</th>
                     <th>Items</th>
                     <th>Cash Total</th>
-                    <th>Thru Door</th>
+                    <th>Thru Door (Transaction)</th>
                     <th>Note</th>
                 </tr>
             </thead>
@@ -111,7 +111,7 @@
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
                         if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                            db.createObjectStore('transactions', { keyPath: 'id' });
                         }
                     };
                     request.onsuccess = (event) => {
