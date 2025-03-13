@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
+    <!-- Required Libraries -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body {
@@ -96,10 +98,16 @@
         #exportBtn:hover {
             background: #026aa7;
         }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="container">
+        <!-- Login Screen -->
         <div id="login" style="display: block;">
             <h2>Login</h2>
             <input type="text" id="username" placeholder="Username">
@@ -107,6 +115,7 @@
             <button id="loginBtn">Login</button>
             <p id="loginError" style="color: red; display: none;">Invalid username or password</p>
         </div>
+        <!-- Main Content -->
         <div id="mainContent" style="display: none;">
             <h1>Sales Log</h1>
             <h2 id="totalCount">Total Thru Door: 0</h2>
@@ -116,7 +125,7 @@
                 </div>
                 <div class="log-column" id="log"></div>
             </div>
-            <button id="exportBtn">Export to PDF</button>
+            <button id="exportBtn" class="no-print">Export to PDF</button>
         </div>
     </div>
 
@@ -128,6 +137,7 @@
         class SalesLog {
             constructor() {
                 this.db = null;
+                this.transactions = [];
                 this.initDB();
                 document.getElementById('loginBtn').addEventListener('click', this.handleLogin.bind(this));
                 document.getElementById('exportBtn').addEventListener('click', this.exportPDF.bind(this));
@@ -195,8 +205,8 @@
 
             async updateDisplay() {
                 try {
-                    const transactions = await this.fetchTransactions();
-                    if (transactions.length === 0) {
+                    this.transactions = await this.fetchTransactions();
+                    if (this.transactions.length === 0) {
                         document.getElementById('totalCount').textContent = 'Total Thru Door: 0';
                         document.getElementById('log').innerHTML = '<p>No active session</p>';
                         if (chart) chart.data.datasets[0].data = [];
@@ -204,11 +214,11 @@
                         return;
                     }
 
-                    const totalThruDoor = transactions[transactions.length - 1].doorCount || 0;
+                    const totalThruDoor = this.transactions[this.transactions.length - 1].doorCount || 0;
                     document.getElementById('totalCount').textContent = `Total Thru Door: ${totalThruDoor}`;
 
-                    this.renderGraph(transactions);
-                    this.displayLog(transactions);
+                    this.renderGraph(this.transactions);
+                    this.displayLog(this.transactions);
                 } catch (error) {
                     console.error(error);
                 }
@@ -275,18 +285,33 @@
             }
 
             async exportPDF() {
+                const transactions = this.transactions;
+                const totalThruDoor = transactions.length > 0 ? transactions[transactions.length - 1].doorCount : 0;
+
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
 
-                doc.text(document.getElementById('totalCount').textContent, 10, 10);
+                // Add title and total
+                doc.text('Sales Log - ' + new Date().toLocaleDateString(), 10, 10);
+                doc.text('Total Thru Door: ' + totalThruDoor, 10, 20);
 
+                // Add chart image
                 const canvas = document.getElementById('thruDoorChart');
                 const chartImage = await html2canvas(canvas);
                 const imgData = chartImage.toDataURL('image/png');
-                doc.addImage(imgData, 'PNG', 10, 20, 180, 90);
+                doc.addImage(imgData, 'PNG', 10, 30, 180, 90);
 
-                const logText = document.getElementById('log').innerText;
-                doc.text(logText, 10, 120);
+                // Add transaction table
+                doc.autoTable({
+                    startY: 130,
+                    head: [['Timestamp', 'Items', 'Cash Total', 'Thru Door']],
+                    body: transactions.map(tx => [
+                        new Date(tx.timestamp).toLocaleString(),
+                        tx.items,
+                        '$' + tx.cashTotal.toFixed(2),
+                        tx.doorCount
+                    ]),
+                });
 
                 doc.save('sales_log.pdf');
             }
