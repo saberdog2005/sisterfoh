@@ -10,39 +10,96 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #121212; color: #e0e0e0; }
-        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 20px; border-radius: 5px; }
-        h1 { color: #bb86fc; text-align: center; }
-        #sessionInfo { color: #e0e0e0; text-align: center; margin-bottom: 10px; }
-        .summary { margin-bottom: 20px; }
-        .summary p { margin: 5px 0; }
-        #doorCountChart { margin-bottom: 20px; }
-        .transaction { padding: 10px; background: #2a2a2a; margin: 5px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); color: #e0e0e0; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #121212; 
+            color: #e0e0e0; 
+        }
+        .container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 20px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #1e1e1e; 
+            border-radius: 5px; 
+        }
+        .summary, .chart-container { 
+            flex: 1; 
+            min-width: 300px; 
+        }
+        h1 { 
+            color: #bb86fc; 
+            text-align: center; 
+            width: 100%; 
+        }
+        .stats { 
+            background: #2a2a2a; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin-bottom: 20px; 
+        }
+        .stats p { 
+            margin: 5px 0; 
+        }
+        .transaction-list { 
+            max-height: 400px; 
+            overflow-y: auto; 
+        }
+        .transaction { 
+            padding: 10px; 
+            background: #2a2a2a; 
+            margin: 5px 0; 
+            border-radius: 5px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3); 
+            color: #e0e0e0; 
+        }
         .cash { color: #4caf50; }
         .cc { color: #f44336; }
         .ticket { color: #2196f3; }
         .comp { color: #ff9800; }
-        #exportBtn { margin-top: 20px; padding: 10px 20px; background: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #exportBtn:hover { background: #026aa7; }
+        #exportBtn { 
+            margin-top: 20px; 
+            padding: 10px 20px; 
+            background: #0288d1; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%; 
+        }
+        #exportBtn:hover { 
+            background: #026aa7; 
+        }
+        @media (max-width: 600px) {
+            .container { 
+                flex-direction: column; 
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sales Log</h1>
-        <div id="sessionInfo"></div>
+        <h1 id="header">Sales Log</h1>
         <div class="summary">
-            <p>Total Sales: $<span id="totalSales">0.00</span></p>
-            <p>Total Thru Door: <span id="totalCount">0</span></p>
-            <p>Total Transactions: <span id="transactionCount">0</span></p>
-            <p>Avg Cash per Transaction: $<span id="avgCash">0.00</span></p>
-            <p>CASH: <span id="cashCount">0</span></p>
-            <p>CC TRANS: <span id="ccCount">0</span></p>
-            <p>TICKET: <span id="ticketCount">0</span></p>
-            <p>COMP: <span id="compCount">0</span></p>
+            <div class="stats" id="stats">
+                <p>Total Thru Door: <span id="totalDoorCount">0</span></p>
+                <p>Total Transactions: <span id="totalTransactions">0</span></p>
+                <p>Total Cash: $<span id="totalCash">0.00</span></p>
+                <p>Avg Cash/Trans: $<span id="avgCash">0.00</span></p>
+                <p>Cash Transactions: <span id="cashCount">0</span></p>
+                <p>CC Transactions: <span id="ccCount">0</span></p>
+                <p>Ticket Transactions: <span id="ticketCount">0</span></p>
+                <p>Comp Transactions: <span id="compCount">0</span></p>
+            </div>
+            <div class="transaction-list" id="log"></div>
         </div>
-        <canvas id="doorCountChart" width="400" height="200"></canvas>
-        <div id="log"></div>
-        <button id="exportBtn">Export to PDF</button>
+        <div class="chart-container">
+            <canvas id="doorCountChart" height="200"></canvas>
+            <button id="exportBtn">Export to PDF</button>
+        </div>
     </div>
 
     <script>
@@ -53,29 +110,24 @@
                 this.db = null;
                 this.initDB()
                     .then(() => {
-                        this.updateChart();
-                        setInterval(() => this.updateChart(), 5000);
+                        this.updateLog();
+                        setInterval(() => this.updateLog(), 5000);
                     })
-                    .catch((error) => console.error('Database initialization failed:', error));
+                    .catch(error => console.error('Database initialization failed:', error));
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
             }
 
-            initDB() {
+            async initDB() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open('SalesDB', 2);
                     request.onupgradeneeded = (event) => {
                         const db = event.target.result;
-                        const oldVersion = event.oldVersion;
-                        if (oldVersion < 1) {
-                            if (!db.objectStoreNames.contains('transactions')) {
-                                db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
-                            }
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
                         }
-                        if (oldVersion < 2) {
-                            const store = event.target.transaction.objectStore('transactions');
-                            if (!store.indexNames.contains('sessionId')) {
-                                store.createIndex('sessionId', 'sessionId', { unique: false });
-                            }
+                        const store = event.target.transaction.objectStore('transactions');
+                        if (!store.indexNames.contains('sessionId')) {
+                            store.createIndex('sessionId', 'sessionId', { unique: false });
                         }
                     };
                     request.onsuccess = (event) => {
@@ -89,85 +141,65 @@
             parseItems(itemsString) {
                 const counts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
                 const items = itemsString.split('; ');
-                items.forEach((item) => {
+                items.forEach(item => {
                     const [keyPart, valuePart] = item.split(': ');
                     if (keyPart && valuePart) {
-                        if (keyPart === 'CASH (CUSTOM)') {
-                            const amounts = valuePart.split(', ');
-                            counts.CASH += amounts.length;
-                        } else {
-                            const count = parseInt(valuePart.split(' @')[0], 10) || 0;
-                            if (keyPart.startsWith('CASH')) counts.CASH += count;
-                            else if (keyPart === 'CC TRANS') counts['CC TRANS'] += count;
-                            else if (keyPart === 'TICKET') counts.TICKET += count;
-                            else if (keyPart === 'COMP') counts.COMP += count;
-                        }
+                        const countMatch = valuePart.match(/(\d+)/);
+                        const count = countMatch ? parseInt(countMatch[0], 10) : 0;
+                        if (keyPart.startsWith('CASH')) counts.CASH += count;
+                        else if (keyPart === 'CC TRANS') counts['CC TRANS'] += count;
+                        else if (keyPart === 'TICKET') counts.TICKET += count;
+                        else if (keyPart === 'COMP') counts.COMP += count;
                     }
                 });
                 return counts;
             }
 
-            updateChart() {
+            updateLog() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
+                const eventName = localStorage.getItem('eventName') || 'N/A';
+                const cashierName = localStorage.getItem('cashierName') || 'N/A';
+                document.getElementById('header').textContent = activeSessionId ? `Sales Log - ${eventName} (${cashierName})` : 'Sales Log';
+
                 if (!activeSessionId) {
                     if (chart) {
-                        chart.data.datasets.forEach((dataset) => (dataset.data = []));
+                        chart.data.datasets.forEach(dataset => dataset.data = []);
                         chart.update();
                     }
-                    document.getElementById('totalSales').textContent = '0.00';
-                    document.getElementById('totalCount').textContent = '0';
-                    document.getElementById('transactionCount').textContent = '0';
-                    document.getElementById('avgCash').textContent = '0.00';
-                    document.getElementById('cashCount').textContent = '0';
-                    document.getElementById('ccCount').textContent = '0';
-                    document.getElementById('ticketCount').textContent = '0';
-                    document.getElementById('compCount').textContent = '0';
+                    document.getElementById('stats').querySelectorAll('span').forEach(span => span.textContent = '0');
                     document.getElementById('log').innerHTML = '<p>No active session</p>';
-                    document.getElementById('sessionInfo').innerHTML = '';
                     return;
                 }
-
-                const eventName = localStorage.getItem('eventName') || 'Unnamed Event';
-                const cashierName = localStorage.getItem('cashierName') || 'Unknown Cashier';
-                document.getElementById('sessionInfo').innerHTML = `Event: ${eventName} | Cashier: ${cashierName}`;
 
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const request = store.getAll();
                 request.onsuccess = () => {
                     const allTransactions = request.result;
-                    const sessionTransactions = allTransactions.filter((t) => t.sessionId === activeSessionId);
+                    const sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     sessionTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
-                    let totalSales = 0;
-                    let totalDoorCount = 0;
+                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = {
-                        CASH: [],
-                        'CC TRANS': [],
-                        TICKET: [],
-                        COMP: [],
-                        TOTAL: []
+                        CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: []
                     };
+                    let totalCash = 0;
 
-                    sessionTransactions.forEach((transaction) => {
+                    sessionTransactions.forEach(transaction => {
                         const counts = this.parseItems(transaction.items);
                         for (const type in counts) {
                             cumulative[type] += counts[type];
                             dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
                         }
-                        totalSales += transaction.cashTotal;
-                        totalDoorCount += transaction.doorCount;
-                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: totalDoorCount });
+                        cumulative.TOTAL += transaction.doorCount;
+                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: cumulative.TOTAL });
+                        totalCash += transaction.cashTotal;
                     });
 
-                    const transactionCount = sessionTransactions.length;
-                    const avgCash = transactionCount > 0 ? (totalSales / transactionCount) : 0;
-
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('totalCount').textContent = totalDoorCount;
-                    document.getElementById('transactionCount').textContent = transactionCount;
-                    document.getElementById('avgCash').textContent = avgCash.toFixed(2);
+                    document.getElementById('totalDoorCount').textContent = cumulative.TOTAL;
+                    document.getElementById('totalTransactions').textContent = sessionTransactions.length;
+                    document.getElementById('totalCash').textContent = totalCash.toFixed(2);
+                    document.getElementById('avgCash').textContent = sessionTransactions.length ? (totalCash / sessionTransactions.length).toFixed(2) : '0.00';
                     document.getElementById('cashCount').textContent = cumulative.CASH;
                     document.getElementById('ccCount').textContent = cumulative['CC TRANS'];
                     document.getElementById('ticketCount').textContent = cumulative.TICKET;
@@ -185,20 +217,20 @@
                             type: 'line',
                             data: {
                                 datasets: [
-                                    { label: 'CASH', data: dataPoints.CASH, borderColor: 'green', fill: false },
-                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: 'red', fill: false },
-                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: 'blue', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: 'orange', fill: false },
-                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: 'purple', fill: false },
-                                ],
+                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
+                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
+                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
+                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
+                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
+                                ]
                             },
                             options: {
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
                                 },
-                                plugins: { legend: { display: true } },
-                            },
+                                plugins: { legend: { display: true } }
+                            }
                         });
                     }
 
@@ -210,7 +242,7 @@
             displayLog(transactions) {
                 const log = document.getElementById('log');
                 log.innerHTML = transactions
-                    .map((t) => {
+                    .map(t => {
                         const items = t.items.split('; ').map(item => {
                             const [key] = item.split(': ');
                             let className = '';
@@ -220,8 +252,7 @@
                             else if (key === 'COMP') className = 'comp';
                             return `<span class="${className}">${item}</span>`;
                         }).join('; ');
-                        const note = t.note ? `<br>Note: ${t.note}` : '';
-                        return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}<br>Items: ${items}${note}</div>`;
+                        return `<div class="transaction">[${new Date(t.timestamp).toLocaleString()}] ${items} | Cash: $${t.cashTotal.toFixed(2)} | Thru Door: ${t.doorCount}</div>`;
                     })
                     .join('');
             }
@@ -229,18 +260,21 @@
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = doc.getImageProperties(imgData);
-                const pdfWidth = doc.internal.pageSize.getWidth();
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                const header = document.getElementById('header').textContent;
+                doc.text(header, 10, 10);
+                const stats = document.getElementById('stats').innerText;
+                doc.text(stats, 10, 20);
+                const canvas = document.getElementById('doorCountChart');
+                const chartImage = await html2canvas(canvas);
+                const imgData = chartImage.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 10, 50, 180, 90);
+                const log = document.getElementById('log').innerText;
+                doc.text(log, 10, 150);
                 doc.save('sales_log.pdf');
             }
         }
 
-        new SalesLog();
+        document.addEventListener('DOMContentLoaded', () => new SalesLog());
     </script>
 </body>
 </html>
