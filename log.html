@@ -26,27 +26,38 @@
             display: none;
         }
         .grid {
-            display: grid;
-            grid-template-columns: 15% 15% 35% 35%;
+            display: flex;
+            flex-wrap: wrap;
             gap: 20px;
+            justify-content: space-between;
         }
         .header {
-            grid-column: 1 / -1;
+            flex: 1 0 100%;
             text-align: center;
         }
         .col-1, .col-2, .col-3, .col-4 {
             padding: 10px;
+            flex: 1;
+            min-width: 0;
         }
+        .col-1 { flex: 0 0 15%; }
+        .col-2 { flex: 0 0 15%; }
+        .col-3 { flex: 0 0 35%; }
+        .col-4 { flex: 0 0 35%; }
         canvas {
             max-width: 100%;
             background-color: #3c3c3c;
             padding: 10px;
             box-sizing: border-box;
         }
+        .transaction-log {
+            max-height: 400px; /* Approx height for 20 rows */
+            overflow-y: auto;
+            overflow-x: auto;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
         th, td {
             border: 1px solid #555;
@@ -113,6 +124,11 @@
             color: #f44336;
             margin-top: 10px;
         }
+        @media (max-width: 768px) {
+            .col-1, .col-2, .col-3, .col-4 {
+                flex: 1 0 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -151,7 +167,7 @@
             </div>
             <div class="col-4">
                 <h2>Transaction Log</h2>
-                <div style="overflow-x: auto;">
+                <div class="transaction-log">
                     <table>
                         <thead>
                             <tr>
@@ -172,6 +188,7 @@
     </div>
 
     <script>
+        // Constants and variables
         const adminUsername = "admin";
         const adminPassword = "password123";
         const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
@@ -184,76 +201,14 @@
         let sessionTimeoutId;
         let jpgExportIntervalId;
         let salesLogInstance;
-
-        function isLoggedIn() {
-            return localStorage.getItem('isLoggedIn') === 'true';
-        }
-
-        function setLoggedIn(value) {
-            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
-        }
-
-        function getLastSessionEndTime() {
-            const time = localStorage.getItem('lastSessionEndTime');
-            return time ? parseInt(time, 10) : 0;
-        }
-
-        function setLastSessionEndTime(time) {
-            localStorage.setItem('lastSessionEndTime', time.toString());
-        }
-
-        function resetSessionTimeout(lastTransactionTime) {
-            clearTimeout(sessionTimeoutId);
-            const now = Date.now();
-            const timeSinceLastTransaction = now - lastTransactionTime;
-            const remainingTime = SESSION_TIMEOUT - timeSinceLastTransaction;
-            if (remainingTime > 0) {
-                sessionTimeoutId = setTimeout(logout, remainingTime);
-            } else {
-                logout();
-            }
-        }
-
-        function logout() {
-            setLoggedIn(false);
-            if (salesLogInstance) salesLogInstance.stop();
-            clearInterval(jpgExportIntervalId);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        const now = Date.now();
-        const lastSessionEnd = getLastSessionEndTime();
-        if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
-            salesLogContainer.style.display = 'block';
-            loginModal.style.display = 'none';
-            salesLogInstance = new SalesLog();
-        } else {
-            setLoggedIn(false);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username === adminUsername && password === adminPassword) {
-                setLoggedIn(true);
-                loginModal.style.display = 'none';
-                salesLogContainer.style.display = 'block';
-                salesLogInstance = new SalesLog();
-            } else {
-                errorMsg.textContent = 'Invalid username or password';
-            }
-        });
-
-        const channel = new BroadcastChannel('transaction_channel');
         let chart;
         let paymentChart;
         let fromDate = null;
         let toDate = null;
         let searchTerm = '';
+        const channel = new BroadcastChannel('transaction_channel');
 
+        // Define SalesLog class first
         class SalesLog {
             constructor() {
                 this.db = null;
@@ -474,14 +429,14 @@
                                 }]
                             },
                             options: {
-                                plugins: {
-                                    legend: { display: true }
-                                }
+                                plugins: { legend: { display: true } }
                             }
                         });
                     }
 
-                    this.displayLog(filteredTransactions);
+                    // Display only the last 20 transactions
+                    const last20Transactions = filteredTransactions.slice(-20);
+                    this.displayLog(last20Transactions);
                 };
             }
 
@@ -533,6 +488,71 @@
                 doc.save('sales_log.pdf');
             }
         }
+
+        // Helper functions
+        function isLoggedIn() {
+            return localStorage.getItem('isLoggedIn') === 'true';
+        }
+
+        function setLoggedIn(value) {
+            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
+        }
+
+        function getLastSessionEndTime() {
+            const time = localStorage.getItem('lastSessionEndTime');
+            return time ? parseInt(time, 10) : 0;
+        }
+
+        function setLastSessionEndTime(time) {
+            localStorage.setItem('lastSessionEndTime', time.toString());
+        }
+
+        function resetSessionTimeout(lastTransactionTime) {
+            clearTimeout(sessionTimeoutId);
+            const now = Date.now();
+            const timeSinceLastTransaction = now - lastTransactionTime;
+            const remainingTime = SESSION_TIMEOUT - timeSinceLastTransaction;
+            if (remainingTime > 0) {
+                sessionTimeoutId = setTimeout(logout, remainingTime);
+            } else {
+                logout();
+            }
+        }
+
+        function logout() {
+            setLoggedIn(false);
+            if (salesLogInstance) salesLogInstance.stop();
+            clearInterval(jpgExportIntervalId);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        // Check login status on load
+        const now = Date.now();
+        const lastSessionEnd = getLastSessionEndTime();
+        if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
+            salesLogContainer.style.display = 'block';
+            loginModal.style.display = 'none';
+            salesLogInstance = new SalesLog();
+        } else {
+            setLoggedIn(false);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        // Login button event listener
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === adminUsername && password === adminPassword) {
+                setLoggedIn(true);
+                loginModal.style.display = 'none';
+                salesLogContainer.style.display = 'block';
+                salesLogInstance = new SalesLog();
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+            }
+        });
     </script>
 </body>
 </html>
