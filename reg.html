@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy-Report-Only" content="script-src 'unsafe-inline' 'unsafe-eval' blob: data: https://www.gstatic.com; report-uri /csp-report">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -196,6 +195,17 @@
         .close-btn { background: #d32f2f; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .disabled { opacity: 0.5; pointer-events: none; }
         .hidden { display: none; }
+        .layout-toggle {
+            margin-right: 5px;
+        }
+        #saveLayoutBtn {
+            background: #1a73e8;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -281,24 +291,27 @@
                 this.currentItems = [];
                 this.cashTotal = 0;
                 this.doorCount = 0;
-                this.isEditing = false;
+                this.isEditingLayout = false;
                 this.activeButtons = JSON.parse(localStorage.getItem('activeButtons')) || {};
                 this.transactionButtons = $('.product-item');
 
+                // Set today's date by default
                 $('#eventDate').val(new Date().toISOString().split('T')[0]);
-                this.initializeButtonStates();
+
+                // Initialize button states
+                this.transactionButtons.each((_, btn) => {
+                    const key = $(btn).data('item');
+                    if (this.activeButtons[key] === undefined) {
+                        this.activeButtons[key] = true; // Default to enabled
+                    }
+                });
+                localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+
+                this.applyLayout();
+                this.updateEditLayoutButton();
                 this.bindEvents();
                 this.initDB();
                 this.initGoogleAPI();
-            }
-
-            initializeButtonStates() {
-                this.transactionButtons.each((_, btn) => {
-                    const key = $(btn).data('item');
-                    const isActive = this.activeButtons[key] !== false;
-                    $(btn).attr('data-active', isActive);
-                    if (!isActive) $(btn).addClass('hidden');
-                });
             }
 
             initDB() {
@@ -317,7 +330,7 @@
                     this.db = event.target.result;
                     this.checkSessionStatus();
                 };
-                request.onerror = () => this.showError('Failed to initialize database.');
+                request.onerror = () => this.showError('Failed to open database.');
             }
 
             initGoogleAPI() {
@@ -328,96 +341,146 @@
                         discoveryDocs: DISCOVERY_DOCS,
                         scope: SCOPE
                     }).then(() => {
-                        if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
-                            gapi.auth2.getAuthInstance().signIn();
-                        }
+                        gapi.auth2.getAuthInstance().signIn();
                     }).catch(err => this.showError('Google API initialization failed: ' + err.message));
                 });
             }
 
             bindEvents() {
                 $('#toggleSalesBtn').on('click', () => this.toggleSales());
-                $('#editLayoutBtn').on('click', () => this.toggleEditMode());
-                $('.increment-btn').on('click', (event) => this.handleIncrement(event));
-                $('.minus').on('click', (event) => this.handleDecrement(event));
-                $('.add-custom').on('click', () => this.handleCustomAdd());
+                $('#editLayoutBtn').on('click', () => this.toggleEditLayout());
+                $(document).on('click', '.increment-btn', (event) => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    const itemPrice = parseFloat($item.data('price'));
+                    this.incrementItem(itemName, itemPrice);
+                });
+                $(document).on('click', '.minus', (event) => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $(event.target).closest('.product-item');
+                    const itemName = $item.data('item');
+                    this.decrementItem(itemName);
+                });
+                $(document).on('click', '.add-custom', () => {
+                    if (this.isEditingLayout || !this.sessionStarted) return;
+                    const $item = $('.product-item[data-item="CASH (CUSTOM)"]');
+                    const amount = parseFloat($item.find('input').val());
+                    if (isNaN(amount) || amount <= 0) {
+                        this.showError('Please enter a valid amount.');
+                        return;
+                    }
+                    const itemName = `CASH $${amount.toFixed(2)}`;
+                    this.incrementItem(itemName, amount);
+                    $item.find('input').val('');
+                });
                 $('#logSaleBtn').on('click', () => this.logSale());
             }
 
-            handleIncrement(event) {
-                if (this.isEditing || !this.sessionStarted) return;
-                const $item = $(event.target).closest('.product-item');
-                const itemName = $item.data('item');
-                const itemPrice = parseFloat($item.data('price'));
-                this.incrementItem(itemName, itemPrice);
-                this.doorCount++; // Increment door count for every button press
-                this.updateTotals();
-            }
-
-            handleDecrement(event) {
-                if (this.isEditing || !this.sessionStarted) return;
-                const $item = $(event.target).closest('.product-item');
-                const itemName = $item.data('item');
-                this.decrementItem(itemName);
-            }
-
-            handleCustomAdd() {
-                if (this.isEditing || !this.sessionStarted) return;
-                const $item = $('.product-item[data-item="CASH (CUSTOM)"]');
-                const amount = parseFloat($item.find('input').val());
-                if (isNaN(amount) || amount <= 0) {
-                    this.showError('Please enter a valid amount.');
+            toggleEditLayout() {
+                if (this.sessionStarted) {
+                    this.showError('Cannot edit layout while sales are open.');
                     return;
                 }
-                const itemName = `CASH $${amount.toFixed(2)}`;
-                this.incrementItem(itemName, amount);
-                this.doorCount++; // Increment door count for custom cash entry
-                $item.find('input').val('');
-                this.updateTotals();
+                this.isEditingLayout = !this.isEditingLayout;
+                if (this.isEditingLayout) {
+                    this.enterEditMode();
+                } else {
+                    this.exitEditMode();
+                }
             }
 
-            toggleEditMode() {
-                this.isEditing = !this.isEditing;
-                $('#editLayoutBtn').text(this.isEditing ? 'Save Layout' : 'Edit Layout');
+            enterEditMode() {
+                this.applyLayout();
                 this.transactionButtons.each((_, btn) => {
                     const $btn = $(btn);
                     const key = $btn.data('item');
-                    if (this.isEditing) {
-                        $btn.removeClass('hidden').toggleClass('disabled', $btn.attr('data-active') === 'false');
-                    } else {
-                        this.activeButtons[key] = $btn.attr('data-active') !== 'false';
-                        $btn.toggleClass('hidden', !this.activeButtons[key]).removeClass('disabled');
-                        localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
-                    }
+                    const isActive = this.activeButtons[key] !== false;
+                    $btn.find('.control-row').prepend(`<input type="checkbox" class="layout-toggle" data-key="${key}" ${isActive ? 'checked' : ''}>`);
                 });
+                $('.footer').append('<button id="saveLayoutBtn">Save Layout</button>');
+                $('#saveLayoutBtn').on('click', () => this.saveLayout());
+            }
+
+            exitEditMode() {
+                this.isEditingLayout = false;
+                this.transactionButtons.find('.layout-toggle').remove();
+                $('#saveLayoutBtn').remove();
+                this.applyLayout();
+            }
+
+            saveLayout() {
+                this.transactionButtons.each((_, btn) => {
+                    const $btn = $(btn);
+                    const key = $btn.data('item');
+                    const isChecked = $btn.find('.layout-toggle').is(':checked');
+                    this.activeButtons[key] = isChecked;
+                });
+                localStorage.setItem('activeButtons', JSON.stringify(this.activeButtons));
+                this.exitEditMode();
+            }
+
+            applyLayout() {
+                if (this.isEditingLayout) {
+                    this.transactionButtons.removeClass('hidden');
+                } else {
+                    this.transactionButtons.each((_, btn) => {
+                        const $btn = $(btn);
+                        const key = $btn.data('item');
+                        const isActive = this.activeButtons[key] !== false;
+                        if (!isActive) {
+                            $btn.addClass('hidden');
+                        } else {
+                            $btn.removeClass('hidden');
+                        }
+                    });
+                }
+            }
+
+            updateEditLayoutButton() {
+                if (this.sessionStarted) {
+                    $('#editLayoutBtn').hide();
+                } else {
+                    $('#editLayoutBtn').show();
+                }
             }
 
             checkSessionStatus() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
-                if (!activeSessionId) return this.resetSession();
-                const tx = this.db.transaction(['sessions'], 'readonly');
-                const store = tx.objectStore('sessions');
-                store.get(Number(activeSessionId)).onsuccess = (event) => {
-                    const session = event.target.result;
-                    if (session?.status === 'open') {
-                        this.sessionStarted = true;
-                        this.sessionId = session.id;
-                        $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
-                        $('#sessionHeader input').prop('disabled', true).addClass('locked').val((_, val) => session[$(this).attr('id')]);
-                        this.loadSessionTransactions();
-                    } else {
-                        this.resetSession();
-                    }
-                };
+                if (activeSessionId) {
+                    const tx = this.db.transaction(['sessions'], 'readonly');
+                    const store = tx.objectStore('sessions');
+                    const request = store.get(Number(activeSessionId));
+                    request.onsuccess = (event) => {
+                        const session = event.target.result;
+                        if (session && session.status === 'open') {
+                            this.sessionStarted = true;
+                            this.sessionId = session.id;
+                            $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
+                            $('#eventDate').val(session.date);
+                            $('#eventVenue').val(session.venue);
+                            $('#eventName').val(session.eventName);
+                            $('#cashierName').val(session.cashier);
+                            $('#sessionHeader input').prop('disabled', true).addClass('locked');
+                            this.loadSessionTransactions();
+                        } else {
+                            this.resetSession();
+                        }
+                        this.updateEditLayoutButton();
+                    };
+                } else {
+                    this.resetSession();
+                }
             }
 
             loadSessionTransactions() {
                 const tx = this.db.transaction(['transactions'], 'readonly');
                 const store = tx.objectStore('transactions');
                 const index = store.index('sessionId');
-                index.getAll(this.sessionId).onsuccess = (event) => {
+                const request = index.getAll(this.sessionId);
+                request.onsuccess = (event) => {
                     const transactions = event.target.result;
-                    this.doorCount = transactions.reduce((sum, t) => sum + t.doorCount, 0);
+                    this.doorCount = transactions.reduce((sum, t) => sum + (t.itemList.some(i => i.item === 'TICKET') ? 1 : 0), 0);
                     this.cashTotal = transactions.reduce((sum, t) => sum + t.total, 0);
                     this.updateTotals();
                 };
@@ -435,52 +498,72 @@
                 $('#eventDate').val(new Date().toISOString().split('T')[0]);
                 $('.count').text('0');
                 this.updateTotals();
+                this.updateEditLayoutButton();
             }
 
             toggleSales() {
                 if (!this.sessionStarted) {
-                    const session = {
-                        date: $('#eventDate').val().trim(),
-                        venue: $('#eventVenue').val().trim(),
-                        eventName: $('#eventName').val().trim(),
-                        cashier: $('#cashierName').val().trim(),
-                        status: 'open',
-                        startTime: new Date().toISOString()
-                    };
-                    if (!session.date || !session.venue || !session.cashier) {
+                    const date = $('#eventDate').val().trim();
+                    const venue = $('#eventVenue').val().trim();
+                    const eventName = $('#eventName').val().trim();
+                    const cashier = $('#cashierName').val().trim();
+                    if (!date || !venue || !cashier) {
                         this.showError('Please fill in date, venue, and cashier name.');
                         return;
                     }
+                    const session = {
+                        date,
+                        venue,
+                        eventName,
+                        cashier,
+                        status: 'open',
+                        startTime: new Date().toISOString()
+                    };
                     const tx = this.db.transaction(['sessions'], 'readwrite');
                     const store = tx.objectStore('sessions');
-                    store.add(session).onsuccess = (event) => {
+                    const request = store.add(session);
+                    request.onsuccess = (event) => {
                         this.sessionId = event.target.result;
                         localStorage.setItem('activeSessionId', this.sessionId);
                         this.sessionStarted = true;
                         $('#toggleSalesBtn').text('Close Sales').removeClass('open-btn').addClass('close-btn');
                         $('#sessionHeader input').prop('disabled', true).addClass('locked');
-                        this.logToGoogleSheet(['SALES OPEN', this.sessionId, session.startTime, '', '', '', '', '']);
+                        this.updateEditLayoutButton();
+                        gapi.client.sheets.spreadsheets.values.append({
+                            spreadsheetId: SPREADSHEET_ID,
+                            range: 'Sheet1!A1',
+                            valueInputOption: 'RAW',
+                            resource: { values: [['SALES OPEN', this.sessionId, session.startTime]] }
+                        }).catch(err => this.showError('Google Sheet error: ' + err.message));
                     };
                 } else {
                     const pin = prompt('Enter PIN to close sales (default: 1234)');
-                    if (pin !== '1234') return this.showError('Incorrect PIN.');
-                    const tx = this.db.transaction(['sessions'], 'readwrite');
-                    const store = tx.objectStore('sessions');
-                    store.get(this.sessionId).onsuccess = (event) => {
-                        const session = event.target.result;
-                        session.status = 'closed';
-                        session.endTime = new Date().toISOString();
-                        store.put(session).onsuccess = () => {
-                            this.logToGoogleSheet(['SALES CLOSED', this.sessionId, session.endTime, '', '', '', '', this.doorCount]);
-                            this.resetSession();
+                    if (pin === '1234') {
+                        const tx = this.db.transaction(['sessions'], 'readwrite');
+                        const store = tx.objectStore('sessions');
+                        const request = store.get(this.sessionId);
+                        request.onsuccess = (event) => {
+                            const session = event.target.result;
+                            session.status = 'closed';
+                            session.endTime = new Date().toISOString();
+                            store.put(session);
+                            gapi.client.sheets.spreadsheets.values.append({
+                                spreadsheetId: SPREADSHEET_ID,
+                                range: 'Sheet1!A1',
+                                valueInputOption: 'RAW',
+                                resource: { values: [['SALES CLOSED', this.sessionId, session.endTime]] }
+                            }).then(() => this.resetSession())
+                              .catch(err => this.showError('Google Sheet error: ' + err.message));
                         };
-                    };
+                    } else {
+                        this.showError('Incorrect PIN.');
+                    }
                 }
             }
 
             incrementItem(itemName, price) {
                 const $count = $(`.product-item[data-item="${itemName}"] .count`);
-                const count = (parseInt($count.text()) || 0) + 1;
+                let count = parseInt($count.text()) + 1;
                 $count.text(count);
                 const existingItem = this.currentItems.find(i => i.item === itemName);
                 if (existingItem) {
@@ -488,20 +571,26 @@
                 } else {
                     this.currentItems.push({ item: itemName, price: price, quantity: 1 });
                 }
+                if (itemName === 'TICKET') this.doorCount++;
                 if (itemName.includes('CASH')) this.cashTotal += price;
+                this.updateTotals();
             }
 
             decrementItem(itemName) {
                 const $count = $(`.product-item[data-item="${itemName}"] .count`);
-                let count = parseInt($count.text()) || 0;
-                if (count <= 0) return;
-                count--;
-                $count.text(count);
-                const existingItem = this.currentItems.find(i => i.item === itemName);
-                if (existingItem) {
-                    existingItem.quantity--;
-                    if (existingItem.quantity <= 0) this.currentItems = this.currentItems.filter(i => i.item !== itemName);
-                    if (itemName.includes('CASH')) this.cashTotal -= existingItem.price;
+                let count = parseInt($count.text());
+                if (count > 0) {
+                    count--;
+                    $count.text(count);
+                    const existingItem = this.currentItems.find(i => i.item === itemName);
+                    if (existingItem) {
+                        existingItem.quantity--;
+                        if (existingItem.quantity <= 0) {
+                            this.currentItems = this.currentItems.filter(i => i.item !== itemName);
+                        }
+                        if (itemName === 'TICKET') this.doorCount--;
+                        if (itemName.includes('CASH')) this.cashTotal -= existingItem.price;
+                    }
                     this.updateTotals();
                 }
             }
@@ -512,55 +601,44 @@
             }
 
             logSale() {
-                if (!this.sessionStarted) return this.showError('Please open sales first.');
-                if (this.currentItems.length === 0 && !$('#noteInput').val()) return this.showError('No items or note to log.');
-                const timestamp = new Date().toISOString();
-                const time = new Date().toLocaleTimeString();
-                const note = $('#noteInput').val();
-
-                this.currentItems.forEach(item => {
-                    const transaction = {
-                        sessionId: this.sessionId,
-                        timestamp: timestamp,
-                        time: time,
-                        itemList: [{ item: item.item, price: item.price, quantity: item.quantity }],
-                        total: item.price * item.quantity,
-                        type: item.item.split(' ')[0], // Extract type (CASH, CC, TICKET, COMP)
-                        note: note,
-                        doorCount: 1 // Each item increments door count individually
-                    };
-                    const tx = this.db.transaction(['transactions'], 'readwrite');
-                    const store = tx.objectStore('transactions');
-                    store.add(transaction).onsuccess = () => {
-                        this.logToGoogleSheet([
-                            'TRANSACTION', 
-                            this.sessionId, 
-                            transaction.timestamp, 
-                            transaction.time, 
-                            JSON.stringify(transaction.itemList), 
-                            transaction.total.toFixed(2), 
-                            transaction.type, 
-                            this.doorCount
-                        ]);
-                    };
-                });
-
-                this.currentItems = [];
-                $('.count').text('0');
-                $('#noteInput').val('');
-                this.updateTotals();
-                $('#logSaleBtn').addClass('flash');
-                setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
-                this.showSuccess('Sale logged successfully.');
-            }
-
-            logToGoogleSheet(values) {
-                gapi.client.sheets.spreadsheets.values.append({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: 'Sheet1!A1',
-                    valueInputOption: 'RAW',
-                    resource: { values: [values] }
-                }).catch(err => this.showError('Google Sheet error: ' + err.message));
+                if (!this.sessionStarted) {
+                    this.showError('Please open sales first.');
+                    return;
+                }
+                if (this.currentItems.length === 0 && !$('#noteInput').val()) {
+                    this.showError('No items or note to log.');
+                    return;
+                }
+                const transaction = {
+                    sessionId: this.sessionId,
+                    timestamp: new Date().toISOString(),
+                    time: new Date().toLocaleTimeString(),
+                    itemList: this.currentItems.map(item => ({ ...item })),
+                    total: this.cashTotal,
+                    note: $('#noteInput').val()
+                };
+                const tx = this.db.transaction(['transactions'], 'readwrite');
+                const store = tx.objectStore('transactions');
+                const request = store.add(transaction);
+                request.onsuccess = () => {
+                    gapi.client.sheets.spreadsheets.values.append({
+                        spreadsheetId: SPREADSHEET_ID,
+                        range: 'Sheet1!A1',
+                        valueInputOption: 'RAW',
+                        resource: {
+                            values: [['TRANSACTION', this.sessionId, transaction.timestamp, transaction.time, JSON.stringify(transaction.itemList), transaction.total.toFixed(2), transaction.note, this.doorCount]]
+                        }
+                    }).then(() => {
+                        this.currentItems = [];
+                        this.cashTotal = 0;
+                        $('.count').text('0');
+                        $('#noteInput').val('');
+                        this.updateTotals();
+                        $('#logSaleBtn').addClass('flash');
+                        setTimeout(() => $('#logSaleBtn').removeClass('flash'), 500);
+                        this.showSuccess('Sale logged successfully.');
+                    }).catch(err => this.showError('Google Sheet error: ' + err.message));
+                };
             }
 
             showError(message) {
@@ -574,7 +652,7 @@
             }
         }
 
-        $(document).ready(() => new SalesApp());
+        const app = new SalesApp();
     </script>
 </body>
 </html>
