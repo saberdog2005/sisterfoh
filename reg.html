@@ -7,20 +7,20 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f0f0f0; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #e0e0e0; }
+        .container { max-width: 800px; margin: auto; background: #f9f9f9; padding: 20px; border: 1px solid #ccc; }
         .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-        .product-item { padding: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .product-item { padding: 10px; border: 1px solid #ccc; text-align: center; }
         .product-item.hidden { display: none; }
         .increment-btn, .minus, .add-custom { margin: 5px; padding: 5px 10px; cursor: pointer; }
         .open-btn { background-color: #4CAF50; color: white; }
         .close-btn { background-color: #f44336; color: white; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 15% auto; padding: 20px; width: 70%; max-width: 400px; }
+        .modal-content { background: #f9f9f9; margin: 15% auto; padding: 20px; width: 70%; max-width: 400px; border: 1px solid #ccc; }
         #errorMessage, #successMessage { margin: 10px 0; padding: 10px; }
         #errorMessage { background-color: #ffebee; color: #c62828; }
         #successMessage { background-color: #e8f5e9; color: #2e7d32; }
-        #addButtonForm { display: none; margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #addButtonForm { display: none; margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
         .cash { color: #4caf50; }
         .cc { color: #f44336; }
         .ticket { color: #2196f3; }
@@ -86,6 +86,7 @@
                 <h2>Enter PIN to Close Sales</h2>
                 <input type="password" id="pinInput" placeholder="PIN">
                 <button id="submitPinBtn">Submit</button>
+                <button id="cancelPinBtn">Cancel</button>
                 <div id="pinError" style="color: red;"></div>
             </div>
         </div>
@@ -130,6 +131,7 @@
                     pinModal: document.getElementById('pinModal'),
                     pinInput: document.getElementById('pinInput'),
                     submitPinBtn: document.getElementById('submitPinBtn'),
+                    cancelPinBtn: document.getElementById('cancelPinBtn'),
                     pinError: document.getElementById('pinError')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
@@ -182,6 +184,7 @@
                 this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
                 this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
                 this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
                 this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
                 this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
             }
@@ -294,6 +297,10 @@
                 }
             }
 
+            cancelPinModal() {
+                this.elements.pinModal.style.display = 'none';
+            }
+
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
@@ -369,7 +376,7 @@
                     this.showError('Please fill in all required fields (Date, Venue, Cashier)');
                     return;
                 }
-                this.elements.logSaleBtn.disabled = true; // Disable button to prevent duplicates
+                this.elements.logSaleBtn.disabled = true;
 
                 const timestamp = new Date().toISOString();
                 const items = Array.from(this.state.currentItems.entries())
@@ -428,14 +435,14 @@
                     this.showError('Saved locally, failed to sync: ' + error.message);
                 }
                 this.resetForm();
-                this.elements.logSaleBtn.disabled = false; // Re-enable button
+                this.elements.logSaleBtn.disabled = false;
                 channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0; // Reset transaction door count
+                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 this.elements.noteInput.value = '';
