@@ -114,6 +114,9 @@
             padding: 10px;
             margin: 10px 0;
             box-sizing: border-box;
+            background-color: #3c3c3c;
+            border: 1px solid #555;
+            color: #e0e0e0;
         }
         .modal-content button {
             padding: 10px 20px;
@@ -208,23 +211,82 @@
         const salesLogContainer = document.getElementById('salesLogContainer');
         const errorMsg = document.getElementById('errorMsg');
 
+        // Session Timeout Configuration
+        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+        let sessionTimeoutId;
+        let salesLogInstance;
+
+        // Helper Functions for Session Management
+        function isLoggedIn() {
+            return localStorage.getItem('isLoggedIn') === 'true';
+        }
+
+        function setLoggedIn(value) {
+            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
+        }
+
+        function getLastSessionEndTime() {
+            const time = localStorage.getItem('lastSessionEndTime');
+            return time ? parseInt(time, 10) : 0;
+        }
+
+        function setLastSessionEndTime(time) {
+            localStorage.setItem('lastSessionEndTime', time.toString());
+        }
+
+        function resetSessionTimeout(lastTransactionTime) {
+            clearTimeout(sessionTimeoutId);
+            const now = Date.now();
+            const timeSinceLastTransaction = now - lastTransactionTime;
+            const remainingTime = SESSION_TIMEOUT - timeSinceLastTransaction;
+            if (remainingTime > 0) {
+                sessionTimeoutId = setTimeout(logout, remainingTime);
+            } else {
+                logout();
+            }
+        }
+
+        function logout() {
+            setLoggedIn(false);
+            if (salesLogInstance) {
+                salesLogInstance.stop();
+            }
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        // Page Load Logic
+        const now = Date.now();
+        const lastSessionEnd = getLastSessionEndTime();
+        if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
+            salesLogContainer.style.display = 'block';
+            loginModal.style.display = 'none';
+            salesLogInstance = new SalesLog();
+            // Session timeout will be set after first updateLog based on last transaction
+        } else {
+            setLoggedIn(false);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
         // Login Functionality
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             if (username === adminUsername && password === adminPassword) {
+                setLoggedIn(true);
                 loginModal.style.display = 'none';
                 salesLogContainer.style.display = 'block';
-                new SalesLog(); // Initialize SalesLog after successful login
+                salesLogInstance = new SalesLog();
             } else {
                 errorMsg.textContent = 'Invalid username or password';
             }
         });
 
-        // Initialize BroadcastChannel and Chart Variables
+        // Global Variables
         const channel = new BroadcastChannel('transaction_channel');
-        let chart; // Line chart for door count
-        let paymentChart; // Pie chart for payment types
+        let chart;
+        let paymentChart;
         let fromDate = null;
         let toDate = null;
         let searchTerm = '';
@@ -232,9 +294,10 @@
         class SalesLog {
             constructor() {
                 this.db = null;
+                this.updateInterval = null;
                 this.initDB().then(() => {
                     this.updateLog();
-                    setInterval(() => this.updateLog(), 5000); // Auto-update every 5 seconds
+                    this.updateInterval = setInterval(() => this.updateLog(), 5000); // Auto-update every 5 seconds
                     channel.onmessage = (event) => {
                         if (event.data.type === 'new_transaction') this.updateLog();
                     };
@@ -250,7 +313,12 @@
                 });
             }
 
-            /** Initialize IndexedDB */
+            stop() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                }
+            }
+
             async initDB() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open('SalesDB', 2);
@@ -268,7 +336,6 @@
                 });
             }
 
-            /** Parse Transaction Items into Counts and Amounts */
             parseItems(itemsString) {
                 const result = {
                     CASH: { count: 0, amount: 0 },
@@ -298,7 +365,6 @@
                 return result;
             }
 
-            /** Update the Log and Charts */
             async updateLog() {
                 const activeSessionId = localStorage.getItem('activeSessionId');
                 if (!activeSessionId) {
@@ -327,16 +393,33 @@
                     let sessionTransactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     let filteredTransactions = sessionTransactions;
 
-                    // Apply Filters
+                    // Get current date and time
+                    const now = new Date();
+
+                    // Handle fromDate (start of the day)
+                    let startDate = null;
                     if (fromDate) {
-                        const from = new Date(fromDate);
-                        filteredTransactions = filteredTransactions.filter(t => new Date(t.timestamp) >= from);
+                        startDate = new Date(fromDate);
+                        startDate.setHours(0, 0, 0, 0); // Set to midnight of fromDate
                     }
+
+                    // Handle toDate (end of the day, capped at current time)
+                    let endDate = now; // Default to current date and time
                     if (toDate) {
-                        const to = new Date(toDate);
-                        to.setDate(to.getDate() + 1); // Include entire end day
-                        filteredTransactions = filteredTransactions.filter(t => new Date(t.timestamp) < to);
+                        const selectedTo = new Date(toDate);
+                        selectedTo.setHours(23, 59, 59, 999); // Set to end of toDate
+                        endDate = selectedTo < now ? selectedTo : now; // Cap at now if toDate is today/future
                     }
+
+                    // Apply date range filter
+                    filteredTransactions = filteredTransactions.filter(t => {
+                        const ts = new Date(t.timestamp);
+                        return ts instanceof Date && !isNaN(ts) &&
+                               (!startDate || ts >= startDate) &&
+                               ts <= endDate;
+                    });
+
+                    // Apply search filter
                     if (searchTerm) {
                         filteredTransactions = filteredTransactions.filter(t =>
                             (t.cashierName && t.cashierName.toLowerCase().includes(searchTerm)) ||
@@ -345,6 +428,20 @@
                     }
 
                     filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    // Determine last session end time for timeout
+                    let lastTransactionTime = 0;
+                    if (filteredTransactions.length > 0) {
+                        lastTransactionTime = new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime();
+                        setLastSessionEndTime(lastTransactionTime);
+                        resetSessionTimeout(lastTransactionTime);
+                    } else if (getLastSessionEndTime() === 0) {
+                        // No transactions yet, set to now on first load after login
+                        setLastSessionEndTime(now.getTime());
+                        resetSessionTimeout(now.getTime());
+                    } else {
+                        resetSessionTimeout(getLastSessionEndTime());
+                    }
 
                     // Initialize Data Accumulators
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
@@ -442,7 +539,6 @@
                 request.onerror = (event) => console.error('Error fetching transactions:', event.target.error);
             }
 
-            /** Display Transaction Log */
             displayLog(transactions) {
                 const logBody = document.getElementById('logBody');
                 logBody.innerHTML = transactions.map(t => {
@@ -468,7 +564,6 @@
                 }).join('');
             }
 
-            /** Export to PDF */
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
