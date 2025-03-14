@@ -18,88 +18,96 @@
             color: #e0e0e0;
         }
         .container {
-            width: 100%;
-            background: #2d2d2d;
-            padding: 20px;
-            box-sizing: border-box;
-            display: none;
+            max-width: 1200px;
+            margin: auto;
         }
         .grid {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
-            justify-content: space-between;
         }
-        .header { flex: 1 0 100%; text-align: center; }
-        .col-1, .col-2, .col-3, .col-4 { padding: 10px; flex: 1; min-width: 0; }
-        .col-1 { flex: 0 0 15%; }
-        .col-2 { flex: 0 0 15%; }
-        .col-3 { flex: 0 0 35%; }
-        .col-4 { flex: 0 0 35%; }
-        canvas {
-            max-width: 100%;
-            background-color: #3c3c3c;
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+        }
+        .col-1, .col-2, .col-3, .col-4 {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .col-1 label, .col-1 select, .col-1 button {
+            display: block;
+            margin: 10px 0;
+            width: 100%;
             padding: 10px;
-            box-sizing: border-box;
+        }
+        .col-1 select {
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        .col-1 button {
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
         .summary-table table {
             width: 100%;
             border-collapse: collapse;
         }
-        th, td {
-            border: 1px solid #555;
-            padding: 8px;
+        .summary-table th, .summary-table td {
+            padding: 10px;
             text-align: left;
-            background-color: #3c3c3c;
+            border-bottom: 1px solid #444;
         }
-        th { background-color: #4c4c4c; }
         #exportBtn {
             margin-top: 10px;
             padding: 10px;
-            background-color: #0288d1;
+            background-color: #2e7d32;
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            width: 100%;
         }
-        #exportBtn:hover { background-color: #026aa7; }
         .modal {
-            display: block;
+            display: none;
             position: fixed;
-            z-index: 1;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0,0,0,0.5);
         }
         .modal-content {
-            background-color: #2d2d2d;
+            background-color: #2e2e2e;
             margin: 15% auto;
             padding: 20px;
-            border: 1px solid #555;
             width: 300px;
+            border-radius: 5px;
             text-align: center;
         }
         .modal-content input {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
-            box-sizing: border-box;
-            background-color: #3c3c3c;
-            border: 1px solid #555;
+            background-color: #333;
             color: #e0e0e0;
+            border: 1px solid #555;
         }
         .modal-content button {
             padding: 10px 20px;
-            background-color: #0288d1;
+            background-color: #2e7d32;
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
         }
-        .modal-content button:hover { background-color: #026aa7; }
-        .error { color: #f44336; margin-top: 10px; }
-        @media (max-width: 768px) {
-            .col-1, .col-2, .col-3, .col-4 { flex: 1 0 100%; }
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -118,7 +126,6 @@
         <div class="grid">
             <h1 class="header">Sales Log</h1>
             <div class="col-1">
-                
                 <h2>Filters</h2>
                 <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
                 <button id="applyFilters">Apply</button>
@@ -154,9 +161,8 @@
     </div>
 
     <script>
-        // Configuration
-        const SERVER_URL = 'http://localhost:3000'; // Update with your server's URL
-        const WS_URL = 'ws://localhost:3000'; // WebSocket URL
+        const SERVER_URL = 'http://localhost:3000';
+        const WS_URL = 'ws://localhost:3000';
         const adminUsername = "admin";
         const adminPassword = "password123";
         const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
@@ -172,7 +178,6 @@
         let selectedSessionId = null;
         const ws = new WebSocket(WS_URL);
 
-        // WebSocket event listeners
         ws.onopen = () => console.log('WebSocket connected');
         ws.onmessage = (event) => {
             if (event.data === 'update') {
@@ -227,7 +232,7 @@
                     if (!activeSessionId) {
                         document.getElementById('sessionInfo').innerHTML = '<p>No session selected</p>';
                         if (chart) {
-                            chart.data.datasets.forEach(dataset => dataset.data = []);
+                            chart.data.datasets = [];
                             chart.update();
                         }
                         document.getElementById('summaryBody').innerHTML = '';
@@ -235,31 +240,16 @@
                         document.getElementById('totalSales').textContent = '0.00';
                         return;
                     }
-const ws = new WebSocket('ws://localhost:3000');
-ws.onmessage = (event) => {
-    if (event.data === 'update') {
-        // Fetch and refresh transaction data
-        fetch('/getTransactions').then(response => response.json()).then(data => {
-            // Update UI with data
-        });
-    }
-};
+
                     const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
 
-                    // Tally Sheet Logic
-                    const summary = {};
-                    const predefinedPrices = [
-                        'CASH $5', 'CASH $7', 'CASH $10', 'CASH $12', 'CASH $15', 'CARD', 'TICKET', 'COMP'
-                    ];
-                    predefinedPrices.forEach(price => {
-                        summary[price] = { people: 0, total: 0, price: parseFloat(price.match(/\$([\d.]+)/)?.[1] || 0) };
-                    });
-
+                    const itemSummary = {};
                     let totalDoorCount = 0;
                     let totalSales = 0;
-                    let doorCountData = [];
 
                     transactions.forEach(t => {
                         const items = t.items.split('; ');
@@ -269,27 +259,22 @@ ws.onmessage = (event) => {
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10);
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                const priceKey = key.includes('CUSTOM') ? 'CASH $' + price : key.toUpperCase();
-                                if (summary[priceKey]) {
-                                    summary[priceKey].people += count;
-                                    summary[priceKey].total += count * (price || summary[priceKey].price);
-                                } else if (key === 'CARD' || key === 'TICKET' || key === 'COMP') {
-                                    summary[key].people += count;
-                                    summary[key].total += count * price;
+                                if (!itemSummary[key]) {
+                                    itemSummary[key] = { people: 0, total: 0, price };
                                 }
+                                itemSummary[key].people += count;
+                                itemSummary[key].total += count * price;
                             }
                         });
                         totalDoorCount += t.doorCount;
                         totalSales += t.cashTotal;
-                        doorCountData.push({ x: t.timestamp, y: totalDoorCount });
                     });
 
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
 
                     const summaryBody = document.getElementById('summaryBody');
-                    summaryBody.innerHTML = Object.entries(summary)
-                        .filter(([_, data]) => data.people > 0)
+                    summaryBody.innerHTML = Object.entries(itemSummary)
                         .map(([key, data]) => `
                             <tr>
                                 <td>${key}</td>
@@ -306,20 +291,42 @@ ws.onmessage = (event) => {
                             </tr>
                         `;
 
+                    const itemTypes = Object.keys(itemSummary);
+                    const datasets = itemTypes.map(type => ({
+                        label: type,
+                        data: [],
+                        borderColor: getColorForType(type),
+                        fill: false
+                    }));
+                    let cumulativeCounts = {};
+                    itemTypes.forEach(type => cumulativeCounts[type] = 0);
+
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const count = parseInt(value.split(' @ ')[0], 10);
+                                if (cumulativeCounts[key] !== undefined) {
+                                    cumulativeCounts[key] += count;
+                                }
+                            }
+                        });
+                        itemTypes.forEach(type => {
+                            datasets.find(d => d.label === type).data.push({
+                                x: t.timestamp,
+                                y: cumulativeCounts[type] || 0
+                            });
+                        });
+                    });
+
                     if (chart) {
-                        chart.data.datasets[0].data = doorCountData;
+                        chart.data.datasets = datasets;
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
-                            data: {
-                                datasets: [{
-                                    label: 'Total Thru Door',
-                                    data: doorCountData,
-                                    borderColor: '#bb86fc',
-                                    fill: false
-                                }]
-                            },
+                            data: { datasets },
                             options: {
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
@@ -345,6 +352,21 @@ ws.onmessage = (event) => {
                 doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 doc.save('sales_log.pdf');
             }
+        }
+
+        function getColorForType(type) {
+            const colors = {
+                'Cash $5': '#2e7d32',
+                'Cash $7': '#2e7d32',
+                'Cash $10': '#2e7d32',
+                'Cash $12': '#2e7d32',
+                'Cash $15': '#2e7d32',
+                'Cash $20': '#2e7d32',
+                'Credit Card': '#d32f2f',
+                'Tickets': '#1a73e8',
+                'Comps': '#ffa500'
+            };
+            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
         }
 
         function isLoggedIn() {
