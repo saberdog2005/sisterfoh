@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -128,13 +129,12 @@
                 flex: 1 0 100%;
             }
         }
-        /* Single column layout for PDF export */
         .pdf-single-column .grid {
             flex-direction: column;
         }
         .pdf-single-column .col-1, .pdf-single-column .col-2, .pdf-single-column .col-3, .pdf-single-column .col-4 {
-            flex: 0 0 auto; /* Take natural height based on content */
-            width: 100%; /* Full width */
+            flex: 0 0 auto;
+            width: 100%;
         }
         .pdf-single-column .transaction-log {
             max-height: none;
@@ -204,7 +204,7 @@
         // Constants and variables
         const adminUsername = "admin";
         const adminPassword = "password123";
-        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
         const JPG_EXPORT_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
         const loginModal = document.getElementById('loginModal');
@@ -366,12 +366,6 @@
                     const cashierText = uniqueCashiers.length > 0 ? uniqueCashiers.join(', ') : 'None';
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${displaySessionId}</p><p>Cashiers: ${cashierText}</p>`;
 
-                    let lastTransactionTime = filteredTransactions.length > 0
-                        ? new Date(filteredTransactions[filteredTransactions.length - 1].timestamp).getTime()
-                        : getLastSessionEndTime() || now.getTime();
-                    setLastSessionEndTime(lastTransactionTime);
-                    resetSessionTimeout(lastTransactionTime);
-
                     let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
                     let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
                     let totalSales = 0;
@@ -532,16 +526,14 @@
                 const doc = new jsPDF({
                     orientation: 'portrait',
                     unit: 'in',
-                    format: 'letter' // 8.5 x 11 inches
+                    format: 'letter'
                 });
                 const content = document.querySelector('.container');
-                // Temporarily apply single-column layout
                 content.classList.add('pdf-single-column');
-                // Ensure charts are updated
                 if (chart) chart.update();
                 if (paymentChart) paymentChart.update();
                 const canvas = await html2canvas(content, { scale: 2 });
-                content.classList.remove('pdf-single-column'); // Restore original layout
+                content.classList.remove('pdf-single-column');
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
@@ -560,28 +552,8 @@
             localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
         }
 
-        function getLastSessionEndTime() {
-            const time = localStorage.getItem('lastSessionEndTime');
-            return time ? parseInt(time, 10) : 0;
-        }
-
-        function setLastSessionEndTime(time) {
-            localStorage.setItem('lastSessionEndTime', time.toString());
-        }
-
-        function resetSessionTimeout(lastTransactionTime) {
-            clearTimeout(sessionTimeoutId);
-            const now = Date.now();
-            const timeSinceLastTransaction = now - lastTransactionTime;
-            const remainingTime = SESSION_TIMEOUT - timeSinceLastTransaction;
-            if (remainingTime > 0) {
-                sessionTimeoutId = setTimeout(logout, remainingTime);
-            } else {
-                logout();
-            }
-        }
-
         function logout() {
+            clearTimeout(sessionTimeoutId);
             setLoggedIn(false);
             if (salesLogInstance) salesLogInstance.stop();
             clearInterval(jpgExportIntervalId);
@@ -590,12 +562,13 @@
         }
 
         // Check login status on load
-        const now = Date.now();
-        const lastSessionEnd = getLastSessionEndTime();
-        if (isLoggedIn() && (now - lastSessionEnd < SESSION_TIMEOUT)) {
+        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
+        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
             salesLogContainer.style.display = 'block';
             loginModal.style.display = 'none';
             salesLogInstance = new SalesLog();
+            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
+            sessionTimeoutId = setTimeout(logout, remainingTime);
         } else {
             setLoggedIn(false);
             salesLogContainer.style.display = 'none';
@@ -607,9 +580,12 @@
             const password = document.getElementById('password').value;
             if (username === adminUsername && password === adminPassword) {
                 setLoggedIn(true);
+                localStorage.setItem('loginTime', Date.now().toString());
+                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
                 loginModal.style.display = 'none';
                 salesLogContainer.style.display = 'block';
                 salesLogInstance = new SalesLog();
+                errorMsg.textContent = '';
             } else {
                 errorMsg.textContent = 'Invalid username or password';
             }
