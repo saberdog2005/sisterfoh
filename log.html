@@ -153,10 +153,12 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://localhost:3000/getTransactions';
+        // Configuration
+        const SERVER_URL = 'http://localhost:3000'; // Update with your server's URL
+        const WS_URL = 'ws://localhost:3000'; // WebSocket URL
         const adminUsername = "admin";
         const adminPassword = "password123";
-        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
         const channel = new BroadcastChannel('transaction_channel');
 
         const loginModal = document.getElementById('loginModal');
@@ -167,6 +169,17 @@
         let salesLogInstance;
         let chart;
         let selectedSessionId = null;
+        const ws = new WebSocket(WS_URL);
+
+        // WebSocket event listeners
+        ws.onopen = () => console.log('WebSocket connected');
+        ws.onmessage = (event) => {
+            if (event.data === 'update') {
+                salesLogInstance?.updateLog();
+            }
+        };
+        ws.onerror = (error) => console.error('WebSocket error:', error);
+        ws.onclose = () => console.log('WebSocket disconnected');
 
         class SalesLog {
             constructor() {
@@ -199,8 +212,9 @@
 
             async updateLog() {
                 try {
-                    const url = selectedSessionId ? `${SERVER_URL}?sessionId=${selectedSessionId}` : SERVER_URL;
+                    const url = selectedSessionId ? `${SERVER_URL}/getTransactions?sessionId=${selectedSessionId}` : `${SERVER_URL}/getTransactions`;
                     const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const allTransactions = await response.json();
 
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
@@ -228,12 +242,10 @@
                     // Tally Sheet Logic
                     const summary = {};
                     const predefinedPrices = [
-                        'Cash $5', 'Cash $7', 'Cash $8', 'Cash $10', 'Cash $12', 'Cash $12.5', 'Cash $15', 'Cash $20', 'SPECIAL$ Cash',
-                        'Credit Card $5', 'Credit Card $7', 'Credit Card $8', 'Credit Card $10', 'Credit Card $12', 
-                        'Credit Card $15', 'Credit Card $20', 'Credit Card $22', 'Comps'
+                        'CASH $5', 'CASH $7', 'CASH $10', 'CASH $12', 'CASH $15', 'CARD', 'TICKET', 'COMP'
                     ];
                     predefinedPrices.forEach(price => {
-                        summary[price] = { people: 0, total: 0, price: parseFloat(price.match(/\$([\d.]+)/)?.[1] || (price === 'Comps' ? 0.01 : 0)) };
+                        summary[price] = { people: 0, total: 0, price: parseFloat(price.match(/\$([\d.]+)/)?.[1] || 0) };
                     });
 
                     let totalDoorCount = 0;
@@ -247,11 +259,14 @@
                             if (key && value) {
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10);
-                                const price = parseFloat(priceStr.replace('$', ''));
-                                const priceKey = key === 'Tickets' ? 'Comps' : `${key}`;
+                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
+                                const priceKey = key.includes('CUSTOM') ? 'CASH $' + price : key.toUpperCase();
                                 if (summary[priceKey]) {
                                     summary[priceKey].people += count;
-                                    summary[priceKey].total += count * price;
+                                    summary[priceKey].total += count * (price || summary[priceKey].price);
+                                } else if (key === 'CARD' || key === 'TICKET' || key === 'COMP') {
+                                    summary[key].people += count;
+                                    summary[key].total += count * price;
                                 }
                             }
                         });
@@ -264,21 +279,23 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
 
                     const summaryBody = document.getElementById('summaryBody');
-                    summaryBody.innerHTML = Object.entries(summary).map(([key, data]) => `
-                        <tr>
-                            <td>${key}</td>
-                            <td>${data.people}</td>
-                            <td>$${data.total.toFixed(2)}</td>
-                            <td>$${data.price.toFixed(2)}</td>
-                        </tr>
-                    `).join('') + `
-                        <tr>
-                            <td>TOTALS</td>
-                            <td>${totalDoorCount}</td>
-                            <td>$${totalSales.toFixed(2)}</td>
-                            <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
-                        </tr>
-                    `;
+                    summaryBody.innerHTML = Object.entries(summary)
+                        .filter(([_, data]) => data.people > 0)
+                        .map(([key, data]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td>${data.people}</td>
+                                <td>$${data.total.toFixed(2)}</td>
+                                <td>$${data.price.toFixed(2)}</td>
+                            </tr>
+                        `).join('') + `
+                            <tr>
+                                <td>TOTALS</td>
+                                <td>${totalDoorCount}</td>
+                                <td>$${totalSales.toFixed(2)}</td>
+                                <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
+                            </tr>
+                        `;
 
                     if (chart) {
                         chart.data.datasets[0].data = doorCountData;
