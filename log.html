@@ -118,6 +118,7 @@
         <div class="grid">
             <h1 class="header">Sales Log</h1>
             <div class="col-1">
+                
                 <h2>Filters</h2>
                 <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
                 <button id="applyFilters">Apply</button>
@@ -234,7 +235,15 @@
                         document.getElementById('totalSales').textContent = '0.00';
                         return;
                     }
-
+const ws = new WebSocket('ws://localhost:3000');
+ws.onmessage = (event) => {
+    if (event.data === 'update') {
+        // Fetch and refresh transaction data
+        fetch('/getTransactions').then(response => response.json()).then(data => {
+            // Update UI with data
+        });
+    }
+};
                     const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
