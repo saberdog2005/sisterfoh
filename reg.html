@@ -10,26 +10,23 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px;
+            padding: 5px;
             background-color: #1e1e1e;
             color: #e0e0e0;
             font-size: 16px;
+            height: 100vh;
+            overflow: hidden;
         }
-        button {
-            touch-action: manipulation;
-        }
+        button { touch-action: manipulation; }
         .header {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             background-color: #2d2d2d;
             padding: 10px;
         }
-        .header label {
-            margin-right: 5px;
-            color: #e0e0e0;
-        }
+        .header label { margin-right: 5px; color: #e0e0e0; }
         .header input {
             padding: 5px;
             background-color: #3c3c3c;
@@ -37,59 +34,44 @@
             border: 1px solid #555;
             font-size: 16px;
         }
-        .header input:disabled {
-            background-color: #555;
-            color: #888;
-        }
+        .header input:disabled { background-color: #555; color: #888; }
         .container {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
+            max-height: 758px;
+            overflow: hidden;
         }
         .button-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
         .product-item {
             background-color: #2d2d2d;
             padding: 10px;
             border: 1px solid #555;
         }
-        .product-item.hidden {
-            display: none;
-        }
+        .product-item.hidden { display: none; }
         .increment-btn, .minus, .add-custom {
-            padding: 1em;
+            padding: 0.8em;
             margin: 0.5em 0;
             width: 100%;
             border: none;
             cursor: pointer;
-            font-size: 1.5em;
+            font-size: 1.4em;
             transition: background-color 0.3s;
         }
-        .increment-btn:hover, .minus:hover, .add-custom:hover {
-            background-color: #444;
-        }
-        button[disabled] {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .increment-btn:hover, .minus:hover, .add-custom:hover { background-color: #444; }
+        button[disabled] { opacity: 0.5; cursor: not-allowed; }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
         .ticket { background-color: #1a73e8; color: white; }
         .comp { background-color: #ffa500; color: white; }
         .minus { background-color: #555; color: white; }
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .control-row { display: flex; justify-content: space-between; align-items: center; }
         .count { font-weight: bold; color: #e0e0e0; }
-        .custom-input {
-            display: flex;
-            gap: 5px;
-        }
+        .custom-input { display: flex; gap: 5px; }
         .custom-input input {
             width: 70%;
             padding: 5px;
@@ -107,11 +89,7 @@
             padding: 10px;
             margin-bottom: 10px;
         }
-        .note-section {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 10px;
-        }
+        .note-section { display: flex; flex-direction: column; margin-bottom: 10px; }
         .note-section textarea {
             width: 100%;
             height: 60px;
@@ -122,20 +100,18 @@
             font-size: 16px;
         }
         #logSaleBtn {
-            padding: 1em;
+            padding: 0.8em;
             background-color: #0288d1;
             color: white;
             border: none;
             cursor: pointer;
             font-size: 1.5em;
         }
-        #logSaleBtn:hover {
-            background-color: #026aa7;
-        }
+        #logSaleBtn:hover { background-color: #026aa7; }
         .footer {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
+            margin-top: 15px;
             background-color: #2d2d2d;
             padding: 10px;
             justify-content: space-between;
@@ -154,7 +130,6 @@
         #successMessage { color: #2e7d32; font-weight: bold; }
         #errorMessage { color: #d32f2f; font-weight: bold; }
         .hidden { display: none; }
-        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         .modal {
             display: none;
             position: fixed;
@@ -335,7 +310,7 @@
     </div>
 
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
+        const SERVER_URL = 'http://localhost:3000/logTransaction';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
 
@@ -400,10 +375,8 @@
                 this.elements.transactionButtons.forEach(btn => {
                     const incrementBtn = btn.querySelector('.increment-btn');
                     const minusBtn = btn.querySelector('.minus');
-                    const addCustomBtn = btn.querySelector('.add-custom');
                     if (incrementBtn) incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
                     if (minusBtn) minusBtn.addEventListener('click', () => this.handleDecrement(btn));
-                    if (addCustomBtn && customInput) addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
                 });
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
                 this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
@@ -450,20 +423,6 @@
                 }
             }
 
-            handleCustomCash(btn, input) {
-                if (!this.state.sessionStarted || this.state.isEditing) return;
-                const amount = parseFloat(input.value);
-                if (amount > 0) {
-                    const item = "CASH (CUSTOM)";
-                    let current = this.state.currentItems.get(item) || { amounts: [], count: 0 };
-                    current.amounts.push(amount);
-                    current.count++;
-                    this.state.currentItems.set(item, current);
-                    this.updateTotals(amount, 1, item);
-                    input.value = '';
-                }
-            }
-
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('Cash') || item === 'CASH (CUSTOM)') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
@@ -488,16 +447,13 @@
                 this.elements.transactionButtons.forEach(btn => {
                     const incrementBtn = btn.querySelector('.increment-btn');
                     const minusBtn = btn.querySelector('.minus');
-                    const addCustomBtn = btn.querySelector('.add-custom');
                     if (this.state.sessionStarted) {
                         if (incrementBtn) incrementBtn.disabled = false;
                         if (minusBtn) minusBtn.disabled = false;
-                        if (addCustomBtn) addCustomBtn.disabled = false;
                         this.elements.editLayoutBtn.classList.add('hidden');
                     } else {
                         if (incrementBtn) incrementBtn.disabled = true;
                         if (minusBtn) minusBtn.disabled = true;
-                        if (addCustomBtn) addCustomBtn.disabled = true;
                         this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
@@ -631,13 +587,8 @@
                 const uniqueId = `${this.state.sessionId}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => {
-                        if (key === "CASH (CUSTOM)") {
-                            return `CASH (CUSTOM): ${value.amounts.map(a => `$${a.toFixed(2)}`).join(', ')}`;
-                        } else {
-                            return `${key}: ${value.count} @ $${value.price.toFixed(2)}`;
-                        }
-                    }).join('; ');
+                    .map(([key, value]) => `${key}: ${value.count} @ $${value.price.toFixed(2)}`)
+                    .join('; ');
                 if (!items) {
                     this.showError('No items to log');
                     return;
@@ -655,17 +606,21 @@
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
                     note: this.elements.noteInput.value,
-                    synced: false
+                    synced: 0
                 };
-                await fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(transaction),
-                    mode: 'no-cors'
-                });
-                this.showSuccess('Sale logged successfully');
-                this.resetForm();
-                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
+                try {
+                    const response = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(transaction)
+                    });
+                    if (!response.ok) throw new Error('Failed to log sale');
+                    this.showSuccess('Sale logged successfully');
+                    this.resetForm();
+                    channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
+                } catch (error) {
+                    this.showError('Error logging sale: ' + error.message);
+                }
             }
 
             resetForm() {
