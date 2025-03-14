@@ -7,8 +7,8 @@ const port = 3000;
 
 // Middleware
 app.use(express.json());
-app.use(cors()); // Enable CORS for client requests
-app.use(express.static('public')); // Serve static files (e.g., HTML) from 'public' folder
+app.use(cors());
+app.use(express.static('public'));
 
 // SQLite Database Setup
 const db = new sqlite3.Database('./transactions.db', (err) => {
@@ -70,6 +70,21 @@ app.post('/logTransaction', (req, res) => {
     });
 });
 
+// API Endpoint: Get Transactions
+app.get('/getTransactions', (req, res) => {
+    const { sessionId } = req.query;
+    const sql = sessionId
+        ? 'SELECT * FROM transactions WHERE sessionId = ? ORDER BY timestamp DESC'
+        : 'SELECT * FROM transactions ORDER BY timestamp DESC';
+    db.all(sql, sessionId ? [sessionId] : [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
 // Sync Transactions to Google Sheets
 async function syncWithGoogleSheets() {
     db.all('SELECT * FROM transactions WHERE synced = 0', [], async (err, rows) => {
@@ -103,10 +118,8 @@ async function syncWithGoogleSheets() {
     });
 }
 
-// Run sync every 5 minutes
 setInterval(syncWithGoogleSheets, 5 * 60 * 1000);
 
-// Start Server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
