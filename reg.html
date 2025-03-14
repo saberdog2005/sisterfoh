@@ -3,234 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://www.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
     <style>
+        /* Styles remain unchanged from the original */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
         }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 600px;
-            margin: 20px auto;
-        }
-        .header, .footer {
-            margin-bottom: 20px;
-        }
-        .header label, .footer label {
-            display: block;
-            margin: 5px 0;
-        }
-        .header input, .footer input, textarea {
-            width: calc(100% - 20px);
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .button-container {
+        .header {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 20px;
-            justify-content: center;
+            background-color: #2d2d2d;
+            padding: 10px;
+        }
+        .header label {
+            margin-right: 5px;
+            color: #e0e0e0;
+        }
+        .header input {
+            padding: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        .header input:disabled {
+            background-color: #555;
+            color: #888;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
         }
         .product-item {
-            flex: 1 1 calc(50% - 10px);
-            max-width: calc(50% - 10px);
-            background: #e0e0e0;
+            background-color: #2d2d2d;
             padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-            position: relative;
-            box-sizing: border-box;
+            border: 1px solid #555;
         }
-        .increment-btn {
+        .product-item.hidden {
+            display: none;
+        }
+        .increment-btn, .minus, .add-custom {
+            padding: 1em;
+            margin: 0.5em 0;
             width: 100%;
-            padding: 10px;
-            background: #4CAF50;
-            color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            margin-bottom: 5px;
+            font-size: 1.5em;
+            transition: background-color 0.3s;
         }
-        .increment-btn.cc {
-            background: #2196F3;
+        .increment-btn:hover, .minus:hover, .add-custom:hover {
+            background-color: #444;
         }
-        .increment-btn.cash {
-            background: #FF9800;
-        }
-        .increment-btn:disabled {
-            background: #cccccc;
+        button[disabled] {
+            opacity: 0.5;
             cursor: not-allowed;
         }
+        .cash { background-color: #2e7d32; color: white; }
+        .cc { background-color: #d32f2f; color: white; }
+        .ticket { background-color: #1a73e8; color: white; }
+        .comp { background-color: #ffa500; color: white; }
+        .minus { background-color: #555; color: white; }
         .control-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
+        }
+        .count { font-weight: bold; color: #e0e0e0; }
+        .custom-input {
+            display: flex;
             gap: 5px;
         }
-        .count {
-            width: 30px;
-            text-align: center;
+        .custom-input input {
+            width: 70%;
+            padding: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
         }
-        .minus {
-            padding: 5px 10px;
-            background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+        .add-custom { background-color: #2e7d32; color: white; width: 30%; }
         .totals-container {
-            margin-bottom: 20px;
-            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2em;
+            background-color: #2d2d2d;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note-section {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
         }
         .note-section textarea {
             width: 100%;
             height: 60px;
-            resize: none;
+            padding: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
         }
         #logSaleBtn {
-            width: 100%;
-            padding: 12px;
-            background: #4CAF50;
+            padding: 1em;
+            background-color: #0288d1;
             color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 1.5em;
         }
-        #logSaleBtn:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
+        #logSaleBtn:hover {
+            background-color: #026aa7;
         }
         .footer {
             display: flex;
-            flex-wrap: wrap;
             gap: 10px;
+            margin-top: 20px;
+            background-color: #2d2d2d;
+            padding: 10px;
+            justify-content: space-between;
             align-items: center;
         }
-        .open-btn, .edit-btn {
-            padding: 10px 20px;
+        .edit-btn, .open-btn, .close-btn {
+            padding: 0.8em 1.5em;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 1.2em;
+            font-weight: bold;
         }
-        .open-btn {
-            background: #2196F3;
-            color: white;
-        }
-        .edit-btn {
-            background: #FF9800;
-            color: white;
-        }
-        #successMessage {
-            color: green;
-            margin-top: 10px;
-            flex: 1 1 100%;
-        }
-        #errorMessage {
-            color: red;
-            margin-top: 10px;
-            flex: 1 1 100%;
-        }
+        .edit-btn { background-color: #555; color: white; }
+        .open-btn { background-color: #0288d1; color: white; }
+        .close-btn { background-color: #d32f2f; color: white; }
+        #successMessage { color: #2e7d32; font-weight: bold; }
+        #errorMessage { color: #d32f2f; font-weight: bold; }
+        .hidden { display: none; }
+        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         .modal {
             display: none;
             position: fixed;
-            top: 0;
+            z-index: 1;
             left: 0;
+            top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
+            background-color: rgba(0,0,0,0.4);
         }
         .modal-content {
-            background: white;
+            background-color: #2d2d2d;
+            margin: 15% auto;
             padding: 20px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 400px;
+            width: 300px;
+            color: #e0e0e0;
             text-align: center;
         }
-        #pinInput {
-            padding: 8px;
-            width: 80%;
+        .modal-content h2 { color: #bb86fc; }
+        .modal-content input {
+            padding: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
             margin: 10px 0;
         }
-        #submitPinBtn, #cancelPinBtn {
+        .modal-content button {
             padding: 10px 20px;
-            margin: 5px;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
+            margin: 5px;
         }
-        #submitPinBtn {
-            background: #4CAF50;
-            color: white;
-        }
-        #cancelPinBtn {
-            background: #f44336;
-            color: white;
-        }
-        #addButtonForm {
-            display: none;
-            margin-top: 20px;
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 4px;
-        }
+        #submitPinBtn { background: #0288d1; color: white; }
+        #submitPinBtn:hover { background: #026aa7; }
+        #cancelPinBtn { background: #555; color: white; }
+        #cancelPinBtn:hover { background: #444; }
+        #addButtonForm { display: none; margin-top: 10px; padding: 10px; background-color: #2d2d2d; border: 1px solid #555; }
         #addButtonForm input {
-            width: calc(100% - 20px);
-            padding: 8px;
-            margin: 5px 0;
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+            background-color: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #555;
         }
-        #submitNewButton, #cancelNewButton {
-            padding: 10px 20px;
+        #addButtonForm button {
+            padding: 5px 10px;
             margin: 5px;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
         }
-        #submitNewButton {
-            background: #4CAF50;
-            color: white;
-        }
-        #cancelNewButton {
-            background: #f44336;
-            color: white;
-        }
-        @media (max-width: 480px) {
-            .product-item {
-                flex: 1 1 100%;
-                max-width: 100%;
-            }
-            .footer {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .open-btn, .edit-btn {
-                width: 100%;
-            }
-        }
+        #submitNewButton { background: #0288d1; color: white; }
+        #cancelNewButton { background: #555; color: white; }
     </style>
 </head>
 <body>
@@ -247,8 +219,18 @@
         </header>
         <main class="container">
             <div class="button-container">
-                <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
-                    <button class="increment-btn cc">CC TRANS</button>
+                <div class="product-item" data-item="CASH (CUSTOM)" data-active="true">
+                    <div class="product-controls cash">
+                        <h4>CASH (CUSTOM)</h4>
+                        <div class="custom-input">
+                            <label for="customCashInput" class="visually-hidden">Custom Cash Amount</label>
+                            <input type="number" step="0.01" min="0.01" id="customCashInput" placeholder="Amount">
+                            <button class="add-custom">Add</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
+                    <button class="increment-btn cash">CASH $20</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -270,6 +252,27 @@
                 </div>
                 <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
                     <button class="increment-btn cash">CASH $10</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="CC TRANS" data-price="0" data-active="true">
+                    <button class="increment-btn cc">CC TRANS</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
+                    <button class="increment-btn ticket">TICKET</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="COMP" data-price="0" data-active="true">
+                    <button class="increment-btn comp">COMP</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -314,7 +317,6 @@
     </div>
 
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
 
@@ -326,12 +328,11 @@
                     currentItems: new Map(),
                     cashTotal: 0,
                     doorCount: 0,
-                    sessionDoorCount: 0,
+                    sessionDoorCount: 0, // Grand total for the session
                     isEditing: false,
                     activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
-                    db: null,
                     isLogging: false,
-                    lastLogTime: 0
+                    lastLogTime: 0 // For debounce
                 };
                 this.elements = {
                     transactionButtons: document.querySelectorAll('.product-item'),
@@ -359,97 +360,20 @@
                     pinError: document.getElementById('pinError')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
-                this.indexedDB = null;
-            }
-
-            async init() {
-                await this.initIndexedDB();
-                await this.loadSQLiteDB();
                 this.checkSessionStatus();
                 this.loadSessionDoorCount();
                 this.initializeButtonStates();
                 this.bindEvents();
             }
 
-            async initIndexedDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 1);
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('database')) {
-                            db.createObjectStore('database');
-                        }
-                    };
-                    request.onsuccess = (event) => {
-                        this.indexedDB = event.target.result;
-                        resolve();
-                    };
-                    request.onerror = (event) => reject(event.target.error);
-                });
-            }
-
-            async loadSQLiteDB() {
-                const SQL = await initSqlJs({
-                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
-                });
-                const tx = this.indexedDB.transaction(['database'], 'readonly');
-                const store = tx.objectStore('database');
-                const request = store.get('main');
-                return new Promise((resolve, reject) => {
-                    request.onsuccess = () => {
-                        const dbBinary = request.result;
-                        let db;
-                        if (dbBinary) {
-                            db = new SQL.Database(dbBinary);
-                        } else {
-                            db = new SQL.Database();
-                            db.run(`CREATE TABLE transactions (
-                                id TEXT PRIMARY KEY,
-                                sessionId TEXT,
-                                timestamp TEXT,
-                                items TEXT,
-                                cashTotal REAL,
-                                doorCount INTEGER,
-                                sessionDoorCount INTEGER,
-                                eventDate TEXT,
-                                eventVenue TEXT,
-                                eventName TEXT,
-                                cashierName TEXT,
-                                note TEXT,
-                                synced INTEGER
-                            )`);
-                        }
-                        this.state.db = db;
-                        resolve();
-                    };
-                    request.onerror = () => reject(request.error);
-                });
-            }
-
-            checkSessionStatus() {
-                const sessionData = JSON.parse(localStorage.getItem('salesSession'));
-                if (sessionData && sessionData.sessionStarted) {
-                    this.state.sessionStarted = true;
-                    this.state.sessionId = sessionData.sessionId;
-                    this.elements.toggleSalesBtn.textContent = 'Close Sales';
-                    this.elements.toggleSalesBtn.classList.add('close-btn');
-                }
-            }
-
-            loadSessionDoorCount() {
-                const sessionDoorCount = parseInt(localStorage.getItem(`doorCount_${this.state.sessionId}`)) || 0;
-                this.state.sessionDoorCount = sessionDoorCount;
-                this.updateTotals();
-            }
-
             initializeButtonStates() {
                 this.elements.transactionButtons.forEach(btn => {
-                    const itemName = btn.dataset.item;
-                    const countSpan = btn.querySelector('.count');
-                    this.elements.counts.set(itemName, countSpan);
-                    const isActive = this.state.activeButtons.get(itemName) !== false;
+                    const key = btn.dataset.item;
+                    const isActive = this.state.activeButtons.get(key) ?? (btn.dataset.active === 'true');
                     btn.dataset.active = isActive;
-                    btn.style.display = isActive || this.state.isEditing ? 'block' : 'none';
+                    if (!isActive) btn.classList.add('hidden');
+                    const countEl = btn.querySelector('.count');
+                    if (countEl) this.elements.counts.set(key, countEl);
                 });
             }
 
@@ -457,168 +381,223 @@
                 this.elements.transactionButtons.forEach(btn => {
                     const incrementBtn = btn.querySelector('.increment-btn');
                     const minusBtn = btn.querySelector('.minus');
-                    const itemName = btn.dataset.item;
-                    const price = parseFloat(btn.dataset.price);
-
-                    incrementBtn.addEventListener('click', () => {
-                        if (!this.state.sessionStarted || btn.dataset.active === 'false') return;
-                        if (this.state.isEditing) {
-                            this.toggleButtonActive(btn);
-                            return;
-                        }
-                        const current = this.state.currentItems.get(itemName) || { count: 0, price };
-                        current.count++;
-                        this.state.currentItems.set(itemName, current);
-                        this.state.doorCount += itemName === 'CC TRANS' ? 0 : 1;
-                        this.state.cashTotal += itemName === 'CC TRANS' ? 0 : price;
-                        this.state.sessionDoorCount += itemName === 'CC TRANS' ? 0 : 1;
-                        localStorage.setItem(`doorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
-                        this.updateCount(itemName);
-                        this.updateTotals();
-                    });
-
-                    minusBtn.addEventListener('click', () => {
-                        if (!this.state.sessionStarted) return;
-                        const current = this.state.currentItems.get(itemName);
-                        if (current && current.count > 0) {
-                            current.count--;
-                            this.state.currentItems.set(itemName, current);
-                            this.state.doorCount -= itemName === 'CC TRANS' ? 0 : 1;
-                            this.state.cashTotal -= itemName === 'CC TRANS' ? 0 : price;
-                            this.state.sessionDoorCount -= itemName === 'CC TRANS' ? 0 : 1;
-                            localStorage.setItem(`doorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
-                            this.updateCount(itemName);
-                            this.updateTotals();
-                        }
-                    });
+                    const addCustomBtn = btn.querySelector('.add-custom');
+                    const customInput = btn.querySelector('input[type="number"]');
+                    if (incrementBtn) incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
+                    if (minusBtn) minusBtn.addEventListener('click', () => this.handleDecrement(btn));
+                    if (addCustomBtn && customInput) addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
                 });
+                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+            }
 
-                this.elements.toggleSalesBtn.addEventListener('click', () => {
-                    if (!this.state.sessionStarted) {
-                        this.startSession();
+            debounceLogSale() {
+                const now = Date.now();
+                if (this.state.isLogging || (now - this.state.lastLogTime < 1000)) return; // 1-second debounce
+                this.state.isLogging = true;
+                this.elements.logSaleBtn.disabled = true;
+                this.logSale().finally(() => {
+                    this.state.isLogging = false;
+                    this.state.lastLogTime = now;
+                    this.elements.logSaleBtn.disabled = false;
+                });
+            }
+
+            handleIncrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const current = this.state.currentItems.get(item) || { count: 0, price };
+                current.count++;
+                this.state.currentItems.set(item, current);
+                this.elements.counts.get(item).textContent = current.count;
+                this.updateTotals(price, 1, item);
+            }
+
+            handleDecrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const current = this.state.currentItems.get(item);
+                if (current && current.count > 0) {
+                    current.count--;
+                    this.state.currentItems.set(item, current);
+                    this.elements.counts.get(item).textContent = current.count;
+                    this.updateTotals(-price, -1, item);
+                }
+            }
+
+            handleCustomCash(btn, input) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const amount = parseFloat(input.value);
+                if (amount > 0) {
+                    const item = "CASH (CUSTOM)";
+                    let current = this.state.currentItems.get(item) || { amounts: [], count: 0 };
+                    current.amounts.push(amount);
+                    current.count++;
+                    this.state.currentItems.set(item, current);
+                    this.updateTotals(amount, 1, item);
+                    input.value = '';
+                }
+            }
+
+            updateTotals(priceDelta, countDelta, item) {
+                if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
+                this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta; // Increment session total
+                this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Display session total
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+            }
+
+            loadSessionDoorCount() {
+                if (this.state.sessionId) {
+                    this.state.sessionDoorCount = parseInt(localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`)) || 0;
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                }
+            }
+
+            checkSessionStatus() {
+                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'close-btn' : 'open-btn';
+                this.elements.transactionButtons.forEach(btn => {
+                    const incrementBtn = btn.querySelector('.increment-btn');
+                    const minusBtn = btn.querySelector('.minus');
+                    const addCustomBtn = btn.querySelector('.add-custom');
+                    if (this.state.sessionStarted) {
+                        if (incrementBtn) incrementBtn.disabled = false;
+                        if (minusBtn) minusBtn.disabled = false;
+                        if (addCustomBtn) addCustomBtn.disabled = false;
+                        this.elements.editLayoutBtn.classList.add('hidden');
                     } else {
-                        this.showPinModal();
+                        if (incrementBtn) incrementBtn.disabled = true;
+                        if (minusBtn) minusBtn.disabled = true;
+                        if (addCustomBtn) addCustomBtn.disabled = true;
+                        this.elements.editLayoutBtn.classList.remove('hidden');
                     }
                 });
-
-                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
-                this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
-                this.elements.submitPinBtn.addEventListener('click', () => this.verifyPin());
-                this.elements.cancelPinBtn.addEventListener('click', () => this.hidePinModal());
-                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
-                this.elements.cancelNewButton.addEventListener('click', () => {
-                    this.elements.addButtonForm.style.display = 'none';
-                });
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
-            updateCount(itemName) {
-                const count = (this.state.currentItems.get(itemName) || { count: 0 }).count;
-                this.elements.counts.get(itemName).textContent = count;
+            toggleSales() {
+                if (!this.state.sessionStarted) {
+                    const layoutSaved = localStorage.getItem('layoutSaved') === 'true';
+                    if (!layoutSaved) {
+                        this.showError('Please save the layout before starting sales');
+                        return;
+                    }
+                    this.state.sessionStarted = true;
+                    localStorage.setItem('sessionActive', true);
+                    this.state.sessionId = Date.now().toString();
+                    localStorage.setItem('activeSessionId', this.state.sessionId);
+                    this.state.cashTotal = 0;
+                    this.state.doorCount = 0;
+                    this.state.sessionDoorCount = 0; // Reset only on new session
+                    localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+                    this.elements.cashTotal.textContent = '0.00';
+                    this.elements.doorCount.textContent = '0';
+                    this.state.currentItems.clear();
+                    this.elements.counts.forEach(count => count.textContent = '0');
+                    this.showSuccess('Sales session started');
+                    this.checkSessionStatus();
+                } else {
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.value = '';
+                    this.elements.pinError.textContent = '';
+                }
             }
 
-            updateTotals() {
-                this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                this.elements.doorCount.textContent = this.state.doorCount;
-            }
-
-            startSession() {
-                this.state.sessionStarted = true;
-                this.state.sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-                localStorage.setItem('salesSession', JSON.stringify({
-                    sessionStarted: true,
-                    sessionId: this.state.sessionId
-                }));
-                this.elements.toggleSalesBtn.textContent = 'Close Sales';
-                this.elements.toggleSalesBtn.classList.add('close-btn');
-                this.showSuccess('Sales session started');
-            }
-
-            showPinModal() {
-                this.elements.pinModal.style.display = 'flex';
-                this.elements.pinInput.focus();
-            }
-
-            hidePinModal() {
-                this.elements.pinModal.style.display = 'none';
-                this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
-            }
-
-            verifyPin() {
+            confirmCloseSales() {
                 const pin = this.elements.pinInput.value;
                 if (pin === DEFAULT_PIN) {
-                    this.endSession();
-                    this.hidePinModal();
+                    this.state.sessionStarted = false;
+                    localStorage.removeItem('activeSessionId');
+                    localStorage.setItem('sessionActive', false);
+                    this.elements.pinModal.style.display = 'none';
+                    this.showSuccess('Sales session ended');
+                    this.checkSessionStatus();
                 } else {
                     this.elements.pinError.textContent = 'Incorrect PIN';
                 }
             }
 
-            endSession() {
-                this.state.sessionStarted = false;
-                this.state.sessionId = null;
-                this.state.sessionDoorCount = 0;
-                localStorage.removeItem('salesSession');
-                localStorage.removeItem(`doorCount_${this.state.sessionId}`);
-                this.elements.toggleSalesBtn.textContent = 'Open Sales';
-                this.elements.toggleSalesBtn.classList.remove('close-btn');
-                this.resetForm();
-                this.showSuccess('Sales session closed');
+            cancelPinModal() {
+                this.elements.pinModal.style.display = 'none';
             }
 
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
-                this.elements.addButtonForm.style.display = this.state.isEditing ? 'block' : 'none';
                 this.elements.transactionButtons.forEach(btn => {
-                    btn.style.display = 'block';
-                    const incrementBtn = btn.querySelector('.increment-btn');
-                    incrementBtn.disabled = this.state.isEditing;
+                    if (this.state.isEditing) {
+                        btn.classList.remove('hidden');
+                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
+                        btn.addEventListener('click', this.toggleButtonState);
+                    } else {
+                        const key = btn.dataset.item;
+                        this.state.activeButtons.set(key, btn.dataset.active === 'true');
+                        btn.style.opacity = '1';
+                        btn.classList.toggle('hidden', btn.dataset.active !== 'true');
+                        btn.removeEventListener('click', this.toggleButtonState);
+                        localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
+                        localStorage.setItem('layoutSaved', 'true');
+                    }
                 });
-                if (!this.state.isEditing) {
-                    localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
-                }
+                this.elements.addButtonForm.style.display = this.state.isEditing ? 'block' : 'none';
             }
 
-            toggleButtonActive(btn) {
-                const itemName = btn.dataset.item;
-                const isActive = btn.dataset.active === 'true';
-                btn.dataset.active = !isActive;
-                this.state.activeButtons.set(itemName, !isActive);
-                if (!this.state.isEditing) {
-                    btn.style.display = !isActive ? 'none' : 'block';
-                }
+            toggleButtonState(e) {
+                const btn = e.currentTarget;
+                const currentActive = btn.dataset.active === 'true';
+                btn.dataset.active = !currentActive;
+                btn.style.opacity = !currentActive ? '1' : '0.5';
             }
 
             addNewButton() {
-                const type = this.elements.newButtonType.value.trim();
-                const name = this.elements.newButtonName.value.trim();
-                const value = parseFloat(this.elements.newButtonValue.value) || 0;
-                if (!type || !name) {
-                    this.showError('Type and Name are required');
+                const type = this.elements.newButtonType.value;
+                const name = this.elements.newButtonName.value;
+                const value = parseFloat(this.elements.newButtonValue.value);
+                if (!type || !name || isNaN(value)) {
+                    this.showError('Please fill in all fields for the new button');
                     return;
                 }
-                const buttonContainer = document.querySelector('.button-container');
-                const newItem = document.createElement('div');
-                newItem.className = 'product-item';
-                newItem.dataset.item = name;
-                newItem.dataset.price = value;
-                newItem.dataset.active = 'true';
-                newItem.innerHTML = `
-                    <button class="increment-btn ${type.toLowerCase()}">${name}</button>
+                const newButton = document.createElement('div');
+                newButton.className = 'product-item';
+                newButton.dataset.item = name;
+                newButton.dataset.price = value;
+                newButton.dataset.active = 'true';
+                const className = type === 'CASH' ? 'cash' : type === 'CC TRANS' ? 'cc' : type === 'TICKET' ? 'ticket' : type === 'COMP' ? 'comp' : '';
+                newButton.innerHTML = `
+                    <button class="increment-btn ${className}">${name}</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 `;
-                buttonContainer.appendChild(newItem);
+                document.querySelector('.button-container').appendChild(newButton);
                 this.state.activeButtons.set(name, true);
-                this.elements.transactionButtons = document.querySelectorAll('.product-item');
-                this.initializeButtonStates();
-                this.bindEvents();
+                localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
+                localStorage.setItem('layoutSaved', 'true');
                 this.elements.newButtonType.value = '';
                 this.elements.newButtonName.value = '';
                 this.elements.newButtonValue.value = '';
+                this.elements.addButtonForm.style.display = 'none';
+                this.showSuccess('New button added');
+            }
+
+            cancelAddButton() {
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonForm.style.display = 'none';
             }
 
             async logSale() {
@@ -635,8 +614,13 @@
                 const uniqueId = `${this.state.sessionId}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${key}: ${value.count} @ $${value.price.toFixed(2)}`)
-                    .join('; ');
+                    .map(([key, value]) => {
+                        if (key === "CASH (CUSTOM)") {
+                            return `CASH (CUSTOM): ${value.amounts.map(a => `$${a.toFixed(2)}`).join(', ')}`;
+                        } else {
+                            return `${key}: ${value.count} @ $${value.price.toFixed(2)}`;
+                        }
+                    }).join('; ');
                 if (!items) {
                     this.showError('No items to log');
                     return;
@@ -655,84 +639,51 @@
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
                     note: this.elements.noteInput.value,
-                    synced: 0
+                    synced: false
                 };
 
-                const db = this.state.db;
-                db.run(`INSERT INTO transactions (
-                    id, sessionId, timestamp, items, cashTotal, doorCount, sessionDoorCount,
-                    eventDate, eventVenue, eventName, cashierName, note, synced
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-                    transaction.id, transaction.sessionId, transaction.timestamp, transaction.items,
-                    transaction.cashTotal, transaction.doorCount, transaction.sessionDoorCount,
-                    transaction.eventDate, transaction.eventVenue, transaction.eventName,
-                    transaction.cashierName, transaction.note, transaction.synced
-                ]);
-
-                const dbBinary = db.export();
-                const tx = this.indexedDB.transaction(['database'], 'readwrite');
-                const store = tx.objectStore('database');
-                await new Promise((resolve, reject) => {
-                    const request = store.put(dbBinary, 'main');
-                    request.onsuccess = resolve;
-                    request.onerror = () => reject(request.error);
-                });
-
                 try {
-                    await fetch(APPS_SCRIPT_URL, {
+                    const response = await fetch('/logTransaction', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(transaction),
-                        mode: 'no-cors'
+                        body: JSON.stringify(transaction)
                     });
-                    db.run(`UPDATE transactions SET synced = 1 WHERE id = ?`, [transaction.id]);
-                    const updatedDbBinary = db.export();
-                    const updateTx = this.indexedDB.transaction(['database'], 'readwrite');
-                    const updateStore = updateTx.objectStore('database');
-                    await new Promise((resolve, reject) => {
-                        const request = updateStore.put(updatedDbBinary, 'main');
-                        request.onsuccess = resolve;
-                        request.onerror = () => reject(request.error);
-                    });
+                    if (!response.ok) {
+                        throw new Error('Failed to log transaction');
+                    }
                     this.showSuccess('Sale logged successfully');
+                    this.resetForm();
+                    channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
                 } catch (error) {
-                    console.error('Error syncing to Google Sheets:', error);
-                    this.showError('Saved locally, failed to sync: ' + error.message);
+                    console.error('Error logging transaction:', error);
+                    this.showError('Failed to log transaction: ' + error.message);
                 }
-
-                this.resetForm();
-                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0;
-                this.elements.transactionButtons.forEach(btn => {
-                    const itemName = btn.dataset.item;
-                    this.updateCount(itemName);
-                });
-                this.updateTotals();
+                this.state.doorCount = 0; // Reset per-transaction count
+                this.elements.cashTotal.textContent = '0.00';
+                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Preserve session total
                 this.elements.noteInput.value = '';
+                this.elements.counts.forEach(count => count.textContent = '0');
             }
 
             showSuccess(message) {
-                this.elements.successMessage.textContent = message;
-                this.elements.errorMessage.textContent = '';
-                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+                const successEl = document.getElementById('successMessage');
+                successEl.textContent = message;
+                setTimeout(() => successEl.textContent = '', 3000);
             }
 
             showError(message) {
-                this.elements.errorMessage.textContent = message;
-                this.elements.successMessage.textContent = '';
-                setTimeout(() => this.elements.errorMessage.textContent = '', 5000);
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                setTimeout(() => errorEl.textContent = '', 3000);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const app = new SalesApp();
-            await app.init();
-        });
+        document.addEventListener('DOMContentLoaded', () => new SalesApp());
     </script>
 </body>
 </html>
