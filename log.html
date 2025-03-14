@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Log</title>
-    <!-- External Libraries -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -31,15 +30,8 @@
             gap: 20px;
             justify-content: space-between;
         }
-        .header {
-            flex: 1 0 100%;
-            text-align: center;
-        }
-        .col-1, .col-2, .col-3, .col-4 {
-            padding: 10px;
-            flex: 1;
-            min-width: 0;
-        }
+        .header { flex: 1 0 100%; text-align: center; }
+        .col-1, .col-2, .col-3, .col-4 { padding: 10px; flex: 1; min-width: 0; }
         .col-1 { flex: 0 0 15%; }
         .col-2 { flex: 0 0 15%; }
         .col-3 { flex: 0 0 35%; }
@@ -50,12 +42,7 @@
             padding: 10px;
             box-sizing: border-box;
         }
-        .transaction-log {
-            max-height: 400px;
-            overflow-y: auto;
-            overflow-x: auto;
-        }
-        table {
+        .summary-table table {
             width: 100%;
             border-collapse: collapse;
         }
@@ -65,10 +52,8 @@
             text-align: left;
             background-color: #3c3c3c;
         }
-        th {
-            background-color: #4c4c4c;
-        }
-        #exportBtn, #moreBtn {
+        th { background-color: #4c4c4c; }
+        #exportBtn {
             margin-top: 10px;
             padding: 10px;
             background-color: #0288d1;
@@ -76,13 +61,7 @@
             border: none;
             cursor: pointer;
         }
-        #exportBtn:hover, #moreBtn:hover {
-            background-color: #026aa7;
-        }
-        .cash { color: #4caf50; }
-        .cc { color: #f44336; }
-        .ticket { color: #2196f3; }
-        .comp { color: #ff9800; }
+        #exportBtn:hover { background-color: #026aa7; }
         .modal {
             display: block;
             position: fixed;
@@ -117,28 +96,10 @@
             border: none;
             cursor: pointer;
         }
-        .modal-content button:hover {
-            background-color: #026aa7;
-        }
-        .error {
-            color: #f44336;
-            margin-top: 10px;
-        }
+        .modal-content button:hover { background-color: #026aa7; }
+        .error { color: #f44336; margin-top: 10px; }
         @media (max-width: 768px) {
-            .col-1, .col-2, .col-3, .col-4 {
-                flex: 1 0 100%;
-            }
-        }
-        .pdf-single-column .grid {
-            flex-direction: column;
-        }
-        .pdf-single-column .col-1, .pdf-single-column .col-2, .pdf-single-column .col-3, .pdf-single-column .col-4 {
-            flex: 0 0 auto;
-            width: 100%;
-        }
-        .pdf-single-column .transaction-log {
-            max-height: none;
-            overflow: visible;
+            .col-1, .col-2, .col-3, .col-4 { flex: 1 0 100%; }
         }
     </style>
 </head>
@@ -158,382 +119,199 @@
             <h1 class="header">Sales Log</h1>
             <div class="col-1">
                 <h2>Filters</h2>
-                <label>From: <input type="date" id="fromDate"></label><br>
-                <label>To: <input type="date" id="toDate"></label><br>
-                <input type="text" id="search" placeholder="Search..."><br>
                 <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
                 <button id="applyFilters">Apply</button>
             </div>
             <div class="col-2">
                 <h2>Summary</h2>
                 <div id="sessionInfo"></div>
-                <div>Total Transactions: <span id="totalTransactions">0</span></div>
-                <div>Total Sales: $<span id="totalSales">0.00</span></div>
-                <div>Avg Transaction: $<span id="avgTransaction">0.00</span></div>
                 <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
-                <canvas id="paymentChart"></canvas>
+                <div>Total Sales: $<span id="totalSales">0.00</span></div>
             </div>
             <div class="col-3">
                 <h2>Door Count Over Time</h2>
                 <canvas id="doorCountChart"></canvas>
             </div>
             <div class="col-4">
-                <h2>Transaction Log</h2>
-                <div class="transaction-log">
+                <h2>Tally Sheet</h2>
+                <div class="summary-table">
                     <table>
                         <thead>
                             <tr>
-                                <th>Timestamp</th>
-                                <th>Cashier</th>
-                                <th>Items</th>
-                                <th>Cash Total</th>
-                                <th>Thru Door</th>
-                                <th>Note</th>
+                                <th>DOOR Price</th>
+                                <th>PEOPLE</th>
+                                <th>Total Amount</th>
+                                <th>Price per Person</th>
                             </tr>
                         </thead>
-                        <tbody id="logBody"></tbody>
+                        <tbody id="summaryBody"></tbody>
                     </table>
                 </div>
-                <button id="moreBtn" style="display: none;">More</button>
                 <button id="exportBtn">Export to PDF</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Constants and variables
+        const SERVER_URL = 'http://localhost:3000/getTransactions';
         const adminUsername = "admin";
         const adminPassword = "password123";
-        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
-        const JPG_EXPORT_INTERVAL = 15 * 60 * 1000; // 15 minutes
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
+        const channel = new BroadcastChannel('transaction_channel');
 
         const loginModal = document.getElementById('loginModal');
         const salesLogContainer = document.getElementById('salesLogContainer');
         const errorMsg = document.getElementById('errorMsg');
 
         let sessionTimeoutId;
-        let jpgExportIntervalId;
         let salesLogInstance;
         let chart;
-        let paymentChart;
-        let fromDate = null;
-        let toDate = null;
-        let searchTerm = '';
-        const channel = new BroadcastChannel('transaction_channel');
+        let selectedSessionId = null;
 
-        // Define SalesLog class
         class SalesLog {
             constructor() {
-                this.db = null;
                 this.updateInterval = null;
-                this.showAllTransactions = false;
-                this.selectedSessionId = null;
-                this.initDB().then(() => {
+                this.init().then(() => {
                     this.updateLog();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
-                    jpgExportIntervalId = setInterval(() => this.exportJPG(), JPG_EXPORT_INTERVAL);
                     channel.onmessage = (event) => {
                         if (event.data.type === 'new_transaction') this.updateLog();
                     };
-                }).catch(error => console.error('Database initialization failed:', error));
-
+                });
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
-                    fromDate = document.getElementById('fromDate').value;
-                    toDate = document.getElementById('toDate').value;
-                    searchTerm = document.getElementById('search').value.toLowerCase();
+                    selectedSessionId = document.getElementById('sessionSelect').value || null;
                     this.updateLog();
                 });
-
-                document.getElementById('moreBtn').addEventListener('click', () => {
-                    this.showAllTransactions = !this.showAllTransactions;
-                    this.updateLog();
-                });
-
                 document.getElementById('sessionSelect').addEventListener('change', (event) => {
-                    this.selectedSessionId = event.target.value || null;
+                    selectedSessionId = event.target.value || null;
                     this.updateLog();
                 });
+            }
+
+            async init() {
+                await this.updateLog();
             }
 
             stop() {
                 if (this.updateInterval) clearInterval(this.updateInterval);
             }
 
-            async initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SalesDB', 2);
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('transactions')) {
-                            db.createObjectStore('transactions', { keyPath: 'id' });
-                        }
-                    };
-                    request.onsuccess = (event) => {
-                        this.db = event.target.result;
-                        resolve();
-                    };
-                    request.onerror = (event) => reject(event.target.error);
-                });
-            }
-
-            parseItems(itemsString) {
-                const result = {
-                    CASH: { count: 0, amount: 0 },
-                    'CC TRANS': { count: 0, amount: 0 },
-                    TICKET: { count: 0, amount: 0 },
-                    COMP: { count: 0, amount: 0 }
-                };
-                const items = itemsString.split('; ').filter(Boolean);
-                items.forEach((item) => {
-                    const [keyPart, valuePart] = item.split(': ');
-                    if (keyPart && valuePart) {
-                        let type = keyPart;
-                        if (type.startsWith('CASH') && type !== 'CASH (CUSTOM)') type = 'CASH';
-                        if (type === 'CASH (CUSTOM)') {
-                            const amounts = valuePart.split(', ').map(a => parseFloat(a.replace('$', '')));
-                            result.CASH.count += amounts.length;
-                            result.CASH.amount += amounts.reduce((sum, a) => sum + a, 0);
-                        } else if (result[type]) {
-                            const [countStr, amountStr] = valuePart.split(' @ ');
-                            const count = parseInt(countStr, 10) || 0;
-                            const amount = parseFloat(amountStr.replace('$', '')) || 0;
-                            result[type].count += count;
-                            result[type].amount += count * amount;
-                        }
-                    }
-                });
-                return result;
-            }
-
             async updateLog() {
-                const activeSessionId = localStorage.getItem('activeSessionId');
-                const tx = this.db.transaction(['transactions'], 'readonly');
-                const store = tx.objectStore('transactions');
-                const request = store.getAll();
-                request.onsuccess = () => {
-                    const allTransactions = request.result;
+                try {
+                    const url = selectedSessionId ? `${SERVER_URL}?sessionId=${selectedSessionId}` : SERVER_URL;
+                    const response = await fetch(url);
+                    const allTransactions = await response.json();
+
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = `<option value="">Select Session</option>` + allSessionIds.map(id => `<option value="${id}">${id}</option>`).join('');
-                    sessionSelect.value = this.selectedSessionId || activeSessionId || '';
+                    sessionSelect.innerHTML = `<option value="">Select Session</option>` + 
+                        allSessionIds.map(id => `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${id}</option>`).join('');
 
-                    const displaySessionId = this.selectedSessionId || activeSessionId;
-                    if (!displaySessionId) {
+                    const activeSessionId = selectedSessionId || localStorage.getItem('activeSessionId');
+                    if (!activeSessionId) {
                         document.getElementById('sessionInfo').innerHTML = '<p>No session selected</p>';
                         if (chart) {
                             chart.data.datasets.forEach(dataset => dataset.data = []);
                             chart.update();
                         }
-                        if (paymentChart) {
-                            paymentChart.data.datasets[0].data = [0, 0, 0, 0];
-                            paymentChart.update();
-                        }
-                        document.getElementById('logBody').innerHTML = '';
-                        document.getElementById('totalTransactions').textContent = '0';
-                        document.getElementById('totalSales').textContent = '0.00';
-                        document.getElementById('avgTransaction').textContent = '0.00';
+                        document.getElementById('summaryBody').innerHTML = '';
                         document.getElementById('totalDoorCount').textContent = '0';
-                        document.getElementById('moreBtn').style.display = 'none';
+                        document.getElementById('totalSales').textContent = '0.00';
                         return;
                     }
 
-                    let sessionTransactions = allTransactions.filter(t => t.sessionId === displaySessionId);
-                    let filteredTransactions = sessionTransactions;
+                    const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
+                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
 
-                    const now = new Date();
-                    let startDate = fromDate ? new Date(fromDate).setHours(0, 0, 0, 0) : null;
-                    let endDate = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : now;
-                    endDate = endDate < now ? endDate : now;
-
-                    filteredTransactions = filteredTransactions.filter(t => {
-                        const ts = new Date(t.timestamp);
-                        return ts instanceof Date && !isNaN(ts) &&
-                               (!startDate || ts >= startDate) &&
-                               ts <= endDate;
+                    // Tally Sheet Logic
+                    const summary = {};
+                    const predefinedPrices = [
+                        'Cash $5', 'Cash $7', 'Cash $8', 'Cash $10', 'Cash $12', 'Cash $12.5', 'Cash $15', 'Cash $20', 'SPECIAL$ Cash',
+                        'Credit Card $5', 'Credit Card $7', 'Credit Card $8', 'Credit Card $10', 'Credit Card $12', 
+                        'Credit Card $15', 'Credit Card $20', 'Credit Card $22', 'Comps'
+                    ];
+                    predefinedPrices.forEach(price => {
+                        summary[price] = { people: 0, total: 0, price: parseFloat(price.match(/\$([\d.]+)/)?.[1] || (price === 'Comps' ? 0.01 : 0)) };
                     });
 
-                    if (searchTerm) {
-                        filteredTransactions = filteredTransactions.filter(t =>
-                            (t.cashierName && t.cashierName.toLowerCase().includes(searchTerm)) ||
-                            (t.note && t.note.toLowerCase().includes(searchTerm))
-                        );
-                    }
-
-                    filteredTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                    const uniqueCashiers = [...new Set(filteredTransactions.map(t => t.cashierName))];
-                    const cashierText = uniqueCashiers.length > 0 ? uniqueCashiers.join(', ') : 'None';
-                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${displaySessionId}</p><p>Cashiers: ${cashierText}</p>`;
-
-                    let cumulative = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0, TOTAL: 0 };
-                    let dataPoints = { CASH: [], 'CC TRANS': [], TICKET: [], COMP: [], TOTAL: [] };
-                    let totalSales = 0;
                     let totalDoorCount = 0;
-                    let paymentAmounts = { CASH: 0, 'CC TRANS': 0, TICKET: 0, COMP: 0 };
+                    let totalSales = 0;
+                    let doorCountData = [];
 
-                    filteredTransactions.forEach(transaction => {
-                        const parsed = this.parseItems(transaction.items);
-                        for (const type in parsed) {
-                            cumulative[type] += parsed[type].count;
-                            paymentAmounts[type] += parsed[type].amount;
-                            dataPoints[type].push({ x: transaction.timestamp, y: cumulative[type] });
-                        }
-                        totalSales += transaction.cashTotal;
-                        totalDoorCount += transaction.doorCount;
-                        dataPoints.TOTAL.push({ x: transaction.timestamp, y: totalDoorCount });
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const [countStr, priceStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10);
+                                const price = parseFloat(priceStr.replace('$', ''));
+                                const priceKey = key === 'Tickets' ? 'Comps' : `${key}`;
+                                if (summary[priceKey]) {
+                                    summary[priceKey].people += count;
+                                    summary[priceKey].total += count * price;
+                                }
+                            }
+                        });
+                        totalDoorCount += t.doorCount;
+                        totalSales += t.cashTotal;
+                        doorCountData.push({ x: t.timestamp, y: totalDoorCount });
                     });
 
-                    const totalTransactions = filteredTransactions.length;
-                    const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-                    document.getElementById('totalTransactions').textContent = totalTransactions;
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('avgTransaction').textContent = avgTransaction.toFixed(2);
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+
+                    const summaryBody = document.getElementById('summaryBody');
+                    summaryBody.innerHTML = Object.entries(summary).map(([key, data]) => `
+                        <tr>
+                            <td>${key}</td>
+                            <td>${data.people}</td>
+                            <td>$${data.total.toFixed(2)}</td>
+                            <td>$${data.price.toFixed(2)}</td>
+                        </tr>
+                    `).join('') + `
+                        <tr>
+                            <td>TOTALS</td>
+                            <td>${totalDoorCount}</td>
+                            <td>$${totalSales.toFixed(2)}</td>
+                            <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
+                        </tr>
+                    `;
 
                     if (chart) {
-                        chart.data.datasets[0].data = dataPoints.CASH;
-                        chart.data.datasets[1].data = dataPoints['CC TRANS'];
-                        chart.data.datasets[2].data = dataPoints.TICKET;
-                        chart.data.datasets[3].data = dataPoints.COMP;
-                        chart.data.datasets[4].data = dataPoints.TOTAL;
+                        chart.data.datasets[0].data = doorCountData;
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
                             data: {
-                                datasets: [
-                                    { label: 'CASH', data: dataPoints.CASH, borderColor: '#4caf50', fill: false },
-                                    { label: 'CC TRANS', data: dataPoints['CC TRANS'], borderColor: '#f44336', fill: false },
-                                    { label: 'TICKET', data: dataPoints.TICKET, borderColor: '#2196f3', fill: false },
-                                    { label: 'COMP', data: dataPoints.COMP, borderColor: '#ff9800', fill: false },
-                                    { label: 'Total Thru Door', data: dataPoints.TOTAL, borderColor: '#bb86fc', fill: false }
-                                ]
+                                datasets: [{
+                                    label: 'Total Thru Door',
+                                    data: doorCountData,
+                                    borderColor: '#bb86fc',
+                                    fill: false
+                                }]
                             },
                             options: {
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
                                     y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                                },
-                                plugins: { legend: { display: true } }
-                            }
-                        });
-                    }
-
-                    const pieData = [
-                        paymentAmounts.CASH,
-                        paymentAmounts['CC TRANS'],
-                        paymentAmounts.TICKET,
-                        paymentAmounts.COMP
-                    ];
-
-                    if (paymentChart) {
-                        paymentChart.data.datasets[0].data = pieData;
-                        paymentChart.update();
-                    } else {
-                        paymentChart = new Chart(document.getElementById('paymentChart'), {
-                            type: 'pie',
-                            data: {
-                                labels: ['CASH', 'CC TRANS', 'TICKET', 'COMP'],
-                                datasets: [{
-                                    data: pieData,
-                                    backgroundColor: ['#4caf50', '#f44336', '#2196f3', '#ff9800'],
-                                    borderColor: '#ffffff',
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                plugins: {
-                                    legend: {
-                                        display: true,
-                                        position: 'bottom',
-                                        labels: { color: '#e0e0e0', font: { size: 14 } }
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Current Cash Transactions',
-                                        color: '#e0e0e0',
-                                        font: { size: 18 }
-                                    },
-                                    tooltip: {
-                                        enabled: true,
-                                        callbacks: {
-                                            label: function(context) {
-                                                let label = context.label || '';
-                                                if (label) label += ': ';
-                                                label += '$' + context.raw.toFixed(2);
-                                                return label;
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         });
                     }
-
-                    const displayTransactions = this.showAllTransactions
-                        ? filteredTransactions.slice().reverse()
-                        : filteredTransactions.slice(-20).reverse();
-                    this.displayLog(displayTransactions);
-
-                    const moreBtn = document.getElementById('moreBtn');
-                    if (totalTransactions > 20) {
-                        moreBtn.style.display = 'block';
-                        moreBtn.textContent = this.showAllTransactions ? 'Show Less' : 'More';
-                    } else {
-                        moreBtn.style.display = 'none';
-                    }
-                };
-            }
-
-            displayLog(transactions) {
-                const logBody = document.getElementById('logBody');
-                logBody.innerHTML = transactions.map(t => {
-                    const items = t.items.split('; ').map(item => {
-                        const [key] = item.split(': ');
-                        let className = '';
-                        if (key.startsWith('CASH')) className = 'cash';
-                        else if (key === 'CC TRANS') className = 'cc';
-                        else if (key === 'TICKET') className = 'ticket';
-                        else if (key === 'COMP') className = 'comp';
-                        return `<span class="${className}">${item}</span>`;
-                    }).join('; ');
-                    return `
-                        <tr>
-                            <td>${new Date(t.timestamp).toLocaleString()}</td>
-                            <td>${t.cashierName || 'Unknown'}</td>
-                            <td>${items}</td>
-                            <td>$${t.cashTotal.toFixed(2)}</td>
-                            <td>${t.doorCount}</td>
-                            <td>${t.note || ''}</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            async exportJPG() {
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content);
-                const imgData = canvas.toDataURL('image/jpeg');
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = `sales_log_${new Date().toISOString().replace(/:/g, '-')}.jpg`;
-                link.click();
+                } catch (error) {
+                    console.error('Error updating log:', error);
+                }
             }
 
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'in',
-                    format: 'letter'
-                });
+                const doc = new jsPDF();
                 const content = document.querySelector('.container');
-                content.classList.add('pdf-single-column');
-                if (chart) chart.update();
-                if (paymentChart) paymentChart.update();
                 const canvas = await html2canvas(content, { scale: 2 });
-                content.classList.remove('pdf-single-column');
                 const imgData = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
@@ -543,7 +321,6 @@
             }
         }
 
-        // Helper functions
         function isLoggedIn() {
             return localStorage.getItem('isLoggedIn') === 'true';
         }
@@ -556,12 +333,10 @@
             clearTimeout(sessionTimeoutId);
             setLoggedIn(false);
             if (salesLogInstance) salesLogInstance.stop();
-            clearInterval(jpgExportIntervalId);
             salesLogContainer.style.display = 'none';
             loginModal.style.display = 'block';
         }
 
-        // Check login status on load
         const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
         if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
             salesLogContainer.style.display = 'block';
