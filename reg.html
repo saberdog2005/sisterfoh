@@ -7,13 +7,16 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        /* Existing styles remain unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 10px;
             background-color: #1e1e1e;
             color: #e0e0e0;
+            font-size: 16px;
+        }
+        button {
+            touch-action: manipulation;
         }
         .header {
             display: flex;
@@ -32,6 +35,7 @@
             background-color: #3c3c3c;
             color: #e0e0e0;
             border: 1px solid #555;
+            font-size: 16px;
         }
         .header input:disabled {
             background-color: #555;
@@ -92,6 +96,7 @@
             background-color: #3c3c3c;
             color: #e0e0e0;
             border: 1px solid #555;
+            font-size: 16px;
         }
         .add-custom { background-color: #2e7d32; color: white; width: 30%; }
         .totals-container {
@@ -114,6 +119,7 @@
             background-color: #3c3c3c;
             color: #e0e0e0;
             border: 1px solid #555;
+            font-size: 16px;
         }
         #logSaleBtn {
             padding: 1em;
@@ -174,6 +180,7 @@
             color: #e0e0e0;
             border: 1px solid #555;
             margin: 10px 0;
+            font-size: 16px;
         }
         .modal-content button {
             padding: 10px 20px;
@@ -185,7 +192,13 @@
         #submitPinBtn:hover { background: #026aa7; }
         #cancelPinBtn { background: #555; color: white; }
         #cancelPinBtn:hover { background: #444; }
-        #addButtonForm { display: none; margin-top: 10px; padding: 10px; background-color: #2d2d2d; border: 1px solid #555; }
+        #addButtonForm {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border: 1px solid #555;
+        }
         #addButtonForm input {
             display: block;
             width: 100%;
@@ -194,6 +207,7 @@
             background-color: #3c3c3c;
             color: #e0e0e0;
             border: 1px solid #555;
+            font-size: 16px;
         }
         #addButtonForm button {
             padding: 5px 10px;
@@ -282,13 +296,6 @@
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Thru Door" data-price="0" data-active="true">
-                    <button class="increment-btn" style="background-color: #f06292; color: white;">Thru Door</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
             </div>
             <div class="totals-container">
                 <div>Cash Total: $<span id="cashTotal">0.00</span></div>
@@ -328,7 +335,6 @@
     </div>
 
     <script>
-        // Define the Google Apps Script URL for logging transactions
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
@@ -341,11 +347,11 @@
                     currentItems: new Map(),
                     cashTotal: 0,
                     doorCount: 0,
-                    sessionDoorCount: 0, // Grand total for the session
+                    sessionDoorCount: 0,
                     isEditing: false,
                     activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
                     isLogging: false,
-                    lastLogTime: 0 // For debounce
+                    lastLogTime: 0
                 };
                 this.elements = {
                     transactionButtons: document.querySelectorAll('.product-item'),
@@ -410,7 +416,7 @@
 
             debounceLogSale() {
                 const now = Date.now();
-                if (this.state.isLogging || (now - this.state.lastLogTime < 1000)) return; // 1-second debounce
+                if (this.state.isLogging || (now - this.state.lastLogTime < 1000)) return;
                 this.state.isLogging = true;
                 this.elements.logSaleBtn.disabled = true;
                 this.logSale().finally(() => {
@@ -460,12 +466,10 @@
 
             updateTotals(priceDelta, countDelta, item) {
                 if (item.startsWith('Cash') || item === 'CASH (CUSTOM)') this.state.cashTotal += priceDelta;
-                if (item === 'Thru Door' || item === 'Tickets') {
-                    this.state.doorCount += countDelta;
-                    this.state.sessionDoorCount += countDelta; // Increment session total
-                }
+                this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Display session total
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
 
@@ -514,7 +518,7 @@
                     localStorage.setItem('activeSessionId', this.state.sessionId);
                     this.state.cashTotal = 0;
                     this.state.doorCount = 0;
-                    this.state.sessionDoorCount = 0; // Reset only on new session
+                    this.state.sessionDoorCount = 0;
                     localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
                     this.elements.cashTotal.textContent = '0.00';
                     this.elements.doorCount.textContent = '0';
@@ -623,7 +627,6 @@
                     this.showError('Please fill in all required fields (Date, Venue, Cashier)');
                     return;
                 }
-
                 const timestamp = new Date().toISOString();
                 const uniqueId = `${this.state.sessionId}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
                 const items = Array.from(this.state.currentItems.entries())
@@ -639,7 +642,6 @@
                     this.showError('No items to log');
                     return;
                 }
-
                 const transaction = {
                     id: uniqueId,
                     sessionId: this.state.sessionId,
@@ -655,8 +657,6 @@
                     note: this.elements.noteInput.value,
                     synced: false
                 };
-
-                // Send transaction data to Google Apps Script URL with no-cors mode
                 await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -671,9 +671,9 @@
             resetForm() {
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
-                this.state.doorCount = 0; // Reset per-transaction count
+                this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.sessionDoorCount; // Preserve session total
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 this.elements.noteInput.value = '';
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
