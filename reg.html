@@ -7,7 +7,7 @@
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        /* Styles remain unchanged from the original */
+        /* Existing styles remain unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -44,7 +44,7 @@
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
         }
         .product-item {
@@ -218,57 +218,72 @@
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
         <main class="container">
-              <div class="product-item" data-item="CARD" data-price="0" data-active="true">
-                    <button class="increment-btn cc">CARD</button>
+            <div class="button-container">
+                <div class="product-item" data-item="Credit Card" data-price="0" data-active="true">
+                    <button class="increment-btn cc">Credit Card</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-               <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
-                    <button class="increment-btn cash">CASH $15</button>
+                <div class="product-item" data-item="Cash $15" data-price="15" data-active="true">
+                    <button class="increment-btn cash">Cash $15</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="CASH $12" data-price="12" data-active="true">
-                    <button class="increment-btn cash">CASH $12</button>
+                <div class="product-item" data-item="Cash $12" data-price="12" data-active="true">
+                    <button class="increment-btn cash">Cash $12</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
-                    <button class="increment-btn cash">CASH $10</button>
+                <div class="product-item" data-item="Cash $10" data-price="10" data-active="true">
+                    <button class="increment-btn cash">Cash $10</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                 <div class="product-item" data-item="CASH $7" data-price="7" data-active="true">
-                    <button class="increment-btn cash">CASH $7</button>
+                <div class="product-item" data-item="Tickets" data-price="0" data-active="true">
+                    <button class="increment-btn ticket">Tickets</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                 <div class="product-item" data-item="CASH $5" data-price="5" data-active="true">
-                    <button class="increment-btn cash">CASH $5</button>
+                <div class="product-item" data-item="Cash $5" data-price="5" data-active="true">
+                    <button class="increment-btn cash">Cash $5</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="TICKET" data-price="0" data-active="true">
-                    <button class="increment-btn ticket">TICKET</button>
+                <div class="product-item" data-item="Cash $7" data-price="7" data-active="true">
+                    <button class="increment-btn cash">Cash $7</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="COMP" data-price="0" data-active="true">
-                    <button class="increment-btn comp">COMP</button>
+                <div class="product-item" data-item="Cash $20" data-price="20" data-active="true">
+                    <button class="increment-btn cash">Cash $20</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="Comps" data-price="0" data-active="true">
+                    <button class="increment-btn comp">Comps</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="Thru Door" data-price="0" data-active="true">
+                    <button class="increment-btn" style="background-color: #f06292; color: white;">Thru Door</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -380,7 +395,6 @@
                     const incrementBtn = btn.querySelector('.increment-btn');
                     const minusBtn = btn.querySelector('.minus');
                     const addCustomBtn = btn.querySelector('.add-custom');
-                    const customInput = btn.querySelector('input[type="number"]');
                     if (incrementBtn) incrementBtn.addEventListener('click', () => this.handleIncrement(btn));
                     if (minusBtn) minusBtn.addEventListener('click', () => this.handleDecrement(btn));
                     if (addCustomBtn && customInput) addCustomBtn.addEventListener('click', () => this.handleCustomCash(btn, customInput));
@@ -445,9 +459,11 @@
             }
 
             updateTotals(priceDelta, countDelta, item) {
-                if (item.startsWith('CASH')) this.state.cashTotal += priceDelta;
-                this.state.doorCount += countDelta;
-                this.state.sessionDoorCount += countDelta; // Increment session total
+                if (item.startsWith('Cash') || item === 'CASH (CUSTOM)') this.state.cashTotal += priceDelta;
+                if (item === 'Thru Door' || item === 'Tickets') {
+                    this.state.doorCount += countDelta;
+                    this.state.sessionDoorCount += countDelta; // Increment session total
+                }
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.sessionDoorCount; // Display session total
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
