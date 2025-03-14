@@ -42,6 +42,9 @@
             max-height: 758px;
             overflow: hidden;
         }
+        .container.editing {
+            overflow: auto;
+        }
         .button-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -192,6 +195,11 @@
         }
         #submitNewButton { background: #0288d1; color: white; }
         #cancelNewButton { background: #555; color: white; }
+        #editInstructions {
+            color: #bb86fc;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -207,6 +215,7 @@
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
         <main class="container">
+            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Click 'Save Layout' when done.</div>
             <div class="button-container">
                 <div class="product-item" data-item="Credit Card" data-price="0" data-active="true">
                     <button class="increment-btn cc">Credit Card</button>
@@ -351,7 +360,8 @@
                     pinInput: document.getElementById('pinInput'),
                     submitPinBtn: document.getElementById('submitPinBtn'),
                     cancelPinBtn: document.getElementById('cancelPinBtn'),
-                    pinError: document.getElementById('pinError')
+                    pinError: document.getElementById('pinError'),
+                    editInstructions: document.getElementById('editInstructions')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.checkSessionStatus();
@@ -510,6 +520,13 @@
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                if (this.state.isEditing) {
+                    document.querySelector('.container').classList.add('editing');
+                    this.elements.editInstructions.classList.remove('hidden');
+                } else {
+                    document.querySelector('.container').classList.remove('editing');
+                    this.elements.editInstructions.classList.add('hidden');
+                }
                 this.elements.transactionButtons.forEach(btn => {
                     if (this.state.isEditing) {
                         btn.classList.remove('hidden');
