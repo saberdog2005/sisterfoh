@@ -2,7 +2,13 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const { google } = require('googleapis');
 const cors = require('cors');
+const WebSocket = require('ws');
+const http = require('http');
+
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
 const port = 3000;
 
 // Middleware
@@ -67,6 +73,7 @@ app.post('/logTransaction', (req, res) => {
             return;
         }
         res.json({ id: transaction.id });
+        broadcastUpdate(); // Notify all WebSocket clients of the update
     });
 });
 
@@ -120,6 +127,22 @@ async function syncWithGoogleSheets() {
 
 setInterval(syncWithGoogleSheets, 5 * 60 * 1000);
 
-app.listen(port, () => {
+// WebSocket connection handler
+wss.on('connection', (ws) => {
+    console.log('Client connected');
+    ws.on('close', () => console.log('Client disconnected'));
+});
+
+// Broadcast updates to all connected clients
+function broadcastUpdate() {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send('update');
+        }
+    });
+}
+
+// Start the server
+server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
