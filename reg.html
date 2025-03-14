@@ -317,6 +317,8 @@
     </div>
 
     <script>
+        // Define the Google Apps Script URL for logging transactions
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP47ePXyvUOxBPOE0iG2bHsNs5EOa7hlznqZrTiv4f8cjHDTCz3yb9mg-2cqo3lwAk/exec';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
 
@@ -642,22 +644,16 @@
                     synced: false
                 };
 
-                try {
-                    const response = await fetch('/logTransaction', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(transaction)
-                    });
-                    if (!response.ok) {
-                        throw new Error('Failed to log transaction');
-                    }
-                    this.showSuccess('Sale logged successfully');
-                    this.resetForm();
-                    channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
-                } catch (error) {
-                    console.error('Error logging transaction:', error);
-                    this.showError('Failed to log transaction: ' + error.message);
-                }
+                // Send transaction data to Google Apps Script URL with no-cors mode
+                await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transaction),
+                    mode: 'no-cors'
+                });
+                this.showSuccess('Sale logged successfully');
+                this.resetForm();
+                channel.postMessage({ type: 'new_transaction', sessionId: this.state.sessionId });
             }
 
             resetForm() {
