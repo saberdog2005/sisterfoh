@@ -17,190 +17,187 @@
             height: 100vh;
             overflow: hidden;
         }
-        button { touch-action: manipulation; }
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-            background-color: #2d2d2d;
-            padding: 10px;
-        }
-        .header label { margin-right: 5px; color: #e0e0e0; }
-        .header input {
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            font-size: 16px;
-        }
-        .header input:disabled { background-color: #555; color: #888; }
         .container {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            max-height: 758px;
-            overflow: hidden;
+            height: 100%;
         }
-        .container.editing {
-            overflow: auto;
-        }
-        .button-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-        .product-item {
-            background-color: #2d2d2d;
+        .header {
             padding: 10px;
+            background-color: #2e2e2e;
+            border-bottom: 1px solid #444;
+        }
+        .header label {
+            margin-right: 5px;
+        }
+        .header input {
+            margin-right: 15px;
+            padding: 5px;
+            background-color: #333;
+            color: #e0e0e0;
             border: 1px solid #555;
         }
-        .product-item.hidden { display: none; }
-        .increment-btn, .minus, .add-custom {
-            padding: 0.8em;
-            margin: 0.5em 0;
-            width: 100%;
-            border: none;
-            cursor: pointer;
-            font-size: 1.4em;
-            transition: background-color 0.3s;
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
         }
-        .increment-btn:hover, .minus:hover, .add-custom:hover { background-color: #444; }
-        button[disabled] { opacity: 0.5; cursor: not-allowed; }
+        .product-item {
+            flex: 1 1 calc(25% - 10px);
+            min-width: 120px;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .product-item.hidden {
+            display: none;
+        }
+        .increment-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 5px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
         .ticket { background-color: #1a73e8; color: white; }
         .comp { background-color: #ffa500; color: white; }
-        .minus { background-color: #555; color: white; }
-        .control-row { display: flex; justify-content: space-between; align-items: center; }
-        .count { font-weight: bold; color: #e0e0e0; }
-        .custom-input { display: flex; gap: 5px; }
-        .custom-input input {
-            width: 70%;
-            padding: 5px;
-            background-color: #3c3c3c;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            font-size: 16px;
-        }
-        .add-custom { background-color: #2e7d32; color: white; width: 30%; }
-        .totals-container {
+        .control-row {
             display: flex;
-            justify-content: space-between;
-            font-size: 1.2em;
-            background-color: #2d2d2d;
-            padding: 10px;
-            margin-bottom: 10px;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
-        .note-section { display: flex; flex-direction: column; margin-bottom: 10px; }
-        .note-section textarea {
+        .count {
+            font-size: 18px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .minus {
+            padding: 5px 10px;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .totals-container {
+            padding: 10px;
+            background-color: #2e2e2e;
+            border-top: 1px solid #444;
+        }
+        .note-section {
+            padding: 10px;
+        }
+        #noteInput {
             width: 100%;
             height: 60px;
-            padding: 5px;
-            background-color: #3c3c3c;
+            background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            font-size: 16px;
+            padding: 5px;
         }
         #logSaleBtn {
-            padding: 1.2em; /* Larger padding for bigger button */
+            width: 100%;
+            padding: 15px;
             background-color: #0288d1;
             color: white;
             border: none;
+            border-radius: 5px;
+            font-size: 18px;
             cursor: pointer;
-            font-size: 1.8em; /* Larger font size */
-            margin-top: 10px;
         }
-        #logSaleBtn:hover { background-color: #026aa7; }
         .footer {
+            padding: 10px;
+            background-color: #2e2e2e;
+            border-top: 1px solid #444;
             display: flex;
             gap: 10px;
-            margin-top: 15px;
-            background-color: #2d2d2d;
-            padding: 10px;
-            justify-content: space-between;
             align-items: center;
         }
-        .edit-btn, .open-btn, .close-btn {
-            padding: 0.8em 1.5em;
+        .open-btn, .close-btn, .edit-btn {
+            padding: 10px;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 1.2em;
-            font-weight: bold;
+            color: white;
         }
-        .edit-btn { background-color: #555; color: white; }
-        .open-btn { background-color: #0288d1; color: white; }
-        .close-btn { background-color: #d32f2f; color: white; }
-        #successMessage { color: #2e7d32; font-weight: bold; }
-        #errorMessage { color: #d32f2f; font-weight: bold; }
-        .hidden { display: none; }
+        .open-btn { background-color: #2e7d32; }
+        .close-btn { background-color: #d32f2f; }
+        .edit-btn { background-color: #0288d1; }
+        .edit-btn.hidden { display: none; }
         .modal {
             display: none;
             position: fixed;
-            z-index: 1;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.4);
+            background-color: rgba(0,0,0,0.5);
         }
         .modal-content {
-            background-color: #2d2d2d;
+            background-color: #2e2e2e;
             margin: 15% auto;
             padding: 20px;
             width: 300px;
-            color: #e0e0e0;
+            border-radius: 5px;
             text-align: center;
         }
-        .modal-content h2 { color: #bb86fc; }
         .modal-content input {
-            padding: 5px;
-            background-color: #3c3c3c;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            margin: 10px 0;
-            font-size: 16px;
         }
         .modal-content button {
             padding: 10px 20px;
-            border: none;
-            cursor: pointer;
             margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
         }
-        #submitPinBtn { background: #0288d1; color: white; }
-        #submitPinBtn:hover { background: #026aa7; }
-        #cancelPinBtn { background: #555; color: white; }
-        #cancelPinBtn:hover { background: #444; }
+        #submitPinBtn { background-color: #2e7d32; }
+        #cancelPinBtn { background-color: #d32f2f; }
         #addButtonForm {
             display: none;
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #2d2d2d;
-            border: 1px solid #555;
+            background-color: #2e2e2e;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 5px;
         }
         #addButtonForm input {
-            display: block;
             width: 100%;
-            margin-bottom: 10px;
-            padding: 5px;
-            background-color: #3c3c3c;
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            font-size: 16px;
         }
-        #addButtonForm button {
-            padding: 5px 10px;
-            margin: 5px;
-            border: none;
-            cursor: pointer;
-        }
-        #submitNewButton { background: #0288d1; color: white; }
-        #cancelNewButton { background: #555; color: white; }
+        #submitNewButton { background-color: #2e7d32; }
+        #cancelNewButton { background-color: #d32f2f; }
         #editInstructions {
-            color: #bb86fc;
-            font-weight: bold;
-            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #0288d1;
+            color: white;
+            text-align: center;
         }
+        .hidden { display: none; }
+        #successMessage, #errorMessage {
+            padding: 5px;
+            margin-left: 10px;
+        }
+        #successMessage { color: #2e7d32; }
+        #errorMessage { color: #d32f2f; }
     </style>
 </head>
 <body>
@@ -225,15 +222,8 @@
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Cash $15" data-price="15" data-active="true">
-                    <button class="increment-btn cash">Cash $15</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
-                <div class="product-item" data-item="Cash $12" data-price="12" data-active="true">
-                    <button class="increment-btn cash">Cash $12</button>
+                <div class="product-item" data-item="Cash $5" data-price="5" data-active="true">
+                    <button class="increment-btn cash">Cash $5</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -246,36 +236,8 @@
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Tickets" data-price="0" data-active="true">
-                    <button class="increment-btn ticket">Tickets</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
-                <div class="product-item" data-item="Cash $5" data-price="5" data-active="true">
-                    <button class="increment-btn cash">Cash $5</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
-                <div class="product-item" data-item="Cash $7" data-price="7" data-active="true">
-                    <button class="increment-btn cash">Cash $7</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
                 <div class="product-item" data-item="Cash $20" data-price="20" data-active="true">
                     <button class="increment-btn cash">Cash $20</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus">-</button>
-                    </div>
-                </div>
-                <div class="product-item" data-item="Comps" data-price="0" data-active="true">
-                    <button class="increment-btn comp">Comps</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -326,6 +288,7 @@
 
         class SalesApp {
             constructor() {
+                localStorage.removeItem('activeButtons'); // Reset to show all buttons by default
                 this.state = {
                     sessionStarted: false,
                     sessionId: null,
