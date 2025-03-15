@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com 'unsafe-inline'; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
@@ -282,7 +282,8 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://localhost:3000/logTransaction';
+        const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
 
@@ -592,7 +593,11 @@
                 try {
                     const response = await fetch(SERVER_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': API_KEY,
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
                         body: JSON.stringify(transaction)
                     });
                     if (!response.ok) throw new Error('Failed to log sale');
