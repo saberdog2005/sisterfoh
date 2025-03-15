@@ -2,181 +2,419 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Transaction Log</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        table { border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+        }
+        .col-1, .col-2, .col-3, .col-4 {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .col-1 label, .col-1 select, .col-1 button {
+            display: block;
+            margin: 10px 0;
+            width: 100%;
+            padding: 10px;
+        }
+        .col-1 select {
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        .col-1 button {
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .summary-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary-table th, .summary-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        #exportBtn {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #2e2e2e;
+            margin: 15% auto;
+            padding: 20px;
+            width: 300px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <canvas id="doorCountChart"></canvas>
-    <div id="summaryTables"></div>
-    <div>Total Door Count: <span id="totalDoorCount">0</span></div>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <p id="errorMsg" class="error"></p>
+        </div>
+    </div>
+
+    <div class="container" id="salesLogContainer">
+        <div class="grid">
+            <h1 class="header">Sales Log</h1>
+            <div class="col-1">
+                <h2>Filters</h2>
+                <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
+                <button id="applyFilters">Apply</button>
+            </div>
+            <div class="col-2">
+                <h2>Summary</h2>
+                <div id="sessionInfo"></div>
+                <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
+                <div>Total Sales: $<span id="totalSales">0.00</span></div>
+            </div>
+            <div class="col-3">
+                <h2>Door Count Over Time</h2>
+                <canvas id="doorCountChart"></canvas>
+            </div>
+            <div class="col-4">
+                <h2>Tally Sheet</h2>
+                <div class="summary-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>DOOR Price</th>
+                                <th>PEOPLE</th>
+                                <th>Total Amount</th>
+                                <th>Price per Person</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryBody"></tbody>
+                    </table>
+                </div>
+                <button id="exportBtn">Export to PDF</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const supabase = Supabase.createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_KEY');
+        const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const adminUsername = "admin";
+        const adminPassword = "password123";
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
+        const channel = new BroadcastChannel('transaction_channel');
+
+        const loginModal = document.getElementById('loginModal');
+        const salesLogContainer = document.getElementById('salesLogContainer');
+        const errorMsg = document.getElementById('errorMsg');
+
+        let sessionTimeoutId;
+        let salesLogInstance;
         let chart;
+        let selectedSessionId = null;
 
-        const typeMapping = {
-            'Cash $5': 'Cash',
-            'Cash $7': 'Cash',
-            'Cash $10': 'Cash',
-            'Cash $12': 'Cash',
-            'Cash $15': 'Cash',
-            'Cash $20': 'Cash',
-            'Credit Card': 'Card',
-            'Tickets': 'Ticket',
-            'Comps': 'Comp'
-        };
-
-        const generalTypes = ['Cash', 'Card', 'Ticket', 'Comp'];
-
-        const typeColors = {
-            'Cash': '#2e7d32',
-            'Card': '#d32f2f',
-            'Ticket': '#1a73e8',
-            'Comp': '#ffa500',
-            'Total': '#800080'
-        };
-
-        async function updateLog() {
-            const { data: transactions, error } = await supabase
-                .from('transactions')
-                .select('*')
-                .order('timestamp', { ascending: true });
-
-            if (error) {
-                console.error('Error fetching transactions:', error);
-                return;
+        class SalesLog {
+            constructor() {
+                this.updateInterval = null;
+                this.init().then(() => {
+                    this.updateLog();
+                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
+                    channel.onmessage = (event) => {
+                        if (event.data.type === 'new_transaction') this.updateLog();
+                    };
+                    supabase
+                        .channel('public:transactions')
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
+                            console.log('New transaction:', payload.new);
+                            this.updateLog();
+                        })
+                        .subscribe();
+                });
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+                document.getElementById('applyFilters').addEventListener('click', () => {
+                    selectedSessionId = document.getElementById('sessionSelect').value || null;
+                    this.updateLog();
+                });
+                document.getElementById('sessionSelect').addEventListener('change', (event) => {
+                    selectedSessionId = event.target.value || null;
+                    this.updateLog();
+                });
             }
 
-            transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            async init() {
+                await this.updateLog();
+            }
 
-            const cumulativeCounts = {};
-            generalTypes.forEach(type => cumulativeCounts[type] = 0);
-            cumulativeCounts['Total'] = 0;
+            stop() {
+                if (this.updateInterval) clearInterval(this.updateInterval);
+            }
 
-            const datasets = generalTypes.map(type => ({
-                label: type,
-                data: [],
-                borderColor: typeColors[type],
-                fill: false
-            }));
-            datasets.push({
-                label: 'Total',
-                data: [],
-                borderColor: typeColors['Total'],
-                fill: false
-            });
-
-            transactions.forEach(t => {
-                const typeCounts = {};
-                generalTypes.forEach(type => typeCounts[type] = 0);
-
-                const items = t.items.split('; ').filter(item => item);
-                items.forEach(item => {
-                    const [key, value] = item.split(': ');
-                    if (key && value) {
-                        const generalType = typeMapping[key] || 'Other';
-                        if (generalTypes.includes(generalType)) {
-                            const count = parseInt(value.split(' @ ')[0], 10) || 0;
-                            typeCounts[generalType] += count;
-                        }
+            async updateLog() {
+                try {
+                    let query = supabase.from('transactions').select('*');
+                    if (selectedSessionId) {
+                        query = query.eq('sessionId', selectedSessionId);
                     }
-                });
+                    const { data: allTransactions, error } = await query.order('timestamp', { ascending: false });
+                    if (error) throw new Error(error.message);
 
-                generalTypes.forEach(type => {
-                    cumulativeCounts[type] += typeCounts[type];
-                    datasets.find(d => d.label === type).data.push({
-                        x: t.timestamp,
-                        y: cumulativeCounts[type]
-                    });
-                });
+                    const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
+                    const sessionSelect = document.getElementById('sessionSelect');
+                    sessionSelect.innerHTML = `<option value="">Select Session</option>` + 
+                        allSessionIds.map(id => `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${id}</option>`).join('');
 
-                cumulativeCounts['Total'] += t.doorCount;
-                datasets.find(d => d.label === 'Total').data.push({
-                    x: t.timestamp,
-                    y: cumulativeCounts['Total']
-                });
-            });
+                    const activeSessionId = selectedSessionId || localStorage.getItem('activeSessionId');
+                    if (!activeSessionId) {
+                        document.getElementById('sessionInfo').innerHTML = '<p>No session selected</p>';
+                        if (chart) {
+                            chart.data.datasets = [];
+                            chart.update();
+                        }
+                        document.getElementById('summaryBody').innerHTML = '';
+                        document.getElementById('totalDoorCount').textContent = '0';
+                        document.getElementById('totalSales').textContent = '0.00';
+                        return;
+                    }
 
-            if (chart) {
-                chart.data.datasets = datasets;
-                chart.update();
-            } else {
-                chart = new Chart(document.getElementById('doorCountChart'), {
-                    type: 'line',
-                    data: { datasets },
-                    options: {
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: { unit: 'minute' },
-                                title: { display: true, text: 'Time' }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'Count' }
+                    const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
+                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
+
+                    const itemSummary = {};
+                    let totalDoorCount = 0;
+                    let totalSales = 0;
+
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const [countStr, priceStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10);
+                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
+                                if (!itemSummary[key]) {
+                                    itemSummary[key] = { people: 0, total: 0, price };
+                                }
+                                itemSummary[key].people += count;
+                                itemSummary[key].total += count * price;
                             }
-                        },
-                        plugins: {
-                            legend: { display: true }
-                        }
+                        });
+                        totalDoorCount += t.doorCount;
+                        totalSales += t.cashTotal;
+                    });
+
+                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+
+                    const summaryBody = document.getElementById('summaryBody');
+                    summaryBody.innerHTML = Object.entries(itemSummary)
+                        .map(([key, data]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td>${data.people}</td>
+                                <td>$${data.total.toFixed(2)}</td>
+                                <td>$${data.price.toFixed(2)}</td>
+                            </tr>
+                        `).join('') + `
+                            <tr>
+                                <td>TOTALS</td>
+                                <td>${totalDoorCount}</td>
+                                <td>$${totalSales.toFixed(2)}</td>
+                                <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
+                            </tr>
+                        `;
+
+                    const itemTypes = Object.keys(itemSummary);
+                    const datasets = itemTypes.map(type => ({
+                        label: type,
+                        data: [],
+                        borderColor: getColorForType(type),
+                        fill: false
+                    }));
+                    let cumulativeCounts = {};
+                    itemTypes.forEach(type => cumulativeCounts[type] = 0);
+
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const count = parseInt(value.split(' @ ')[0], 10);
+                                if (cumulativeCounts[key] !== undefined) {
+                                    cumulativeCounts[key] += count;
+                                }
+                            }
+                        });
+                        itemTypes.forEach(type => {
+                            datasets.find(d => d.label === type).data.push({
+                                x: t.timestamp,
+                                y: cumulativeCounts[type] || 0
+                            });
+                        });
+                    });
+
+                    if (chart) {
+                        chart.data.datasets = datasets;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: { datasets },
+                            options: {
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                                }
+                            }
+                        });
                     }
-                });
+                } catch (error) {
+                    console.error('Error updating log:', error);
+                }
             }
 
-            const summary = {};
-            let totalDoorCount = 0;
-            transactions.forEach(t => {
-                if (!summary[t.cashier]) {
-                    summary[t.cashier] = { items: {}, total: 0, people: 0 };
-                }
-                const itemSummary = summary[t.cashier].items;
-                const items = t.items.split('; ').filter(item => item);
-                items.forEach(item => {
-                    const [key, value] = item.split(': ');
-                    if (key && value) {
-                        const [countStr, priceStr] = value.split(' @ ');
-                        const count = parseInt(countStr, 10) || 0;
-                        const price = priceStr ? parseFloat(priceStr.replace('$', '')) || 0 : 0;
-                        if (!itemSummary[key]) {
-                            itemSummary[key] = { people: 0, total: 0, price };
-                        }
-                        itemSummary[key].people += count;
-                        itemSummary[key].total += count * price;
-                    }
-                });
-                summary[t.cashier].total += t.total;
-                summary[t.cashier].people += t.doorCount;
-                totalDoorCount += t.doorCount;
-            });
-
-            let html = '<table><tr><th>Cashier</th><th>Item</th><th>People</th><th>Total</th></tr>';
-            for (const [cashier, data] of Object.entries(summary)) {
-                for (const [item, itemData] of Object.entries(data.items)) {
-                    html += `<tr><td>${cashier}</td><td>${item}</td><td>${itemData.people}</td><td>$${itemData.total.toFixed(2)}</td></tr>`;
-                }
-                html += `<tr><td>${cashier} Total</td><td></td><td>${data.people}</td><td>$${data.total.toFixed(2)}</td></tr>`;
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const content = document.querySelector('.container');
+                const canvas = await html2canvas(content, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = doc.getImageProperties(imgData);
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                doc.save('sales_log.pdf');
             }
-            html += `<tr><td><strong>Total</strong></td><td></td><td>${totalDoorCount}</td><td></td></tr></table>`;
-            document.getElementById('summaryTables').innerHTML = html;
-
-            document.getElementById('totalDoorCount').textContent = totalDoorCount;
         }
 
-        // Initial call and real-time subscription
-        updateLog();
-        supabase
-            .channel('transactions')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
-                updateLog();
-            })
-            .subscribe();
+        function getColorForType(type) {
+            const colors = {
+                'Cash $5': '#2e7d32',
+                'Cash $7': '#2e7d32',
+                'Cash $10': '#2e7d32',
+                'Cash $12': '#2e7d32',
+                'Cash $15': '#2e7d32',
+                'Cash $20': '#2e7d32',
+                'Credit Card': '#d32f2f',
+                'Tickets': '#1a73e8',
+                'Comps': '#ffa500'
+            };
+            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
+        }
+
+        function isLoggedIn() {
+            return localStorage.getItem('isLoggedIn') === 'true';
+        }
+
+        function setLoggedIn(value) {
+            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
+        }
+
+        function logout() {
+            clearTimeout(sessionTimeoutId);
+            setLoggedIn(false);
+            if (salesLogInstance) salesLogInstance.stop();
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
+        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
+            salesLogContainer.style.display = 'block';
+            loginModal.style.display = 'none';
+            salesLogInstance = new SalesLog();
+            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
+            sessionTimeoutId = setTimeout(logout, remainingTime);
+        } else {
+            setLoggedIn(false);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === adminUsername && password === adminPassword) {
+                setLoggedIn(true);
+                localStorage.setItem('loginTime', Date.now().toString());
+                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
+                loginModal.style.display = 'none';
+                salesLogContainer.style.display = 'block';
+                salesLogInstance = new SalesLog();
+                errorMsg.textContent = '';
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+            }
+        });
     </script>
 </body>
 </html>
