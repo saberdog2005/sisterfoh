@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -161,8 +162,9 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://localhost:3000';
-        const WS_URL = 'ws://localhost:3000';
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
+        const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
+        const supabase = window.supabase.createClient('https://nnbevkohcjnzyxgkzgna.supabase.co', API_KEY);
         const adminUsername = "admin";
         const adminPassword = "password123";
         const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
@@ -176,16 +178,6 @@
         let salesLogInstance;
         let chart;
         let selectedSessionId = null;
-        const ws = new WebSocket(WS_URL);
-
-        ws.onopen = () => console.log('WebSocket connected');
-        ws.onmessage = (event) => {
-            if (event.data === 'update') {
-                salesLogInstance?.updateLog();
-            }
-        };
-        ws.onerror = (error) => console.error('WebSocket error:', error);
-        ws.onclose = () => console.log('WebSocket disconnected');
 
         class SalesLog {
             constructor() {
@@ -196,6 +188,13 @@
                     channel.onmessage = (event) => {
                         if (event.data.type === 'new_transaction') this.updateLog();
                     };
+                    supabase
+                        .channel('public:transactions')
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
+                            console.log('New transaction:', payload.new);
+                            this.updateLog();
+                        })
+                        .subscribe();
                 });
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
@@ -218,8 +217,15 @@
 
             async updateLog() {
                 try {
-                    const url = selectedSessionId ? `${SERVER_URL}/getTransactions?sessionId=${selectedSessionId}` : `${SERVER_URL}/getTransactions`;
-                    const response = await fetch(url);
+                    const url = selectedSessionId 
+                        ? `${SERVER_URL}?sessionId=eq.${selectedSessionId}&order=timestamp.desc` 
+                        : `${SERVER_URL}?order=timestamp.desc`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'apikey': API_KEY,
+                            'Authorization': `Bearer ${API_KEY}`
+                        }
+                    });
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const allTransactions = await response.json();
 
