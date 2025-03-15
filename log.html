@@ -218,6 +218,7 @@
 
             async updateLog() {
                 try {
+                    // Fetch transactions
                     let query = supabase.from('transactions').select('*');
                     if (selectedSessionId) {
                         query = query.eq('sessionId', selectedSessionId);
@@ -225,6 +226,9 @@
                     const { data: allTransactions, error } = await query.order('timestamp', { ascending: false });
                     if (error) throw new Error(error.message);
 
+                    console.log('All transactions fetched:', allTransactions.length);
+
+                    // Update session dropdown
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
                     sessionSelect.innerHTML = `<option value="">Select Session</option>` + 
@@ -245,10 +249,12 @@
 
                     const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    console.log('Transactions for session', activeSessionId, ':', transactions.length);
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
 
+                    // Tally Sheet Data
                     const itemSummary = {};
                     let totalDoorCount = 0;
                     let totalSales = 0;
@@ -259,7 +265,7 @@
                             const [key, value] = item.split(': ');
                             if (key && value) {
                                 const [countStr, priceStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10);
+                                const count = parseInt(countStr, 10) || 0;
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
                                 if (!itemSummary[key]) {
                                     itemSummary[key] = { people: 0, total: 0, price };
@@ -268,9 +274,11 @@
                                 itemSummary[key].total += count * price;
                             }
                         });
-                        totalDoorCount += t.doorCount;
-                        totalSales += t.cashTotal;
+                        totalDoorCount += t.doorCount || 0;
+                        totalSales += t.cashTotal || 0;
                     });
+
+                    console.log('Item Summary:', itemSummary);
 
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
@@ -293,34 +301,28 @@
                             </tr>
                         `;
 
-                    const itemTypes = Object.keys(itemSummary);
-                    const datasets = itemTypes.map(type => ({
-                        label: type,
+                    // Graph Data: Cumulative Door Count by Cashier
+                    const cashiers = [...new Set(transactions.map(t => t.cashierName))];
+                    const datasets = cashiers.map(cashier => ({
+                        label: cashier,
                         data: [],
-                        borderColor: getColorForType(type),
+                        borderColor: getColorForType(cashier),
                         fill: false
                     }));
-                    let cumulativeCounts = {};
-                    itemTypes.forEach(type => cumulativeCounts[type] = 0);
+                    let cumulativeDoorCounts = {};
+                    cashiers.forEach(cashier => cumulativeDoorCounts[cashier] = 0);
 
                     transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const count = parseInt(value.split(' @ ')[0], 10);
-                                if (cumulativeCounts[key] !== undefined) {
-                                    cumulativeCounts[key] += count;
-                                }
-                            }
-                        });
-                        itemTypes.forEach(type => {
-                            datasets.find(d => d.label === type).data.push({
+                        cumulativeDoorCounts[t.cashierName] += t.doorCount || 0;
+                        cashiers.forEach(cashier => {
+                            datasets.find(d => d.label === cashier).data.push({
                                 x: t.timestamp,
-                                y: cumulativeCounts[type] || 0
+                                y: cumulativeDoorCounts[cashier]
                             });
                         });
                     });
+
+                    console.log('Graph Datasets:', datasets);
 
                     if (chart) {
                         chart.data.datasets = datasets;
@@ -331,8 +333,15 @@
                             data: { datasets },
                             options: {
                                 scales: {
-                                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                                    x: { 
+                                        type: 'time', 
+                                        time: { unit: 'minute' }, 
+                                        title: { display: true, text: 'Time' } 
+                                    },
+                                    y: { 
+                                        beginAtZero: true, 
+                                        title: { display: true, text: 'Door Count' } 
+                                    }
                                 }
                             }
                         });
@@ -368,7 +377,12 @@
                 'Tickets': '#1a73e8',
                 'Comps': '#ffa500'
             };
-            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
+            // Use a hash for consistent colors per cashier name
+            if (!colors[type]) {
+                const hash = type.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                return `hsl(${hash % 360}, 70%, 50%)`;
+            }
+            return colors[type];
         }
 
         function isLoggedIn() {
