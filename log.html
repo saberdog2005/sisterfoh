@@ -54,11 +54,18 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .summary-table table {
+        #summaryTables {
+            margin-top: 20px;
+        }
+        #summaryTables h3 {
+            margin-bottom: 10px;
+        }
+        #summaryTables table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
-        .summary-table th, .summary-table td {
+        #summaryTables th, #summaryTables td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #444;
@@ -143,19 +150,7 @@
             </div>
             <div class="col-4">
                 <h2>Tally Sheet</h2>
-                <div class="summary-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>DOOR Price</th>
-                                <th>PEOPLE</th>
-                                <th>Total Amount</th>
-                                <th>Price per Person</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summaryBody"></tbody>
-                    </table>
-                </div>
+                <div id="summaryTables"></div>
                 <button id="exportBtn">Export to PDF</button>
             </div>
         </div>
@@ -241,7 +236,7 @@
                             chart.data.datasets = [];
                             chart.update();
                         }
-                        document.getElementById('summaryBody').innerHTML = '';
+                        document.getElementById('summaryTables').innerHTML = '';
                         document.getElementById('totalDoorCount').textContent = '0';
                         document.getElementById('totalSales').textContent = '0.00';
                         return;
@@ -253,11 +248,27 @@
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
 
-                    const itemSummary = {};
+                    // Calculate overall totals
                     let totalDoorCount = 0;
                     let totalSales = 0;
-
                     transactions.forEach(t => {
+                        totalDoorCount += t.doorCount;
+                        totalSales += t.cashTotal;
+                    });
+                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+
+                    // Calculate per-cashier summaries
+                    const cashiers = [...new Set(transactions.map(t => t.cashierName))];
+                    const cashierSummaries = {};
+                    cashiers.forEach(cashier => {
+                        cashierSummaries[cashier] = { itemSummary: {}, totalDoorCount: 0, totalSales: 0 };
+                    });
+                    transactions.forEach(t => {
+                        const cashier = t.cashierName;
+                        const summary = cashierSummaries[cashier];
+                        summary.totalDoorCount += t.doorCount;
+                        summary.totalSales += t.cashTotal;
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
@@ -265,65 +276,63 @@
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10);
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (!itemSummary[key]) {
-                                    itemSummary[key] = { people: 0, total: 0, price };
+                                if (!summary.itemSummary[key]) {
+                                    summary.itemSummary[key] = { people: 0, total: 0, price };
                                 }
-                                itemSummary[key].people += count;
-                                itemSummary[key].total += count * price;
+                                summary.itemSummary[key].people += count;
+                                summary.itemSummary[key].total += count * price;
                             }
                         });
-                        totalDoorCount += t.doorCount;
-                        totalSales += t.cashTotal;
                     });
 
-                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-
-                    const summaryBody = document.getElementById('summaryBody');
-                    summaryBody.innerHTML = Object.entries(itemSummary)
-                        .map(([key, data]) => `
-                            <tr>
-                                <td>${key}</td>
-                                <td>${data.people}</td>
-                                <td>$${data.total.toFixed(2)}</td>
-                                <td>$${data.price.toFixed(2)}</td>
-                            </tr>
-                        `).join('') + `
-                            <tr>
-                                <td>TOTALS</td>
-                                <td>${totalDoorCount}</td>
-                                <td>$${totalSales.toFixed(2)}</td>
-                                <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
-                            </tr>
+                    // Update tally sheet
+                    const summaryTables = document.getElementById('summaryTables');
+                    summaryTables.innerHTML = '';
+                    Object.entries(cashierSummaries).forEach(([cashier, data]) => {
+                        summaryTables.innerHTML += `
+                            <h3>Cashier: ${cashier}</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>DOOR Price</th>
+                                        <th>PEOPLE</th>
+                                        <th>Total Amount</th>
+                                        <th>Price per Person</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(data.itemSummary).map(([key, item]) => `
+                                        <tr>
+                                            <td>${key}</td>
+                                            <td>${item.people}</td>
+                                            <td>$${item.total.toFixed(2)}</td>
+                                            <td>$${item.price.toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr>
+                                        <td colspan="4">Total Door Count: ${data.totalDoorCount}, Total Sales: $${data.totalSales.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         `;
+                    });
 
-                    const itemTypes = Object.keys(itemSummary);
-                    const datasets = itemTypes.map(type => ({
-                        label: type,
+                    // Update graph
+                    const datasets = cashiers.map((cashier, index) => ({
+                        label: `Cashier: ${cashier}`,
                         data: [],
-                        borderColor: getColorForType(type),
+                        borderColor: getColorForCashier(index),
                         fill: false
                     }));
-                    let cumulativeCounts = {};
-                    itemTypes.forEach(type => cumulativeCounts[type] = 0);
+
+                    const cumulativeDoorCounts = {};
+                    cashiers.forEach(cashier => cumulativeDoorCounts[cashier] = 0);
 
                     transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const count = parseInt(value.split(' @ ')[0], 10);
-                                if (cumulativeCounts[key] !== undefined) {
-                                    cumulativeCounts[key] += count;
-                                }
-                            }
-                        });
-                        itemTypes.forEach(type => {
-                            datasets.find(d => d.label === type).data.push({
-                                x: t.timestamp,
-                                y: cumulativeCounts[type] || 0
-                            });
-                        });
+                        const cashier = t.cashierName;
+                        cumulativeDoorCounts[cashier] += t.doorCount;
+                        const dataset = datasets.find(d => d.label === `Cashier: ${cashier}`);
+                        dataset.data.push({x: t.timestamp, y: cumulativeDoorCounts[cashier]});
                     });
 
                     if (chart) {
@@ -360,19 +369,9 @@
             }
         }
 
-        function getColorForType(type) {
-            const colors = {
-                'Cash $5': '#2e7d32',
-                'Cash $7': '#2e7d32',
-                'Cash $10': '#2e7d32',
-                'Cash $12': '#2e7d32',
-                'Cash $15': '#2e7d32',
-                'Cash $20': '#2e7d32',
-                'Credit Card': '#d32f2f',
-                'Tickets': '#1a73e8',
-                'Comps': '#ffa500'
-            };
-            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
+        function getColorForCashier(index) {
+            const colors = ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'];
+            return colors[index % colors.length];
         }
 
         function isLoggedIn() {
