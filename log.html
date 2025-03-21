@@ -15,7 +15,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px; /* Reduced from 20px to fit within 800px height */
+            padding: 10px;
             background-color: #1e1e1e;
             color: #e0e0e0;
         }
@@ -26,61 +26,80 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr; /* Increased to 4 columns for more horizontal space */
-            grid-template-rows: 50px 380px 300px; /* Adjusted heights: header, graph, sections */
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 50px auto;
             gap: 10px;
         }
         .header {
-            grid-column: 1 / 5; /* Spans all 4 columns */
+            grid-column: 1 / 3;
             grid-row: 1;
             text-align: center;
-            font-size: 24px; /* Slightly larger header */
-        }
-        .graph {
-            grid-column: 1 / 5; /* Graph spans all columns for prominence */
-            grid-row: 2;
-            background-color: #2e2e2e;
-            padding: 15px; /* Increased padding */
-            border-radius: 5px;
-        }
-        .filters {
-            grid-column: 1;
-            grid-row: 3;
-            background-color: #2e2e2e;
-            padding: 20px; /* Increased for larger items */
-            border-radius: 5px;
-        }
-        .summary {
-            grid-column: 2;
-            grid-row: 3;
-            background-color: #2e2e2e;
-            padding: 20px; /* Increased for larger items */
-            border-radius: 5px;
+            font-size: 24px;
         }
         .transaction-log {
-            grid-column: 3;
-            grid-row: 3;
+            grid-column: 1;
+            grid-row: 2;
             background-color: #2e2e2e;
-            padding: 20px; /* Increased for larger items */
+            padding: 20px;
             border-radius: 5px;
-            max-height: 260px; /* Adjusted for 300px row height minus padding */
+            height: 720px;
             overflow-y: auto;
         }
-        .tally-sheet {
-            grid-column: 4;
-            grid-row: 3;
-            background-color: #2e2e2e;
-            padding: 20px; /* Increased for larger items */
-            border-radius: 5px;
-            max-height: 260px; /* Adjusted for 300px row height minus padding */
+        .right-panel {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 720px;
+        }
+        .filters, .summary, .tally-sheet {
+            flex: 0 0 100px;
             overflow-y: auto;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .graph {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .graph-wrapper {
+            flex: 1;
+            min-height: 0;
+        }
+        #doorCountChart {
+            width: 100%;
+            height: 100%;
+        }
+        .transaction-log table, .tally-sheet table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .transaction-log th, .transaction-log td, .tally-sheet th, .tally-sheet td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background-color: #3e3e3e;
+            color: #ffffff;
+        }
+        .summary h3 {
+            font-size: 18px;
         }
         .filters label, .filters select, .filters button {
             display: block;
-            margin: 10px 0; /* Increased spacing */
+            margin: 10px 0;
             width: 100%;
-            padding: 8px; /* Larger padding */
-            font-size: 16px; /* Larger text */
+            padding: 8px;
+            font-size: 16px;
         }
         .filters select {
             background-color: #333;
@@ -94,41 +113,15 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .graph-wrapper {
-            height: 100%;
-            width: 100%;
-        }
-        #doorCountChart {
-            width: 100%;
-            height: 100%;
-        }
-        .transaction-log table, .tally-sheet table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px; /* Increased from implied default */
-        }
-        .transaction-log th, .transaction-log td, .tally-sheet th, .tally-sheet td {
-            padding: 10px; /* Increased for larger items */
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background-color: #3e3e3e;
-            color: #ffffff;
-        }
-        .summary h3 {
-            font-size: 18px; /* Larger summary titles */
-        }
         #exportBtn {
-            margin-top: 15px; /* More spacing */
-            padding: 10px; /* Larger button */
             background-color: #2e7d32;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
-            font-size: 16px; /* Larger text */
+            padding: 8px;
+            font-size: 16px;
         }
         .modal {
             display: none;
@@ -154,7 +147,7 @@
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            font-size: 16px; /* Larger text */
+            font-size: 16px;
         }
         .modal-content button {
             padding: 10px 20px;
@@ -163,7 +156,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px; /* Larger text */
+            font-size: 16px;
         }
         .error {
             color: #d32f2f;
@@ -184,8 +177,9 @@
             height: calc(100vh - 40px);
         }
         .cash-header { color: #2e7d32; }
-        .items-header { color: #d32f2f; }
-        .payment-type-header { color: #1a73e8; }
+        .credit-card-header { color: #d32f2f; }
+        .comp-header { color: #ffa500; }
+        .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
     </style>
@@ -204,29 +198,6 @@
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <h1 class="header">Sales Log</h1>
-            <div class="graph">
-                <h2>Payment Counts Over Time</h2>
-                <button id="toggleGraphSize">Toggle Full Screen</button>
-                <div class="graph-wrapper">
-                    <canvas id="doorCountChart"></canvas>
-                </div>
-            </div>
-            <div class="filters">
-                <h2>Filters</h2>
-                <label>Cashier Session:
-                    <select id="sessionSelect">
-                        <option value="">Select Cashier Session</option>
-                    </select>
-                </label>
-                <button id="applyFilters">Apply</button>
-            </div>
-            <div class="summary">
-                <h2>Summary</h2>
-                <div id="sessionInfo"></div>
-                <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
-                <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
-                <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
-            </div>
             <div class="transaction-log">
                 <h2>Transaction Log</h2>
                 <table>
@@ -243,20 +214,45 @@
                     <tbody id="transactionLogBody"></tbody>
                 </table>
             </div>
-            <div class="tally-sheet">
-                <h2>Tally Sheet</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="payment-type-header">Payment Type</th>
-                            <th>People</th>
-                            <th>Total Amount</th>
-                            <th>Price per Person</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summaryBody"></tbody>
-                </table>
-                <button id="exportBtn">Export to PDF</button>
+            <div class="right-panel">
+                <div class="filters">
+                    <h2>Filters</h2>
+                    <label>Cashier Session:
+                        <select id="sessionSelect">
+                            <option value="">Select Cashier Session</option>
+                        </select>
+                    </label>
+                    <button id="applyFilters">Apply</button>
+                    <button id="exportBtn">Export to PDF</button>
+                </div>
+                <div class="summary">
+                    <h2>Summary</h2>
+                    <div id="sessionInfo"></div>
+                    <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
+                    <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
+                    <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
+                </div>
+                <div class="graph">
+                    <h2>Payment Counts Over Time</h2>
+                    <button id="toggleGraphSize">Toggle Full Screen</button>
+                    <div class="graph-wrapper">
+                        <canvas id="doorCountChart"></canvas>
+                    </div>
+                </div>
+                <div class="tally-sheet">
+                    <h2>Tally Sheet</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="payment-type-header">Payment Type</th>
+                                <th>People</th>
+                                <th>Total Amount</th>
+                                <th>Price per Person</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -282,7 +278,7 @@
 
         class SalesLog {
             constructor() {
-                this.transactions = []; // Added to store transactions for PDF export
+                this.transactions = [];
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionIdFromUrl = urlParams.get('sessionId');
                 const exportFlag = urlParams.get('export');
@@ -364,9 +360,9 @@
                     }
 
                     const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
-                    this.transactions = transactions; // Store for PDF export
+                    this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Latest first
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
@@ -418,7 +414,7 @@
                     transactionLogBody.innerHTML = transactions.map(t => `
                         <tr>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
-                            <td>${t.items}</td>
+                            <td>${colorCodeItems(t.items)}</td>
                             <td>$${t.cashTotal.toFixed(2)}</td>
                             <td>${t.doorCount}</td>
                             <td>${t.cashierName}</td>
@@ -502,7 +498,7 @@
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const margin = 10;
                 const graphWidth = pageWidth - 2 * margin;
-                const graphHeight = (400 * graphWidth) / 800; // Based on 800x400 canvas ratio
+                const graphHeight = (400 * graphWidth) / 800;
 
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
@@ -548,14 +544,13 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Capture main chart (cumulative)
                 const canvas = document.getElementById('doorCountChart');
+                await waitForChartRender(chart);
                 const mainGraphImage = canvas.toDataURL('image/png');
 
-                // Generate 15-minute interval bar charts
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
+                const interval = 15 * 60 * 1000;
                 const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
 
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
@@ -567,7 +562,6 @@
                     });
 
                     if (intervalTransactions.length > 0) {
-                        // Calculate totals for this interval
                         const intervalSummary = {};
                         types.forEach(type => intervalSummary[type] = 0);
                         let intervalTotal = 0;
@@ -590,13 +584,11 @@
                             intervalTotal += t.doorCount || 0;
                         });
 
-                        // Create temporary canvas for bar chart
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = 800;
                         tempCanvas.height = 400;
                         document.body.appendChild(tempCanvas);
 
-                        // Create bar chart
                         const barChart = new Chart(tempCanvas, {
                             type: 'bar',
                             data: {
@@ -614,19 +606,17 @@
                             }
                         });
 
-                        // Capture bar chart image
+                        await waitForChartRender(barChart);
                         const barChartImage = tempCanvas.toDataURL('image/png');
                         doc.addPage();
                         doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
                         doc.addImage(barChartImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
 
-                        // Clean up
                         barChart.destroy();
                         tempCanvas.remove();
                     }
                 }
 
-                // Add main cumulative graph
                 doc.addPage();
                 doc.text('Payment Counts Over Time (Full Session)', pageWidth / 2, margin, { align: 'center' });
                 doc.addImage(mainGraphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
@@ -644,6 +634,25 @@
                 'Total': '#808080'
             };
             return colors[type] || '#888888';
+        }
+
+        function colorCodeItems(items) {
+            const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+            return items.split('; ').map(item => {
+                const type = types.find(t => item.startsWith(t));
+                if (type) {
+                    const rest = item.slice(type.length);
+                    return `<span class="${type.toLowerCase().replace(' ', '-')}-header">${type}</span>${rest}`;
+                }
+                return item;
+            }).join('; ');
+        }
+
+        function waitForChartRender(chart) {
+            return new Promise(resolve => {
+                chart.update();
+                setTimeout(resolve, 100);
+            });
         }
 
         function isLoggedIn() {
