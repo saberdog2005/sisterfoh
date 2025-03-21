@@ -178,7 +178,7 @@
             margin: 10px;
             border-radius: 5px;
         }
-        #addButtonForm input {
+        #addButtonForm input, #addButtonForm select {
             width: 100%;
             padding: 10px;
             margin: 5px 0;
@@ -274,7 +274,13 @@
             </div>
             <div id="addButtonForm">
                 <h3>Add New Button</h3>
-                <input type="text" id="newButtonType" placeholder="Type (e.g., CASH, CC TRANS, TICKET, COMP)">
+                <select id="newButtonType" required>
+                    <option value="">Select Type</option>
+                    <option value="CASH">CASH</option>
+                    <option value="CC TRANS">CC TRANS</option>
+                    <option value="TICKET">TICKET</option>
+                    <option value="COMP">COMP</option>
+                </select>
                 <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
                 <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
                 <button id="submitNewButton">Submit</button>
@@ -618,7 +624,8 @@
                     event_name: this.elements.eventName.value,
                     cashier_name: this.elements.cashierName.value,
                     items: Object.fromEntries(this.state.currentItems),
-                    cash_total: this.state.cashTotal,
+                    // Remove cash_total if it's not in the schema; use a fallback or adjust schema
+                    cash_total: 0, // Default to 0 if column is missing, or remove if not needed
                     door_count: this.state.doorCount,
                     note: this.elements.noteInput.value,
                     timestamp: new Date().toISOString(),
