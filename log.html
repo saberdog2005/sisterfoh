@@ -31,7 +31,7 @@
             grid-column: 1 / -1;
             text-align: center;
         }
-        .col-1, .col-2, .col-3, .col-4 {
+        .col-1, .col-2, .col-3, .col-4, .col-5 {
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
@@ -54,11 +54,11 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .summary-table table {
+        .summary-table table, .transaction-table table {
             width: 100%;
             border-collapse: collapse;
         }
-        .summary-table th, .summary-table td {
+        .summary-table th, .summary-table td, .transaction-table th, .transaction-table td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #444;
@@ -134,12 +134,28 @@
             <div class="col-2">
                 <h2>Summary</h2>
                 <div id="sessionInfo"></div>
-                <div>Total Thru Door: <span id="totalDoorCount">0</span></div>
-                <div>Total Sales: $<span id="totalSales">0.00</span></div>
+                <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
+                <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
+                <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
             </div>
             <div class="col-3">
                 <h2>Door Count Over Time</h2>
                 <canvas id="doorCountChart"></canvas>
+                <div class="transaction-table">
+                    <h2>Transaction Log</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Items</th>
+                                <th>Cash Total</th>
+                                <th>Door Count</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionLogBody"></tbody>
+                    </table>
+                </div>
             </div>
             <div class="col-4">
                 <h2>Tally Sheet</h2>
@@ -242,8 +258,10 @@
                             chart.update();
                         }
                         document.getElementById('summaryBody').innerHTML = '';
+                        document.getElementById('transactionLogBody').innerHTML = '';
                         document.getElementById('totalDoorCount').textContent = '0';
                         document.getElementById('totalSales').textContent = '0.00';
+                        document.getElementById('totalTransactions').textContent = '0';
                         return;
                     }
 
@@ -282,6 +300,7 @@
 
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+                    document.getElementById('totalTransactions').textContent = transactions.length;
 
                     const summaryBody = document.getElementById('summaryBody');
                     summaryBody.innerHTML = Object.entries(itemSummary)
@@ -300,6 +319,18 @@
                                 <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
                             </tr>
                         `;
+
+                    // Transaction Log Table
+                    const transactionLogBody = document.getElementById('transactionLogBody');
+                    transactionLogBody.innerHTML = transactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.timestamp).toLocaleString()}</td>
+                            <td>${t.items}</td>
+                            <td>$${t.cashTotal.toFixed(2)}</td>
+                            <td>${t.doorCount}</td>
+                            <td>${t.note || ''}</td>
+                        </tr>
+                    `).join('');
 
                     // Graph Data: Cumulative Door Count by Cashier
                     const cashiers = [...new Set(transactions.map(t => t.cashierName))];
@@ -368,16 +399,13 @@
         function getColorForType(type) {
             const colors = {
                 'Cash $5': '#2e7d32',
-                'Cash $7': '#2e7d32',
                 'Cash $10': '#2e7d32',
-                'Cash $12': '#2e7d32',
                 'Cash $15': '#2e7d32',
                 'Cash $20': '#2e7d32',
                 'Credit Card': '#d32f2f',
-                'Tickets': '#1a73e8',
-                'Comps': '#ffa500'
+                'Ticket': '#1a73e8',
+                'Comp': '#ffa500'
             };
-            // Use a hash for consistent colors per cashier name
             if (!colors[type]) {
                 const hash = type.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                 return `hsl(${hash % 360}, 70%, 50%)`;
