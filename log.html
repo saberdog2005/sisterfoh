@@ -148,7 +148,11 @@
             <h1 class="header">Sales Log</h1>
             <div class="col-1">
                 <h2>Filters</h2>
-                <label>Cashier Session: <select id="sessionSelect"><option value="">Select Cashier Session</option></select></label><br>
+                <label>Cashier Session: 
+                    <select id="sessionSelect">
+                        <option value="">Select Cashier Session</option>
+                    </select>
+                </label><br>
                 <button id="applyFilters">Apply</button>
             </div>
             <div class="col-2">
@@ -249,6 +253,8 @@
                             console.log('Subscription status:', status);
                         });
                 });
+
+                // Event Listeners
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
                     selectedSessionId = document.getElementById('sessionSelect').value || null;
@@ -264,14 +270,14 @@
                     const otherCols = document.querySelectorAll('.col-1, .col-2, .col-4');
                     if (graphContainer.classList.contains('fullscreen')) {
                         graphContainer.classList.remove('fullscreen');
-                        grid.style.display = 'grid';
-                        otherCols.forEach(col => col.style.display = 'block');
+                        grid.style.display = 'grid'; // Restore original grid layout
+                        otherCols.forEach(col => col.style.display = 'block'); // Show other columns
                     } else {
                         graphContainer.classList.add('fullscreen');
-                        grid.style.display = 'block';
-                        otherCols.forEach(col => col.style.display = 'none');
+                        grid.style.display = 'block'; // Adjust for full-screen mode
+                        otherCols.forEach(col => col.style.display = 'none'); // Hide other columns
                     }
-                    chart.resize();
+                    if (chart) chart.resize(); // Resize chart to fit new dimensions
                 });
             }
 
@@ -285,33 +291,31 @@
 
             async updateLog() {
                 try {
-                    // Fetch all transactions, ordered by sessionId descending
+                    // Fetch all transactions
                     const { data: allTransactions, error } = await supabase
                         .from('transactions')
                         .select('*')
                         .order('sessionId', { ascending: false });
-                    if (error) {
-                        console.error('Error fetching transactions:', error);
-                        throw new Error(error.message);
-                    }
+                    if (error) throw new Error(`Error fetching transactions: ${error.message}`);
+
                     console.log('Fetched transactions:', allTransactions.length);
                     if (allTransactions.length === 0) {
                         console.log('No transactions found. Check RLS policies or data insertion.');
                     }
 
-                    // Update session dropdown with session IDs and cashier names
+                    // Populate session dropdown
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = `<option value="">Select Cashier Session</option>` +
+                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
                         allSessionIds.map(id => {
                             const sessionTx = allTransactions.find(t => t.sessionId === id);
                             const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
                             return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
                         }).join('');
 
-                    // If no session selected, use the most recent session
-                    if (!selectedSessionId && allTransactions.length > 0) {
-                        selectedSessionId = allSessionIds[0]; // Most recent session
+                    // Default to most recent session if none selected
+                    if (!selectedSessionId && allSessionIds.length > 0) {
+                        selectedSessionId = allSessionIds[0];
                         sessionSelect.value = selectedSessionId;
                     }
 
@@ -329,10 +333,12 @@
                         return;
                     }
 
+                    // Filter transactions by selected session
                     const transactions = allTransactions.filter(t => t.sessionId === selectedSessionId);
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                     console.log('Transactions for session', selectedSessionId, ':', transactions.length);
 
+                    // Update session info
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
 
@@ -406,7 +412,7 @@
                     const totalDataset = {
                         label: 'Total',
                         data: [],
-                        borderColor: '#ffffff',
+                        borderColor: '#32CD32', // Lime green
                         fill: false
                     };
                     let cumulativeCounts = {};
@@ -458,7 +464,7 @@
                                 scales: {
                                     x: { 
                                         type: 'time', 
-                                        time: { unit: 'minute' }, 
+                                        time: { unit: 'minute', stepSize: 15 }, // 15-minute intervals
                                         title: { display: true, text: 'Time' } 
                                     },
                                     y: { 
@@ -529,14 +535,14 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Graph
+                // Graph (Payment Counts Over Time)
                 const canvas = document.getElementById('doorCountChart');
                 const graphImage = canvas.toDataURL('image/png');
                 const imgProps = doc.getImageProperties(graphImage);
                 const graphWidth = pageWidth - 2 * margin;
                 const graphHeight = (imgProps.height * graphWidth) / imgProps.width;
                 doc.addPage();
-                doc.text('Payment Counts Over Time', pageWidth / 2, margin, { align: 'center' });
+                doc.text('Payment Counts Over Time (15-Minute Intervals)', pageWidth / 2, margin, { align: 'center' });
                 doc.addImage(graphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
@@ -549,7 +555,7 @@
                 'Credit Card': '#d32f2f',
                 'Comp': '#ffa500',
                 'Ticket': '#1a73e8',
-                'Total': '#ffffff'
+                'Total': '#32CD32' // Lime green
             };
             return colors[type] || '#888888';
         }
