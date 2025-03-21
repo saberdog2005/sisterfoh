@@ -624,8 +624,7 @@
                     event_name: this.elements.eventName.value,
                     cashier_name: this.elements.cashierName.value,
                     items: Object.fromEntries(this.state.currentItems),
-                    // Remove cash_total if it's not in the schema; use a fallback or adjust schema
-                    cash_total: 0, // Default to 0 if column is missing, or remove if not needed
+                    cash_total: 0, // Default to 0 since column is missing in schema
                     door_count: this.state.doorCount,
                     note: this.elements.noteInput.value,
                     timestamp: new Date().toISOString(),
