@@ -8,205 +8,47 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 5px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            font-size: 16px;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        .header {
-            padding: 10px;
-            background-color: #2e2e2e;
-            border-bottom: 1px solid #444;
-        }
-        .header label {
-            margin-right: 5px;
-        }
-        .header input {
-            margin-right: 15px;
-            padding: 5px;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-        }
-        .button-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 10px;
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-        .product-item {
-            flex: 1 1 calc(25% - 10px);
-            min-width: 120px;
-            background-color: #2e2e2e;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .product-item.hidden {
-            display: none;
-        }
-        .increment-btn {
-            width: 100%;
-            padding: 35px;
-            margin-bottom: 5px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 5px; background-color: #1e1e1e; color: #e0e0e0; font-size: 16px; height: 100vh; overflow: hidden; }
+        .container { display: flex; flex-direction: column; height: 100%; }
+        .header { padding: 10px; background-color: #2e2e2e; border-bottom: 1px solid #444; }
+        .header label { margin-right: 5px; }
+        .header input { margin-right: 15px; padding: 5px; background-color: #333; color: #e0e0e0; border: 1px solid #555; }
+        .button-container { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; flex-grow: 1; overflow-y: auto; }
+        .product-item { flex: 1 1 calc(25% - 10px); min-width: 120px; background-color: #2e2e2e; padding: 10px; border-radius: 5px; text-align: center; }
+        .product-item.hidden { display: none; }
+        .increment-btn { width: 100%; padding: 35px; margin-bottom: 5px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
         .ticket { background-color: #1a73e8; color: white; }
         .comp { background-color: #ffa500; color: white; }
-        .control-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-        .count {
-            font-size: 18px;
-            min-width: 20px;
-            text-align: center;
-        }
-        .minus {
-            padding: 5px 10px;
-            background-color: #555;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .note-section {
-            padding: 10px;
-        }
-        #noteInput {
-            width: 100%;
-            height: 60px;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            padding: 5px;
-        }
-        #logSaleBtn {
-            width: 100%;
-            padding: 15px;
-            background-color: #028801;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        .footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #2e2e2e;
-            border-top: 1px solid #444;
-        }
-        .totals-container {
-            display: flex;
-            gap: 20px;
-        }
-        .totals-container h3 {
-            color: pink;
-            margin: 0;
-        }
-        .totals-container .total-value {
-            color: white;
-        }
-        .footer-right {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .open-btn, .close-btn, .edit-btn {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            color: white;
-        }
+        .control-row { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .count { font-size: 18px; min-width: 20px; text-align: center; }
+        .minus { padding: 5px 10px; background-color: #555; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .note-section { padding: 10px; }
+        #noteInput { width: 100%; height: 60px; background-color: #333; color: #e0e0e0; border: 1px solid #555; padding: 5px; }
+        #logSaleBtn { width: 100%; padding: 15px; background-color: #028801; color: white; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; }
+        .footer { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #2e2e2e; border-top: 1px solid #444; }
+        .totals-container { display: flex; gap: 20px; }
+        .totals-container h3 { color: pink; margin: 0; }
+        .totals-container .total-value { color: white; }
+        .footer-right { display: flex; gap: 10px; align-items: center; }
+        .open-btn, .close-btn, .edit-btn { padding: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; }
         .open-btn { background-color: #2e7d32; }
         .close-btn { background-color: #d32f2f; }
         .edit-btn { background-color: #0288d1; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #2e2e2e;
-            margin: 15% auto;
-            padding: 20px;
-            width: 300px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            color: white;
-        }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #2e2e2e; margin: 15% auto; padding: 20px; width: 300px; border-radius: 5px; text-align: center; }
+        .modal-content input { width: 100%; padding: 10px; margin: 10px 0; background-color: #333; color: #e0e0e0; border: 1px solid #555; }
+        .modal-content button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; color: white; }
         #submitPinBtn { background-color: #2e7d32; }
         #cancelPinBtn { background-color: #d32f2f; }
-        #addButtonForm {
-            display: none;
-            background-color: #2e2e2e;
-            padding: 20px;
-            margin: 10px;
-            border-radius: 5px;
-        }
-        #addButtonForm input, #addButtonForm select {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-        }
+        #addButtonForm { display: none; background-color: #2e2e2e; padding: 20px; margin: 10px; border-radius: 5px; }
+        #addButtonForm input, #addButtonForm select { width: 100%; padding: 10px; margin: 5px 0; background-color: #333; color: #e0e0e0; border: 1px solid #555; }
         #submitNewButton { background-color: #2e7d32; }
         #cancelNewButton { background-color: #d32f2f; }
-        #editInstructions {
-            padding: 10px;
-            background-color: #0288d1;
-            color: white;
-            text-align: center;
-        }
+        #editInstructions { padding: 10px; background-color: #0288d1; color: white; text-align: center; }
         .hidden { display: none; }
-        #successMessage, #errorMessage {
-            padding: 5px;
-            margin-left: 10px;
-        }
+        #successMessage, #errorMessage { padding: 5px; margin-left: 10px; }
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
     </style>
@@ -523,13 +365,19 @@
                 if (!this.state.currentItems.size && !isClosing) return;
 
                 this.state.isLogging = true;
+                const itemsWithPrice = {};
+                this.state.currentItems.forEach((count, item) => {
+                    const productItem = document.querySelector(`.product-item[data-item="${item}"]`);
+                    const price = productItem ? parseFloat(productItem.dataset.price) : 0;
+                    itemsWithPrice[item] = { count, price };
+                });
                 const transactionData = {
-                    sessionId: this.state.sessionId, // Changed from session_id
+                    sessionId: this.state.sessionId,
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
-                    items: Object.fromEntries(this.state.currentItems),
+                    items: itemsWithPrice,
                     cashTotal: this.state.cashTotal,
                     doorCount: this.state.doorCount,
                     note: this.elements.noteInput.value,
@@ -652,12 +500,7 @@
                     this.showError('Please fill in all fields for the new button');
                     return;
                 }
-                const classMap = {
-                    'CASH': 'cash',
-                    'CC TRANS': 'cc',
-                    'TICKET': 'ticket',
-                    'COMP': 'comp'
-                };
+                const classMap = { 'CASH': 'cash', 'CC TRANS': 'cc', 'TICKET': 'ticket', 'COMP': 'comp' };
                 const btnClass = classMap[type] || 'cash';
                 const newButton = document.createElement('div');
                 newButton.className = 'product-item';
