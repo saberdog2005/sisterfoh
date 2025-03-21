@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
+        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' 'data:';
+    ">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -550,34 +556,53 @@
                         </tr>
                     `).join('');
 
-                    // Updated graph dataset to display number of transactions
+                    // Updated graph dataset to display transactions by type and total
+                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
                     const transactionCounts = {};
                     const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
 
                     transactions.forEach(t => {
                         const txTime = new Date(t.timestamp).getTime();
                         const bin = Math.floor(txTime / interval) * interval;
-                        if (!transactionCounts[bin]) transactionCounts[bin] = 0;
-                        transactionCounts[bin]++;
+                        if (!transactionCounts[bin]) {
+                            transactionCounts[bin] = { total: 0 };
+                            types.forEach(type => transactionCounts[bin][type] = 0);
+                        }
+                        transactionCounts[bin].total++;
+                        const firstItem = t.items.split('; ')[0];
+                        const key = firstItem.split(': ')[0];
+                        let type;
+                        if (key.startsWith('Cash')) type = 'Cash';
+                        else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                        else if (key.startsWith('Comp')) type = 'Comp';
+                        else if (key.startsWith('Ticket')) type = 'Ticket';
+                        if (types.includes(type)) {
+                            transactionCounts[bin][type]++;
+                        }
                     });
 
                     const labels = Object.keys(transactionCounts).map(bin => new Date(parseInt(bin)));
-                    const data = Object.values(transactionCounts);
-
-                    const dataset = {
-                        label: 'Number of Transactions',
-                        data: labels.map((label, index) => ({ x: label, y: data[index] })),
+                    const datasets = types.map(type => ({
+                        label: type,
+                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()][type] || 0 })),
+                        borderColor: getColorForType(type),
+                        fill: false
+                    }));
+                    datasets.push({
+                        label: 'Total',
+                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()].total || 0 })),
                         borderColor: '#808080',
                         fill: false
-                    };
+                    });
 
                     if (chart) {
-                        chart.data.datasets = [dataset];
+                        chart.data.labels = labels;
+                        chart.data.datasets = datasets;
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
-                            data: { datasets: [dataset] },
+                            data: { labels, datasets },
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
@@ -600,7 +625,7 @@
                 const graphWidth = pageWidth - 2 * margin;
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
 
-                const dpi = 150; // Updated to 150 DPI
+                const dpi = 150;
                 const pxToIn = (px) => px / dpi;
 
                 doc.setFontSize(16);
@@ -664,6 +689,7 @@
                     type: 'line',
                     data: chart.data,
                     options: {
+                        animation: { duration: 0 },
                         maintainAspectRatio: false,
                         scales: {
                             x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time', font: { size: 16 } } },
@@ -728,6 +754,7 @@
                                 }]
                             },
                             options: {
+                                animation: { duration: 0 },
                                 scales: {
                                     y: { beginAtZero: true, title: { display: true, text: 'Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
                                     x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
@@ -784,7 +811,7 @@
 
         function waitForChartRender(chart) {
             return new Promise(resolve => {
-                if (chart.animating) {
+                if (chart.options.animation && chart.options.animation.duration > 0) {
                     chart.options.animation.onComplete = () => resolve();
                 } else {
                     resolve();
