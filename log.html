@@ -208,10 +208,12 @@
                     supabase
                         .channel('public:transactions')
                         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
-                            console.log('New transaction:', payload.new);
+                            console.log('New transaction received:', payload.new);
                             this.updateLog();
                         })
-                        .subscribe();
+                        .subscribe(status => {
+                            console.log('Subscription status:', status);
+                        });
                 });
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
@@ -240,9 +242,14 @@
                         query = query.eq('sessionId', selectedSessionId);
                     }
                     const { data: allTransactions, error } = await query.order('timestamp', { ascending: false });
-                    if (error) throw new Error(error.message);
-
-                    console.log('All transactions fetched:', allTransactions.length);
+                    if (error) {
+                        console.error('Error fetching transactions:', error);
+                        throw new Error(error.message);
+                    }
+                    console.log('Fetched transactions:', allTransactions.length);
+                    if (allTransactions.length === 0) {
+                        console.log('No transactions found. Check RLS policies in Supabase.');
+                    }
 
                     // Update session dropdown
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
