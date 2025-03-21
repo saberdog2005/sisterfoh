@@ -136,17 +136,37 @@
             padding: 20px;
             box-sizing: border-box;
         }
-        .col-3 canvas {
+        .graph-wrapper {
+            height: 600px; /* Fixed height in normal mode */
             width: 100%;
-            height: 600px; /* Fixed height for normal mode */
         }
-        .col-3.fullscreen canvas {
-            width: 100%;
+        .col-3.fullscreen .graph-wrapper {
             height: calc(100vh - 40px); /* Full height minus padding in full-screen */
+        }
+        #doorCountChart {
+            width: 100%;
+            height: 100%;
         }
         .transaction-table {
             max-height: 300px;
             overflow-y: auto;
+        }
+        /* Color-coded headers */
+        .cash-header {
+            color: #2e7d32; /* Green for cash */
+        }
+        .items-header {
+            color: #d32f2f; /* Red for items (includes card, comp, ticket) */
+        }
+        .payment-type-header {
+            color: #1a73e8; /* Blue for payment type (covers all types) */
+        }
+        /* Totals in orange */
+        .col-2 h3 span {
+            color: orange;
+        }
+        .total-row td {
+            color: orange;
         }
     </style>
 </head>
@@ -183,15 +203,17 @@
             <div class="col-3">
                 <h2>Payment Counts Over Time</h2>
                 <button id="toggleGraphSize">Toggle Full Screen</button>
-                <canvas id="doorCountChart"></canvas>
+                <div class="graph-wrapper">
+                    <canvas id="doorCountChart"></canvas>
+                </div>
                 <div class="transaction-table">
                     <h2>Transaction Log</h2>
                     <table>
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
-                                <th>Items</th>
-                                <th>Cash Total</th>
+                                <th class="items-header">Items</th>
+                                <th class="cash-header">Cash Total</th>
                                 <th>Door Count</th>
                                 <th>Cashier</th>
                                 <th>Note</th>
@@ -207,7 +229,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Payment Type</th>
+                                <th class="payment-type-header">Payment Type</th>
                                 <th>People</th>
                                 <th>Total Amount</th>
                                 <th>Price per Person</th>
@@ -290,11 +312,9 @@
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graphContainer = document.querySelector('.col-3');
                     const grid = document.querySelector('.grid');
-                    const canvas = document.getElementById('doorCountChart');
                     if (graphContainer.classList.contains('fullscreen')) {
                         graphContainer.classList.remove('fullscreen');
                         grid.classList.remove('fullscreen-mode');
-                        canvas.style.height = '600px'; // Reset to fixed height
                     } else {
                         graphContainer.classList.add('fullscreen');
                         grid.classList.add('fullscreen-mode');
@@ -400,7 +420,7 @@
                                 <td>$${data.price.toFixed(2)}</td>
                             </tr>
                         `).join('') + `
-                            <tr>
+                            <tr class="total-row">
                                 <td><strong>TOTALS</strong></td>
                                 <td><strong>${totalDoorCount}</strong></td>
                                 <td><strong>$${totalSales.toFixed(2)}</strong></td>
