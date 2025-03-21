@@ -114,6 +114,17 @@
             color: #d32f2f;
             margin-top: 10px;
         }
+        .col-3.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+            background-color: #1e1e1e;
+            padding: 20px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -144,6 +155,7 @@
             </div>
             <div class="col-3">
                 <h2>Payment Counts Over Time</h2>
+                <button id="toggleGraphSize">Toggle Full Screen</button>
                 <canvas id="doorCountChart"></canvas>
                 <div class="transaction-table">
                     <h2>Transaction Log</h2>
@@ -213,7 +225,7 @@
 
                 this.updateInterval = null;
                 this.init().then(() => {
-                    this.updateLog();
+                    this.updateLog(); // Load data immediately
                     if (exportFlag === 'true') {
                         this.exportPDF();
                     }
@@ -240,6 +252,11 @@
                 document.getElementById('sessionSelect').addEventListener('change', (event) => {
                     selectedSessionId = event.target.value || null;
                     this.updateLog();
+                });
+                document.getElementById('toggleGraphSize').addEventListener('click', () => {
+                    const graphContainer = document.querySelector('.col-3');
+                    graphContainer.classList.toggle('fullscreen');
+                    chart.resize(); // Resize chart to fit new container size
                 });
             }
 
@@ -279,7 +296,8 @@
 
                     // If no session selected, use the most recent session
                     if (!selectedSessionId && allTransactions.length > 0) {
-                        selectedSessionId = allTransactions[0].sessionId;
+                        selectedSessionId = allSessionIds[0]; // Most recent session
+                        sessionSelect.value = selectedSessionId;
                     }
 
                     if (!selectedSessionId) {
