@@ -558,7 +558,7 @@
 
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
                     const transactionCounts = {};
-                    const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
+                    const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
 
                     transactions.forEach(t => {
                         const txTime = new Date(t.timestamp).getTime();
@@ -605,7 +605,7 @@
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
-                                    x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
+                                    x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time' } },
                                     y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions' } }
                                 }
                             }
@@ -625,7 +625,6 @@
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
                 const dpi = 150;
 
-                // Check if chart data is available
                 if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
                     console.error('No chart data available for export.');
                     return;
@@ -684,36 +683,12 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Main chart (line chart)
-                const mainCanvas = document.createElement('canvas');
-                mainCanvas.width = graphWidth * dpi;
-                mainCanvas.height = graphHeight * dpi;
-                document.body.appendChild(mainCanvas); // Temporarily add to DOM
-                const mainCtx = mainCanvas.getContext('2d');
-                const tempChart = new Chart(mainCtx, {
-                    type: 'line',
-                    data: chart.data,
-                    options: {
-                        animation: { duration: 0 },
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time', font: { size: 16 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
-                        },
-                        plugins: {
-                            legend: { labels: { font: { size: 14 } } }
-                        }
-                    }
-                });
-                tempChart.update();
-                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for rendering
-                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                document.body.removeChild(mainCanvas); // Clean up
-                tempChart.destroy();
+                // Start interval bar charts on a new page
+                doc.addPage();
 
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 15 * 60 * 1000;
+                const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
                 const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
 
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
@@ -750,7 +725,7 @@
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = graphWidth * dpi;
                         tempCanvas.height = graphHeight * dpi;
-                        document.body.appendChild(tempCanvas); // Temporarily add to DOM
+                        document.body.appendChild(tempCanvas);
                         const tempCtx = tempCanvas.getContext('2d');
                         const barChart = new Chart(tempCtx, {
                             type: 'bar',
@@ -774,20 +749,44 @@
                             }
                         });
                         barChart.update();
-                        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for rendering
-                        doc.addPage();
+                        await new Promise(resolve => setTimeout(resolve, 100));
                         doc.setFontSize(16);
                         doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
                         doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                        document.body.removeChild(tempCanvas); // Clean up
+                        document.body.removeChild(tempCanvas);
                         barChart.destroy();
+                        doc.addPage();
                     }
                 }
 
-                doc.addPage();
+                // Main chart on the last page
+                const mainCanvas = document.createElement('canvas');
+                mainCanvas.width = graphWidth * dpi;
+                mainCanvas.height = graphHeight * dpi;
+                document.body.appendChild(mainCanvas);
+                const mainCtx = mainCanvas.getContext('2d');
+                const tempChart = new Chart(mainCtx, {
+                    type: 'line',
+                    data: chart.data,
+                    options: {
+                        animation: { duration: 0 },
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                        },
+                        plugins: {
+                            legend: { labels: { font: { size: 14 } } }
+                        }
+                    }
+                });
+                tempChart.update();
+                await new Promise(resolve => setTimeout(resolve, 100));
                 doc.setFontSize(16);
                 doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
                 doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                document.body.removeChild(mainCanvas);
+                tempChart.destroy();
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
