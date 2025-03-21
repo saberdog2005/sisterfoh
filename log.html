@@ -21,39 +21,34 @@
         }
         .container {
             width: 99%;
+            height: calc(100vh - 20px); /* Fits viewport minus padding */
         }
         .grid {
             display: grid;
-            grid-template-columns: 2fr 2fr 1.5fr; /* Adjusted for wider right panel */
-            grid-template-rows: 50px auto;
+            grid-template-columns: 2fr 2fr 1.5fr;
+            grid-template-rows: auto; /* No fixed header row */
             gap: 10px;
-        }
-        .header {
-            grid-column: 1 / -1;
-            grid-row: 1;
-            text-align: center;
-            font-size: 24px;
+            height: 100%; /* Fills container */
         }
         .graph {
             grid-column: 1;
-            grid-row: 2;
+            grid-row: 1;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
-            height: calc(100vh - 80px);
             display: flex;
             flex-direction: column;
-            transition: all 0.2s ease; /* Smooth transition for full-screen */
+            transition: all 0.2s ease;
         }
         .middle-panel {
             grid-column: 2;
-            grid-row: 2;
+            grid-row: 1;
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 80px);
+            height: 100%;
         }
         .tally-sheet {
-            height: 300px; /* Increased height for more room */
+            height: 300px; /* Fixed height, adjustable if needed */
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
@@ -84,18 +79,25 @@
         }
         .right-panel {
             grid-column: 3;
-            grid-row: 2;
+            grid-row: 1;
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 80px);
+            height: 100%;
             gap: 10px;
         }
         .filters, .summary {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden; /* Prevents horizontal scrolling */
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
+        }
+        .filters select {
+            max-width: 100%; /* Ensures select fits container */
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
         }
         .graph-wrapper {
             flex: 1;
@@ -128,11 +130,6 @@
             width: 100%;
             padding: 8px;
             font-size: 16px;
-        }
-        .filters select {
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
         }
         .filters button {
             background-color: #0288d1;
@@ -191,22 +188,11 @@
             margin-top: 10px;
         }
         .graph.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1000;
-            background-color: #1e1e1e;
-            padding: 20px;
-            box-sizing: border-box;
+            height: 100%; /* Expands within column */
         }
-        .graph.fullscreen .graph-wrapper {
-            height: calc(100vh - 40px);
-        }
-        .cash-header { color: #2e7d32; } /* Green for cash */
+        .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
-        .comp-header { color: #ffdab9; } /* Peach for comp */
+        .comp-header { color: #ffdab9; }
         .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
@@ -225,9 +211,8 @@
 
     <div class="container" id="salesLogContainer">
         <div class="grid">
-            <h1 class="header">Sales Log</h1>
             <div class="graph">
-                <h2>Payment Counts Over Time</h2>
+                <h2>Customer Count Over Time</h2>
                 <button id="toggleGraphSize">Toggle Full Screen</button>
                 <div class="graph-wrapper">
                     <canvas id="doorCountChart"></canvas>
@@ -357,7 +342,7 @@
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graph = document.querySelector('.graph');
                     graph.classList.toggle('fullscreen');
-                    if (chart) setTimeout(() => chart.resize(), 200); // Increased delay
+                    if (chart) requestAnimationFrame(() => chart.resize());
                 });
             }
 
@@ -535,7 +520,7 @@
                                 maintainAspectRatio: false,
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count' } }
+                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Customer Count' } }
                                 }
                             }
                         });
@@ -676,7 +661,7 @@
                 }
 
                 doc.addPage();
-                doc.text('Payment Counts Over Time (Full Session)', pageWidth / 2, margin, { align: 'center' });
+                doc.text('Customer Count Over Time (Full Session)', pageWidth / 2, margin, { align: 'center' });
                 doc.addImage(mainGraphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
@@ -687,7 +672,7 @@
             const colors = {
                 'Cash': '#2e7d32',
                 'Credit Card': '#d32f2f',
-                'Comp': '#ffdab9', // Updated to peach
+                'Comp': '#ffdab9',
                 'Ticket': '#1a73e8',
                 'Total': '#808080'
             };
@@ -709,7 +694,7 @@
         function waitForChartRender(chart) {
             return new Promise(resolve => {
                 chart.update();
-                setTimeout(resolve, 200); // Increased delay for chart render
+                setTimeout(resolve, 200);
             });
         }
 
