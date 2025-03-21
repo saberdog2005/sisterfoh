@@ -174,8 +174,14 @@
         let chart;
         let selectedSessionId = null;
 
+        // Updated formatItems function to handle undefined price and count
         function formatItems(items) {
-            return Object.entries(items).map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`).join('; ');
+            if (!items) return '';
+            return Object.entries(items).map(([key, data]) => {
+                const count = data.count !== undefined ? data.count : 0;
+                const price = data.price !== undefined ? data.price : 0;
+                return `${key}: ${count} @ $${price.toFixed(2)}`;
+            }).join('; ');
         }
 
         function colorCodeItems(items) {
