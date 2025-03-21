@@ -345,8 +345,9 @@
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
+                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'N/A';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Event Date: ${eventDate}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -392,9 +393,8 @@
                     `;
                     document.getElementById('totalsBody').innerHTML = totalsRow;
 
-                    const nonzeroTransactions = transactions.filter(t => Object.values(t.items).some(item => item.count > 0));
                     const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = nonzeroTransactions.map(t => `
+                    transactionLogBody.innerHTML = transactions.map(t => `
                         <tr>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
                             <td>${colorCodeItems(formatItems(t.items))}</td>
