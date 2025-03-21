@@ -20,7 +20,7 @@
             color: #e0e0e0;
         }
         .container {
-            width: 80%; /* Set content to 80% of screen width */
+            width: 80%;
             max-width: 1200px;
             margin: auto;
         }
@@ -32,7 +32,7 @@
         .grid.fullscreen-mode .col-1,
         .grid.fullscreen-mode .col-2,
         .grid.fullscreen-mode .col-4 {
-            display: none; /* Hide other columns in full-screen mode */
+            display: none;
         }
         .header {
             grid-column: 1 / -1;
@@ -131,6 +131,10 @@
             background-color: #1e1e1e;
             padding: 20px;
             box-sizing: border-box;
+        }
+        .col-3.fullscreen canvas {
+            height: calc(100vh - 40px) !important; /* Scale to screen height minus padding */
+            width: 100% !important;
         }
         .transaction-table {
             max-height: 300px;
@@ -252,6 +256,10 @@
                     channel.onmessage = (event) => {
                         if (event.data.type === 'new_transaction') {
                             this.updateLog();
+                        } else if (event.data.type === 'new_session') {
+                            selectedSessionId = event.data.sessionId;
+                            console.log('New session received:', selectedSessionId);
+                            this.updateLog();
                         }
                     };
                     supabase
@@ -312,8 +320,11 @@
                         console.log('No transactions found. Check RLS policies or data insertion.');
                     }
 
-                    // Populate session dropdown
+                    // Log all session IDs for debugging
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
+                    console.log('All session IDs:', allSessionIds);
+
+                    // Populate session dropdown
                     const sessionSelect = document.getElementById('sessionSelect');
                     sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
                         allSessionIds.map(id => {
@@ -342,9 +353,10 @@
                         return;
                     }
 
-                    // Filter transactions by selected session
-                    const transactions = allTransactions.filter(t => t.sessionId === selectedSessionId);
+                    // Filter transactions by selected session with type conversion
+                    const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId);
                     console.log('Transactions for session', selectedSessionId, ':', transactions.length);
+                    console.log('Transaction session IDs:', transactions.map(t => t.sessionId));
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     // Update session info
@@ -470,17 +482,18 @@
                             type: 'line',
                             data: { datasets },
                             options: {
+                                maintainAspectRatio: false, // Allow graph to fill container height
                                 scales: {
                                     x: {
                                         type: 'time',
-                                        time: { unit: 'minute', stepSize: 15 }, // 15-minute intervals
+                                        time: { unit: 'minute', stepSize: 15 },
                                         title: {
                                             display: true,
                                             text: 'Time',
-                                            font: { size: 14 } // Increased font size
+                                            font: { size: 14 }
                                         },
                                         ticks: {
-                                            font: { size: 12 } // Increased tick font size
+                                            font: { size: 12 }
                                         }
                                     },
                                     y: {
@@ -488,10 +501,10 @@
                                         title: {
                                             display: true,
                                             text: 'Cumulative Count',
-                                            font: { size: 14 } // Increased font size
+                                            font: { size: 14 }
                                         },
                                         ticks: {
-                                            font: { size: 12 } // Increased tick font size
+                                            font: { size: 12 }
                                         }
                                     }
                                 }
