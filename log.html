@@ -15,7 +15,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 10px; /* Reduced from 20px to fit within 800px height */
             background-color: #1e1e1e;
             color: #e0e0e0;
         }
@@ -26,59 +26,61 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 50px 100px 100px 200px 200px;
+            grid-template-columns: 1fr 1fr 1fr 1fr; /* Increased to 4 columns for more horizontal space */
+            grid-template-rows: 50px 380px 300px; /* Adjusted heights: header, graph, sections */
             gap: 10px;
         }
         .header {
-            grid-column: 1 / -1;
+            grid-column: 1 / 5; /* Spans all 4 columns */
             grid-row: 1;
             text-align: center;
+            font-size: 24px; /* Slightly larger header */
         }
-        .filters {
-            grid-column: 2;
+        .graph {
+            grid-column: 1 / 5; /* Graph spans all columns for prominence */
             grid-row: 2;
             background-color: #2e2e2e;
-            padding: 10px;
+            padding: 15px; /* Increased padding */
+            border-radius: 5px;
+        }
+        .filters {
+            grid-column: 1;
+            grid-row: 3;
+            background-color: #2e2e2e;
+            padding: 20px; /* Increased for larger items */
             border-radius: 5px;
         }
         .summary {
             grid-column: 2;
             grid-row: 3;
             background-color: #2e2e2e;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .graph {
-            grid-column: 1;
-            grid-row: 2 / span 4;
-            background-color: #2e2e2e;
-            padding: 10px;
+            padding: 20px; /* Increased for larger items */
             border-radius: 5px;
         }
         .transaction-log {
-            grid-column: 2;
-            grid-row: 4;
+            grid-column: 3;
+            grid-row: 3;
             background-color: #2e2e2e;
-            padding: 10px;
+            padding: 20px; /* Increased for larger items */
             border-radius: 5px;
-            max-height: 180px;
+            max-height: 260px; /* Adjusted for 300px row height minus padding */
             overflow-y: auto;
         }
         .tally-sheet {
-            grid-column: 2;
-            grid-row: 5;
+            grid-column: 4;
+            grid-row: 3;
             background-color: #2e2e2e;
-            padding: 10px;
+            padding: 20px; /* Increased for larger items */
             border-radius: 5px;
-            max-height: 180px;
+            max-height: 260px; /* Adjusted for 300px row height minus padding */
             overflow-y: auto;
         }
         .filters label, .filters select, .filters button {
             display: block;
-            margin: 5px 0;
+            margin: 10px 0; /* Increased spacing */
             width: 100%;
-            padding: 5px;
+            padding: 8px; /* Larger padding */
+            font-size: 16px; /* Larger text */
         }
         .filters select {
             background-color: #333;
@@ -103,9 +105,10 @@
         .transaction-log table, .tally-sheet table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 14px; /* Increased from implied default */
         }
         .transaction-log th, .transaction-log td, .tally-sheet th, .tally-sheet td {
-            padding: 8px;
+            padding: 10px; /* Increased for larger items */
             text-align: left;
             border-bottom: 1px solid #444;
         }
@@ -113,15 +116,19 @@
             background-color: #3e3e3e;
             color: #ffffff;
         }
+        .summary h3 {
+            font-size: 18px; /* Larger summary titles */
+        }
         #exportBtn {
-            margin-top: 10px;
-            padding: 8px;
+            margin-top: 15px; /* More spacing */
+            padding: 10px; /* Larger button */
             background-color: #2e7d32;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
+            font-size: 16px; /* Larger text */
         }
         .modal {
             display: none;
@@ -147,6 +154,7 @@
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
+            font-size: 16px; /* Larger text */
         }
         .modal-content button {
             padding: 10px 20px;
@@ -155,6 +163,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 16px; /* Larger text */
         }
         .error {
             color: #d32f2f;
@@ -174,11 +183,9 @@
         .graph.fullscreen .graph-wrapper {
             height: calc(100vh - 40px);
         }
-        /* Color-coded headers */
         .cash-header { color: #2e7d32; }
         .items-header { color: #d32f2f; }
         .payment-type-header { color: #1a73e8; }
-        /* Totals in orange */
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
     </style>
@@ -197,6 +204,13 @@
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <h1 class="header">Sales Log</h1>
+            <div class="graph">
+                <h2>Payment Counts Over Time</h2>
+                <button id="toggleGraphSize">Toggle Full Screen</button>
+                <div class="graph-wrapper">
+                    <canvas id="doorCountChart"></canvas>
+                </div>
+            </div>
             <div class="filters">
                 <h2>Filters</h2>
                 <label>Cashier Session:
@@ -212,13 +226,6 @@
                 <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                 <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                 <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
-            </div>
-            <div class="graph">
-                <h2>Payment Counts Over Time</h2>
-                <button id="toggleGraphSize">Toggle Full Screen</button>
-                <div class="graph-wrapper">
-                    <canvas id="doorCountChart"></canvas>
-                </div>
             </div>
             <div class="transaction-log">
                 <h2>Transaction Log</h2>
@@ -261,7 +268,7 @@
 
         const adminUsername = "admin";
         const adminPassword = "password123";
-        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
         const channel = new BroadcastChannel('transaction_channel');
 
         const loginModal = document.getElementById('loginModal');
@@ -275,61 +282,44 @@
 
         class SalesLog {
             constructor() {
+                this.transactions = []; // Added to store transactions for PDF export
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionIdFromUrl = urlParams.get('sessionId');
                 const exportFlag = urlParams.get('export');
 
-                if (sessionIdFromUrl) {
-                    selectedSessionId = sessionIdFromUrl;
-                }
+                if (sessionIdFromUrl) selectedSessionId = sessionIdFromUrl;
 
                 this.updateInterval = null;
                 this.init().then(() => {
                     this.updateLog();
-                    if (exportFlag === 'true') {
-                        this.exportPDF();
-                    }
+                    if (exportFlag === 'true') this.exportPDF();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
                     channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') {
-                            this.updateLog();
-                        } else if (event.data.type === 'new_session') {
+                        if (event.data.type === 'new_transaction') this.updateLog();
+                        else if (event.data.type === 'new_session') {
                             selectedSessionId = event.data.sessionId;
-                            console.log('New session received:', selectedSessionId);
                             this.updateLog();
                         }
                     };
                     supabase
                         .channel('public:transactions')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
-                            this.updateLog();
-                        })
-                        .subscribe(status => {
-                            console.log('Subscription status:', status);
-                        });
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => this.updateLog())
+                        .subscribe(status => console.log('Subscription status:', status));
                 });
 
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
                     selectedSessionId = document.getElementById('sessionSelect').value || null;
-                    console.log('Apply button clicked - Selected session ID:', selectedSessionId);
                     this.updateLog();
                 });
                 document.getElementById('sessionSelect').addEventListener('change', (event) => {
                     selectedSessionId = event.target.value || null;
-                    console.log('Dropdown changed - Selected session ID:', selectedSessionId);
                     this.updateLog();
                 });
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graph = document.querySelector('.graph');
-                    if (graph.classList.contains('fullscreen')) {
-                        graph.classList.remove('fullscreen');
-                    } else {
-                        graph.classList.add('fullscreen');
-                    }
-                    if (chart) {
-                        setTimeout(() => chart.resize(), 100);
-                    }
+                    graph.classList.toggle('fullscreen');
+                    if (chart) setTimeout(() => chart.resize(), 100);
                 });
             }
 
@@ -349,14 +339,7 @@
                         .order('sessionId', { ascending: false });
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
-                    console.log('Fetched transactions:', allTransactions.length);
-                    if (allTransactions.length === 0) {
-                        console.log('No transactions found. Check RLS policies or data insertion.');
-                    }
-
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
-                    console.log('All session IDs:', allSessionIds);
-
                     const sessionSelect = document.getElementById('sessionSelect');
                     sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
                         allSessionIds.map(id => {
@@ -365,10 +348,7 @@
                             return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
                         }).join('');
 
-                    if (!selectedSessionId && allSessionIds.length > 0) {
-                        selectedSessionId = allSessionIds[0];
-                    }
-
+                    if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
                     if (!selectedSessionId) {
                         document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
                         if (chart) {
@@ -384,7 +364,7 @@
                     }
 
                     const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
-                    console.log('Transactions for session', selectedSessionId, ':', transactions.length);
+                    this.transactions = transactions; // Store for PDF export
                     sessionSelect.value = selectedSessionId;
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
@@ -403,9 +383,7 @@
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10) || 0;
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (!itemSummary[key]) {
-                                    itemSummary[key] = { people: 0, total: 0, price };
-                                }
+                                if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
                                 itemSummary[key].people += count;
                                 itemSummary[key].total += count * price;
                             }
@@ -479,9 +457,7 @@
                                 else if (key.startsWith('Credit Card')) type = 'Credit Card';
                                 else if (key.startsWith('Comp')) type = 'Comp';
                                 else if (key.startsWith('Ticket')) type = 'Ticket';
-                                if (types.includes(type)) {
-                                    cumulativeCounts[type] += count;
-                                }
+                                if (types.includes(type)) cumulativeCounts[type] += count;
                             }
                         });
                         cumulativeTotal += transactionDoorCount;
@@ -509,17 +485,8 @@
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
-                                    x: {
-                                        type: 'time',
-                                        time: { unit: 'minute', stepSize: 15 },
-                                        title: { display: true, text: 'Time', font: { size: 14 } },
-                                        ticks: { font: { size: 12 } }
-                                    },
-                                    y: {
-                                        beginAtZero: true,
-                                        title: { display: true, text: 'Cumulative Count', font: { size: 14 } },
-                                        ticks: { font: { size: 12 } }
-                                    }
+                                    x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count' } }
                                 }
                             }
                         });
@@ -534,6 +501,8 @@
                 const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const margin = 10;
+                const graphWidth = pageWidth - 2 * margin;
+                const graphHeight = (400 * graphWidth) / 800; // Based on 800x400 canvas ratio
 
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
@@ -579,14 +548,88 @@
                     styles: { fontSize: 8 }
                 });
 
+                // Capture main chart (cumulative)
                 const canvas = document.getElementById('doorCountChart');
-                const graphImage = canvas.toDataURL('image/png');
-                const imgProps = doc.getImageProperties(graphImage);
-                const graphWidth = pageWidth - 2 * margin;
-                const graphHeight = (imgProps.height * graphWidth) / imgProps.width;
+                const mainGraphImage = canvas.toDataURL('image/png');
+
+                // Generate 15-minute interval bar charts
+                const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
+                const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
+                const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
+                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+
+                for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
+                    const intervalStart = new Date(time);
+                    const intervalEnd = new Date(time + interval);
+                    const intervalTransactions = this.transactions.filter(t => {
+                        const txTime = new Date(t.timestamp);
+                        return txTime >= intervalStart && txTime < intervalEnd;
+                    });
+
+                    if (intervalTransactions.length > 0) {
+                        // Calculate totals for this interval
+                        const intervalSummary = {};
+                        types.forEach(type => intervalSummary[type] = 0);
+                        let intervalTotal = 0;
+
+                        intervalTransactions.forEach(t => {
+                            const items = t.items.split('; ');
+                            items.forEach(item => {
+                                const [key, value] = item.split(': ');
+                                if (key && value) {
+                                    const [countStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
+                                    let type;
+                                    if (key.startsWith('Cash')) type = 'Cash';
+                                    else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                    else if (key.startsWith('Comp')) type = 'Comp';
+                                    else if (key.startsWith('Ticket')) type = 'Ticket';
+                                    if (types.includes(type)) intervalSummary[type] += count;
+                                }
+                            });
+                            intervalTotal += t.doorCount || 0;
+                        });
+
+                        // Create temporary canvas for bar chart
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = 800;
+                        tempCanvas.height = 400;
+                        document.body.appendChild(tempCanvas);
+
+                        // Create bar chart
+                        const barChart = new Chart(tempCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: types.concat('Total'),
+                                datasets: [{
+                                    label: 'Count',
+                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
+                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+
+                        // Capture bar chart image
+                        const barChartImage = tempCanvas.toDataURL('image/png');
+                        doc.addPage();
+                        doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
+                        doc.addImage(barChartImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
+
+                        // Clean up
+                        barChart.destroy();
+                        tempCanvas.remove();
+                    }
+                }
+
+                // Add main cumulative graph
                 doc.addPage();
-                doc.text('Payment Counts Over Time (15-Minute Intervals)', pageWidth / 2, margin, { align: 'center' });
-                doc.addImage(graphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
+                doc.text('Payment Counts Over Time (Full Session)', pageWidth / 2, margin, { align: 'center' });
+                doc.addImage(mainGraphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
