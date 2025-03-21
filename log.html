@@ -175,7 +175,10 @@
         let selectedSessionId = null;
 
         function formatItems(items) {
-            return Object.entries(items).map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`).join('; ');
+            return Object.entries(items).map(([key, data]) => {
+                const price = data.price !== undefined ? data.price : 0; // Default to 0 if price is undefined
+                return `${key}: ${data.count} @ $${price.toFixed(2)}`;
+            }).join('; ');
         }
 
         function colorCodeItems(items) {
@@ -337,7 +340,7 @@
                     transactions.forEach(t => {
                         Object.entries(t.items).forEach(([key, data]) => {
                             const count = data.count || 0;
-                            const price = data.price || 0;
+                            const price = data.price !== undefined ? data.price : 0; // Default to 0 if price is undefined
                             if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
                             itemSummary[key].people += count;
                             itemSummary[key].total += count * price;
