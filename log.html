@@ -297,7 +297,7 @@
                     const { data: allTransactions, error } = await supabase
                         .from('transactions')
                         .select('*')
-                        .order('sessionId', { ascending: false });
+                        .order('timestamp', { ascending: true }); // Order by timestamp ascending for cumulative calculations
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
                     const validTransactions = allTransactions.filter(t => t.sessionId != null);
@@ -330,11 +330,16 @@
                     const transactions = validTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    // Sort transactions by timestamp ascending for cumulative calculations
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+
+                    // Get all unique payment types from transactions
+                    const allTypes = [...new Set(transactions.flatMap(t => Object.keys(t.items)))];
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -377,8 +382,10 @@
                     `;
                     document.getElementById('totalsBody').innerHTML = totalsRow;
 
+                    // Filter nonzero transactions
+                    const nonzeroTransactions = transactions.filter(t => Object.values(t.items).some(item => item.count > 0));
                     const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = transactions.map(t => `
+                    transactionLogBody.innerHTML = nonzeroTransactions.map(t => `
                         <tr>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
                             <td>${colorCodeItems(formatItems(t.items))}</td>
@@ -389,55 +396,50 @@
                         </tr>
                     `).join('');
 
-                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-                    const transactionCounts = {};
-                    const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
-
-                    transactions.forEach(t => {
-                        const txTime = new Date(t.timestamp).getTime();
-                        const bin = Math.floor(txTime / interval) * interval;
-                        if (!transactionCounts[bin]) {
-                            transactionCounts[bin] = { total: 0 };
-                            types.forEach(type => transactionCounts[bin][type] = 0);
-                        }
-                        transactionCounts[bin].total++;
-                        Object.entries(t.items).forEach(([key, data]) => {
-                            let type;
-                            if (key.startsWith('Cash')) type = 'Cash';
-                            else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                            else if (key.startsWith('Comp')) type = 'Comp';
-                            else if (key.startsWith('Ticket')) type = 'Ticket';
-                            if (types.includes(type)) transactionCounts[bin][type] += data.count;
-                        });
+                    // Calculate cumulative door count
+                    let cumulativeDoorCount = 0;
+                    const doorCountData = transactions.map(t => {
+                        cumulativeDoorCount += t.doorCount || 0;
+                        return { x: new Date(t.timestamp), y: cumulativeDoorCount };
                     });
 
-                    const labels = Object.keys(transactionCounts).map(bin => new Date(parseInt(bin)));
-                    const datasets = types.map(type => ({
-                        label: type,
-                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()][type] || 0 })),
-                        borderColor: getColorForType(type),
-                        fill: false
-                    }));
-                    datasets.push({
-                        label: 'Total',
-                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()].total || 0 })),
+                    // Calculate cumulative counts for each payment type
+                    const typeDatasets = allTypes.map(type => {
+                        let cumulativeCount = 0;
+                        const data = transactions.map(t => {
+                            const count = t.items[type]?.count || 0;
+                            cumulativeCount += count;
+                            return { x: new Date(t.timestamp), y: cumulativeCount };
+                        });
+                        return {
+                            label: type,
+                            data,
+                            borderColor: getColorForType(type),
+                            fill: false
+                        };
+                    });
+
+                    // Add the total door count dataset
+                    typeDatasets.push({
+                        label: 'Total Door Count',
+                        data: doorCountData,
                         borderColor: '#808080',
                         fill: false
                     });
 
                     if (chart) {
-                        chart.data.labels = labels;
-                        chart.data.datasets = datasets;
+                        chart.data.labels = transactions.map(t => new Date(t.timestamp));
+                        chart.data.datasets = typeDatasets;
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
-                            data: { labels, datasets },
+                            data: { datasets: typeDatasets },
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions' } }
+                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count' } }
                                 }
                             }
                         });
@@ -598,7 +600,7 @@
                         maintainAspectRatio: false,
                         scales: {
                             x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                            y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
                         plugins: {
                             legend: { labels: { font: { size: 14 } } }
@@ -625,7 +627,8 @@
                 'Ticket': '#1a73e8',
                 'Total': '#808080'
             };
-            return colors[type] || '#888888';
+            // Generate a color if type is not predefined
+            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
         }
 
         function waitForChartRender(chart) {
