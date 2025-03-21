@@ -20,80 +20,96 @@
             color: #e0e0e0;
         }
         .container {
-            width: 99%; /* Updated to 99% of screen width */
+            width: 99%;
         }
         .grid {
             display: grid;
-            grid-template-columns: 2fr 2fr 1fr; /* Three columns: graph, middle panel, right panel */
+            grid-template-columns: 2fr 2fr 1fr;
             grid-template-rows: 50px auto;
             gap: 10px;
         }
         .header {
-            grid-column: 1 / -1; /* Spans all three columns */
+            grid-column: 1 / -1;
             grid-row: 1;
             text-align: center;
             font-size: 24px;
         }
         .graph {
-            grid-column: 1; /* First column for graph */
+            grid-column: 1;
             grid-row: 2;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
-            height: 720px; /* Fixed height */
+            height: calc(100vh - 80px);
             display: flex;
             flex-direction: column;
         }
         .middle-panel {
-            grid-column: 2; /* Second column for tally sheet and transaction log */
+            grid-column: 2;
             grid-row: 2;
             display: flex;
             flex-direction: column;
-            height: 720px; /* Fixed height */
+            height: calc(100vh - 80px);
         }
         .tally-sheet {
-            height: 200px; /* Fixed height for tally sheet; adjust as needed */
-            overflow-y: auto; /* Scroll if content exceeds height */
+            height: 200px;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        .tally-table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .tally-sheet table {
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .tally-sheet th, .tally-sheet td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
         }
         .transaction-log {
-            flex: 1; /* Takes remaining space in middle-panel */
-            overflow-y: auto; /* Scroll if content exceeds height */
+            flex: 1;
+            overflow-y: auto;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
         }
         .right-panel {
-            grid-column: 3; /* Third column for filters and summary */
+            grid-column: 3;
             grid-row: 2;
             display: flex;
             flex-direction: column;
-            height: 720px; /* Fixed height */
+            height: calc(100vh - 80px);
             gap: 10px;
         }
         .filters, .summary {
-            flex: 1; /* Each takes half the space in right-panel */
+            flex: 1;
             overflow-y: auto;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
         }
         .graph-wrapper {
-            flex: 1; /* Allows graph to fill remaining space */
+            flex: 1;
             min-height: 0;
         }
         #doorCountChart {
             width: 100%;
             height: 100%;
         }
-        .transaction-log table, .tally-sheet table {
+        .transaction-log table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
         }
-        .transaction-log th, .transaction-log td, .tally-sheet th, .tally-sheet td {
+        .transaction-log th, .transaction-log td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #444;
@@ -219,16 +235,28 @@
             <div class="middle-panel">
                 <div class="tally-sheet">
                     <h2>Tally Sheet</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="payment-type-header">Payment Type</th>
-                                <th>People</th>
-                                <th>Total Amount</th>
-                                <th>Price per Person</th>
+                    <div class="tally-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-payment-type">Payment Type</th>
+                                    <th class="col-people">People</th>
+                                    <th class="col-total-amount">Total Amount</th>
+                                    <th class="col-price-per-person">Price per Person</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryBody"></tbody>
+                        </table>
+                    </div>
+                    <table class="tally-totals">
+                        <tbody id="summaryTotals">
+                            <tr class="total-row">
+                                <td class="col-payment-type"><strong>TOTALS</strong></td>
+                                <td class="col-people"><strong>0</strong></td>
+                                <td class="col-total-amount"><strong>$0.00</strong></td>
+                                <td class="col-price-per-person">#DIV/0!</td>
                             </tr>
-                        </thead>
-                        <tbody id="summaryBody"></tbody>
+                        </tbody>
                     </table>
                 </div>
                 <div class="transaction-log">
@@ -365,6 +393,14 @@
                             chart.update();
                         }
                         document.getElementById('summaryBody').innerHTML = '';
+                        document.getElementById('summaryTotals').innerHTML = `
+                            <tr class="total-row">
+                                <td class="col-payment-type"><strong>TOTALS</strong></td>
+                                <td class="col-people"><strong>0</strong></td>
+                                <td class="col-total-amount"><strong>$0.00</strong></td>
+                                <td class="col-price-per-person">#DIV/0!</td>
+                            </tr>
+                        `;
                         document.getElementById('transactionLogBody').innerHTML = '';
                         document.getElementById('totalDoorCount').textContent = '0';
                         document.getElementById('totalSales').textContent = '0.00';
@@ -375,7 +411,7 @@
                     const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Latest first
+                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
@@ -405,23 +441,26 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
-                    const summaryBody = document.getElementById('summaryBody');
-                    summaryBody.innerHTML = Object.entries(itemSummary)
+                    const summaryRows = Object.entries(itemSummary)
                         .map(([key, data]) => `
                             <tr>
-                                <td>${key}</td>
-                                <td>${data.people}</td>
-                                <td>$${data.total.toFixed(2)}</td>
-                                <td>$${data.price.toFixed(2)}</td>
+                                <td class="col-payment-type">${key}</td>
+                                <td class="col-people">${data.people}</td>
+                                <td class="col-total-amount">$${data.total.toFixed(2)}</td>
+                                <td class="col-price-per-person">$${data.price.toFixed(2)}</td>
                             </tr>
-                        `).join('') + `
-                            <tr class="total-row">
-                                <td><strong>TOTALS</strong></td>
-                                <td><strong>${totalDoorCount}</strong></td>
-                                <td><strong>$${totalSales.toFixed(2)}</strong></td>
-                                <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
-                            </tr>
-                        `;
+                        `).join('');
+                    const totalsRow = `
+                        <tr class="total-row">
+                            <td class="col-payment-type"><strong>TOTALS</strong></td>
+                            <td class="col-people"><strong>${totalDoorCount}</strong></td>
+                            <td class="col-total-amount"><strong>$${totalSales.toFixed(2)}</strong></td>
+                            <td class="col-price-per-person">${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
+                        </tr>
+                    `;
+
+                    document.getElementById('summaryBody').innerHTML = summaryRows;
+                    document.getElementById('summaryTotals').innerHTML = totalsRow;
 
                     const transactionLogBody = document.getElementById('transactionLogBody');
                     transactionLogBody.innerHTML = transactions.map(t => `
@@ -534,8 +573,13 @@
                 });
 
                 const tallyTable = document.querySelector('.tally-sheet table');
+                const tallyTotalsTable = document.querySelector('.tally-totals');
                 const tallyData = Array.from(tallyTable.querySelectorAll('tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
+                ).concat(
+                    Array.from(tallyTotalsTable.querySelectorAll('tr')).map(row => 
+                        Array.from(row.cells).map(cell => cell.innerText)
+                    )
                 );
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 10,
