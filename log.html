@@ -463,11 +463,14 @@
                         .order('sessionId', { ascending: false });
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
-                    const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
+                    // Filter out transactions with null or undefined sessionId
+                    const validTransactions = allTransactions.filter(t => t.sessionId != null);
+                    
+                    const allSessionIds = [...new Set(validTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
                     sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
                         allSessionIds.map(id => {
-                            const sessionTx = allTransactions.find(t => t.sessionId === id);
+                            const sessionTx = validTransactions.find(t => t.sessionId === id);
                             const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
                             return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
                         }).join('');
@@ -488,7 +491,7 @@
                         return;
                     }
 
-                    const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
+                    const transactions = validTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
                     transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
