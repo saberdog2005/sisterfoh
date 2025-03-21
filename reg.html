@@ -68,50 +68,50 @@
         <main class="container">
             <div id="editInstructions" class="hidden">Drag buttons to reorder or click to toggle active state. Click 'Save Layout' when done.</div>
             <div class="button-container">
-                <div class="product-item" data-item="Credit Card" data-price="0" data-active="true">
-                    <button class="increment-btn cc">Credit Card</button>
+                <div class="product-item" data-item="CC" data-price="0" data-active="true">
+                    <button class="increment-btn cc">CC</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Cash $5" data-price="5" data-active="true">
-                    <button class="increment-btn cash">Cash $5</button>
+                <div class="product-item" data-item="CASH $5" data-price="5" data-active="true">
+                    <button class="increment-btn cash">CASH $5</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Cash $10" data-price="10" data-active="true">
-                    <button class="increment-btn cash">Cash $10</button>
+                <div class="product-item" data-item="CASH $10" data-price="10" data-active="true">
+                    <button class="increment-btn cash">CASH $10</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Cash $15" data-price="15" data-active="true">
-                    <button class="increment-btn cash">Cash $15</button>
+                <div class="product-item" data-item="CASH $15" data-price="15" data-active="true">
+                    <button class="increment-btn cash">CASH $15</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Cash $20" data-price="20" data-active="true">
-                    <button class="increment-btn cash">Cash $20</button>
+                <div class="product-item" data-item="CASH $20" data-price="20" data-active="true">
+                    <button class="increment-btn cash">CASH $20</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Comp" data-price="0" data-active="true">
-                    <button class="increment-btn comp">Comp</button>
+                <div class="product-item" data-item="COMP" data-price="0" data-active="true">
+                    <button class="increment-btn comp">COMP</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
                 </div>
-                <div class="product-item" data-item="Ticket" data-price="10" data-active="true">
-                    <button class="increment-btn ticket">Ticket</button>
+                <div class="product-item" data-item="TICKET" data-price="10" data-active="true">
+                    <button class="increment-btn ticket">TICKET</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
@@ -127,7 +127,7 @@
                 <select id="newButtonType" required>
                     <option value="">Select Type</option>
                     <option value="CASH">CASH</option>
-                    <option value="CC TRANS">CC TRANS</option>
+                    <option value="CC">CC</option>
                     <option value="TICKET">TICKET</option>
                     <option value="COMP">COMP</option>
                 </select>
@@ -216,8 +216,7 @@
                 this.elements.eventName.value = localStorage.getItem('lastEventName') || '';
                 this.elements.cashierName.value = localStorage.getItem('lastCashierName') || '';
 
-                this.checkSessionStatus();
-                this.loadSessionDoorCount();
+                this.loadSessionState();
                 this.initializeButtonStates();
                 this.bindEvents();
                 this.loadButtonPositions();
@@ -257,6 +256,24 @@
                 this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
                 this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
                 this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+            }
+
+            loadSessionState = () => {
+                const sessionStarted = localStorage.getItem('sessionStarted') === 'true';
+                if (sessionStarted) {
+                    this.state.sessionStarted = true;
+                    this.state.sessionId = localStorage.getItem('sessionId');
+                    this.state.sessionDoorCount = parseInt(localStorage.getItem('sessionDoorCount') || '0');
+                    this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
+                    this.elements.toggleSalesBtn.textContent = 'Close Sales';
+                    this.elements.toggleSalesBtn.classList.remove('open-btn');
+                    this.elements.toggleSalesBtn.classList.add('close-btn');
+                    const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                    inputs.forEach(input => {
+                        input.value = localStorage.getItem(input.id) || input.value;
+                        input.disabled = true;
+                    });
+                }
             }
 
             toggleEditMode = () => {
@@ -307,8 +324,6 @@
                     this.showError('Please fill in all required fields');
                     return;
                 }
-                localStorage.setItem('lastEventName', this.elements.eventName.value);
-                localStorage.setItem('lastCashierName', this.elements.cashierName.value);
                 this.state.sessionStarted = true;
                 this.state.sessionId = `${this.elements.eventDate.value}-${this.elements.eventVenue.value}-${this.elements.cashierName.value}-${Date.now()}`;
                 this.state.sessionDoorCount = 0;
@@ -316,8 +331,17 @@
                 this.elements.toggleSalesBtn.textContent = 'Close Sales';
                 this.elements.toggleSalesBtn.classList.remove('open-btn');
                 this.elements.toggleSalesBtn.classList.add('close-btn');
+                localStorage.setItem('sessionStarted', 'true');
+                localStorage.setItem('sessionId', this.state.sessionId);
+                localStorage.setItem('sessionDoorCount', '0');
+                localStorage.setItem('eventDate', this.elements.eventDate.value);
+                localStorage.setItem('eventVenue', this.elements.eventVenue.value);
+                localStorage.setItem('eventName', this.elements.eventName.value);
+                localStorage.setItem('cashierName', this.elements.cashierName.value);
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = true);
                 this.showSuccess('Session started');
-                this.checkSessionStatus();
+                channel.postMessage({ type: 'new_session', sessionId: this.state.sessionId });
             }
 
             confirmCloseSales = () => {
@@ -333,7 +357,6 @@
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
-                localStorage.setItem('sessionDoorCount', '0');
                 this.elements.counts.forEach(count => count.textContent = '0');
                 this.elements.cashTotal.textContent = '0.00';
                 this.elements.sessionDoorCount.textContent = '0';
@@ -343,8 +366,12 @@
                 this.elements.pinModal.style.display = 'none';
                 this.elements.pinInput.value = '';
                 this.elements.pinError.textContent = '';
+                localStorage.removeItem('sessionStarted');
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('sessionDoorCount');
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = false);
                 this.showSuccess('Session closed');
-                this.checkSessionStatus();
             }
 
             cancelPinModal = () => {
@@ -382,7 +409,7 @@
                     doorCount: this.state.doorCount,
                     note: this.elements.noteInput.value,
                     timestamp: new Date().toISOString(),
-                    status: 'completed'
+                    status: isClosing ? 'closed' : 'completed'
                 };
 
                 try {
@@ -390,7 +417,7 @@
                         .from('transactions')
                         .insert([transactionData]);
                     if (error) throw error;
-                    channel.postMessage({ type: 'transaction', data: transactionData });
+                    channel.postMessage({ type: 'new_transaction', data: transactionData });
                     if (!isClosing) {
                         this.state.currentItems.clear();
                         this.state.cashTotal = 0;
@@ -406,28 +433,6 @@
                 } finally {
                     this.state.isLogging = false;
                 }
-            }
-
-            checkSessionStatus = () => {
-                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                if (this.state.sessionStarted) {
-                    this.elements.toggleSalesBtn.textContent = 'Close Sales';
-                    this.elements.toggleSalesBtn.classList.remove('open-btn');
-                    this.elements.toggleSalesBtn.classList.add('close-btn');
-                    this.elements.editLayoutBtn.style.display = 'none';
-                    inputs.forEach(input => input.disabled = true);
-                } else {
-                    this.elements.toggleSalesBtn.textContent = 'Open Sales';
-                    this.elements.toggleSalesBtn.classList.remove('close-btn');
-                    this.elements.toggleSalesBtn.classList.add('open-btn');
-                    this.elements.editLayoutBtn.style.display = 'block';
-                    inputs.forEach(input => input.disabled = false);
-                }
-            }
-
-            loadSessionDoorCount = () => {
-                this.state.sessionDoorCount = parseInt(localStorage.getItem('sessionDoorCount') || '0');
-                this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
             }
 
             showSuccess = (message) => {
@@ -454,7 +459,7 @@
                 this.elements.counts.get(item).textContent = count;
                 this.state.cashTotal += price;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                if (item === 'Ticket') {
+                if (item.startsWith('TICKET')) {
                     this.state.doorCount += 1;
                     this.state.sessionDoorCount += 1;
                     this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
@@ -476,7 +481,7 @@
                     this.elements.counts.get(item).textContent = newCount;
                     this.state.cashTotal -= price;
                     this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
-                    if (item === 'Ticket' && this.state.doorCount > 0) {
+                    if (item.startsWith('TICKET') && this.state.doorCount > 0) {
                         this.state.doorCount -= 1;
                         this.state.sessionDoorCount -= 1;
                         this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
@@ -500,7 +505,7 @@
                     this.showError('Please fill in all fields for the new button');
                     return;
                 }
-                const classMap = { 'CASH': 'cash', 'CC TRANS': 'cc', 'TICKET': 'ticket', 'COMP': 'comp' };
+                const classMap = { 'CASH': 'cash', 'CC': 'cc', 'TICKET': 'ticket', 'COMP': 'comp' };
                 const btnClass = classMap[type] || 'cash';
                 const newButton = document.createElement('div');
                 newButton.className = 'product-item';
