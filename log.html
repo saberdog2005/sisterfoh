@@ -20,6 +20,7 @@
             color: #e0e0e0;
         }
         .container {
+            width: 80%; /* Set content to 80% of screen width */
             max-width: 1200px;
             margin: auto;
         }
@@ -27,6 +28,11 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
+        }
+        .grid.fullscreen-mode .col-1,
+        .grid.fullscreen-mode .col-2,
+        .grid.fullscreen-mode .col-4 {
+            display: none; /* Hide other columns in full-screen mode */
         }
         .header {
             grid-column: 1 / -1;
@@ -129,6 +135,10 @@
         .transaction-table {
             max-height: 300px;
             overflow-y: auto;
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
         }
     </style>
 </head>
@@ -258,26 +268,25 @@
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('applyFilters').addEventListener('click', () => {
                     selectedSessionId = document.getElementById('sessionSelect').value || null;
+                    console.log('Selected session ID (Apply):', selectedSessionId);
                     this.updateLog();
                 });
                 document.getElementById('sessionSelect').addEventListener('change', (event) => {
                     selectedSessionId = event.target.value || null;
+                    console.log('Selected session ID (Change):', selectedSessionId);
                     this.updateLog();
                 });
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graphContainer = document.querySelector('.col-3');
                     const grid = document.querySelector('.grid');
-                    const otherCols = document.querySelectorAll('.col-1, .col-2, .col-4');
                     if (graphContainer.classList.contains('fullscreen')) {
                         graphContainer.classList.remove('fullscreen');
-                        grid.style.display = 'grid'; // Restore original grid layout
-                        otherCols.forEach(col => col.style.display = 'block'); // Show other columns
+                        grid.classList.remove('fullscreen-mode');
                     } else {
                         graphContainer.classList.add('fullscreen');
-                        grid.style.display = 'block'; // Adjust for full-screen mode
-                        otherCols.forEach(col => col.style.display = 'none'); // Hide other columns
+                        grid.classList.add('fullscreen-mode');
                     }
-                    if (chart) chart.resize(); // Resize chart to fit new dimensions
+                    if (chart) chart.resize();
                 });
             }
 
@@ -335,8 +344,8 @@
 
                     // Filter transactions by selected session
                     const transactions = allTransactions.filter(t => t.sessionId === selectedSessionId);
-                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                     console.log('Transactions for session', selectedSessionId, ':', transactions.length);
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     // Update session info
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
@@ -412,7 +421,7 @@
                     const totalDataset = {
                         label: 'Total',
                         data: [],
-                        borderColor: '#32CD32', // Lime green
+                        borderColor: '#808080', // Grey
                         fill: false
                     };
                     let cumulativeCounts = {};
@@ -462,14 +471,28 @@
                             data: { datasets },
                             options: {
                                 scales: {
-                                    x: { 
-                                        type: 'time', 
+                                    x: {
+                                        type: 'time',
                                         time: { unit: 'minute', stepSize: 15 }, // 15-minute intervals
-                                        title: { display: true, text: 'Time' } 
+                                        title: {
+                                            display: true,
+                                            text: 'Time',
+                                            font: { size: 14 } // Increased font size
+                                        },
+                                        ticks: {
+                                            font: { size: 12 } // Increased tick font size
+                                        }
                                     },
-                                    y: { 
-                                        beginAtZero: true, 
-                                        title: { display: true, text: 'Cumulative Count' } 
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Cumulative Count',
+                                            font: { size: 14 } // Increased font size
+                                        },
+                                        ticks: {
+                                            font: { size: 12 } // Increased tick font size
+                                        }
                                     }
                                 }
                             }
@@ -555,7 +578,7 @@
                 'Credit Card': '#d32f2f',
                 'Comp': '#ffa500',
                 'Ticket': '#1a73e8',
-                'Total': '#32CD32' // Lime green
+                'Total': '#808080' // Grey
             };
             return colors[type] || '#888888';
         }
