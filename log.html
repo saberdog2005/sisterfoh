@@ -42,7 +42,7 @@
         .tally-sheet th, .transaction-log th { background-color: #3e3e3e; position: static; }
         .tally-sheet td, .transaction-log td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
         th { background-color: #3e3e3e; color: #ffffff; }
-        .scrollable-body { overflow-y: visible; }
+        .tally-sheet .scrollable-body { max-height: 200px; overflow-y: auto; } /* Added for scrolling */
         .transaction-log .scrollable-body { max-height: 300px; overflow-y: auto; }
         .summary h3 { font-size: 18px; }
         .filters label, .filters select, .filters button { display: block; margin: 10px 0; width: 100%; padding: 8px; font-size: 16px; }
@@ -175,10 +175,7 @@
         let selectedSessionId = null;
 
         function formatItems(items) {
-            return Object.entries(items).map(([key, data]) => {
-                const price = data.price !== undefined ? data.price : 0; // Default to 0 if price is undefined
-                return `${key}: ${data.count} @ $${price.toFixed(2)}`;
-            }).join('; ');
+            return Object.entries(items).map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`).join('; ');
         }
 
         function colorCodeItems(items) {
@@ -340,7 +337,7 @@
                     transactions.forEach(t => {
                         Object.entries(t.items).forEach(([key, data]) => {
                             const count = data.count || 0;
-                            const price = data.price !== undefined ? data.price : 0; // Default to 0 if price is undefined
+                            const price = data.price || 0;
                             if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
                             itemSummary[key].people += count;
                             itemSummary[key].total += count * price;
@@ -359,7 +356,7 @@
                                 <td>${key}</td>
                                 <td>${data.people}</td>
                                 <td>$${data.total.toFixed(2)}</td>
-                                <td>$${data.people ? (data.total / data.people).toFixed(2) : data.price.toFixed(2)}</td>
+                                <td>$${data.price.toFixed(2)}</td>
                             </tr>
                         `).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
@@ -388,7 +385,7 @@
 
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
                     const transactionCounts = {};
-                    const interval = 30 * 60 * 1000;
+                    const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
 
                     transactions.forEach(t => {
                         const txTime = new Date(t.timestamp).getTime();
@@ -511,10 +508,12 @@
                     styles: { fontSize: 8 }
                 });
 
+                // Start interval bar charts on a new page
                 doc.addPage();
+
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 30 * 60 * 1000;
+                const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
                 const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
 
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
@@ -579,6 +578,7 @@
                     }
                 }
 
+                // Main chart on the last page
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
