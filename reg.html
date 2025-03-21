@@ -609,7 +609,7 @@
 
                 // Log session start
                 const sessionData = {
-                    session_id: this.state.sessionId,
+                    id: this.state.sessionId,
                     sessionId: parseInt(this.state.sessionId),
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
@@ -659,7 +659,7 @@
 
                 // Log session end
                 const sessionData = {
-                    session_id: this.state.sessionId,
+                    id: this.state.sessionId,
                     sessionId: parseInt(this.state.sessionId),
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
@@ -709,7 +709,7 @@
 
                 this.state.isLogging = true;
                 const transactionData = {
-                    session_id: this.state.sessionId,
+                    id: this.state.sessionId,
                     sessionId: parseInt(this.state.sessionId),
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
