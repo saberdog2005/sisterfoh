@@ -63,6 +63,10 @@
             text-align: left;
             border-bottom: 1px solid #444;
         }
+        th {
+            background-color: #3e3e3e;
+            color: #ffffff;
+        }
         #exportBtn {
             margin-top: 10px;
             padding: 10px;
@@ -128,7 +132,7 @@
             <h1 class="header">Sales Log</h1>
             <div class="col-1">
                 <h2>Filters</h2>
-                <label>Session: <select id="sessionSelect"><option value="">Select Session</option></select></label><br>
+                <label>Cashier Session: <select id="sessionSelect"><option value="">Select Cashier Session</option></select></label><br>
                 <button id="applyFilters">Apply</button>
             </div>
             <div class="col-2">
@@ -139,7 +143,7 @@
                 <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
             </div>
             <div class="col-3">
-                <h2>Door Count Over Time</h2>
+                <h2>Payment Counts Over Time</h2>
                 <canvas id="doorCountChart"></canvas>
                 <div class="transaction-table">
                     <h2>Transaction Log</h2>
@@ -150,6 +154,7 @@
                                 <th>Items</th>
                                 <th>Cash Total</th>
                                 <th>Door Count</th>
+                                <th>Cashier</th>
                                 <th>Note</th>
                             </tr>
                         </thead>
@@ -163,8 +168,8 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>DOOR Price</th>
-                                <th>PEOPLE</th>
+                                <th>Payment Type</th>
+                                <th>People</th>
                                 <th>Total Amount</th>
                                 <th>Price per Person</th>
                             </tr>
@@ -198,17 +203,29 @@
 
         class SalesLog {
             constructor() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const sessionIdFromUrl = urlParams.get('sessionId');
+                const exportFlag = urlParams.get('export');
+
+                if (sessionIdFromUrl) {
+                    selectedSessionId = sessionIdFromUrl;
+                }
+
                 this.updateInterval = null;
                 this.init().then(() => {
                     this.updateLog();
+                    if (exportFlag === 'true') {
+                        this.exportPDF();
+                    }
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
                     channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') this.updateLog();
+                        if (event.data.type === 'new_transaction') {
+                            this.updateLog();
+                        }
                     };
                     supabase
                         .channel('public:transactions')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
-                            console.log('New transaction received:', payload.new);
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
                             this.updateLog();
                         })
                         .subscribe(status => {
@@ -236,30 +253,37 @@
 
             async updateLog() {
                 try {
-                    // Fetch transactions
-                    let query = supabase.from('transactions').select('*');
-                    if (selectedSessionId) {
-                        query = query.eq('sessionId', selectedSessionId);
-                    }
-                    const { data: allTransactions, error } = await query.order('timestamp', { ascending: false });
+                    // Fetch all transactions, ordered by sessionId descending
+                    const { data: allTransactions, error } = await supabase
+                        .from('transactions')
+                        .select('*')
+                        .order('sessionId', { ascending: false });
                     if (error) {
                         console.error('Error fetching transactions:', error);
                         throw new Error(error.message);
                     }
                     console.log('Fetched transactions:', allTransactions.length);
                     if (allTransactions.length === 0) {
-                        console.log('No transactions found. Check RLS policies in Supabase.');
+                        console.log('No transactions found. Check RLS policies or data insertion.');
                     }
 
-                    // Update session dropdown
+                    // Update session dropdown with session IDs and cashier names
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = `<option value="">Select Session</option>` + 
-                        allSessionIds.map(id => `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${id}</option>`).join('');
+                    sessionSelect.innerHTML = `<option value="">Select Cashier Session</option>` +
+                        allSessionIds.map(id => {
+                            const sessionTx = allTransactions.find(t => t.sessionId === id);
+                            const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
+                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
+                        }).join('');
 
-                    const activeSessionId = selectedSessionId || localStorage.getItem('activeSessionId');
-                    if (!activeSessionId) {
-                        document.getElementById('sessionInfo').innerHTML = '<p>No session selected</p>';
+                    // If no session selected, use the most recent session
+                    if (!selectedSessionId && allTransactions.length > 0) {
+                        selectedSessionId = allTransactions[0].sessionId;
+                    }
+
+                    if (!selectedSessionId) {
+                        document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
                         if (chart) {
                             chart.data.datasets = [];
                             chart.update();
@@ -272,12 +296,12 @@
                         return;
                     }
 
-                    const transactions = allTransactions.filter(t => t.sessionId === activeSessionId);
+                    const transactions = allTransactions.filter(t => t.sessionId === selectedSessionId);
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                    console.log('Transactions for session', activeSessionId, ':', transactions.length);
+                    console.log('Transactions for session', selectedSessionId, ':', transactions.length);
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${activeSessionId}</p><p>Cashiers: ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
 
                     // Tally Sheet Data
                     const itemSummary = {};
@@ -303,8 +327,6 @@
                         totalSales += t.cashTotal || 0;
                     });
 
-                    console.log('Item Summary:', itemSummary);
-
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
@@ -320,9 +342,9 @@
                             </tr>
                         `).join('') + `
                             <tr>
-                                <td>TOTALS</td>
-                                <td>${totalDoorCount}</td>
-                                <td>$${totalSales.toFixed(2)}</td>
+                                <td><strong>TOTALS</strong></td>
+                                <td><strong>${totalDoorCount}</strong></td>
+                                <td><strong>$${totalSales.toFixed(2)}</strong></td>
                                 <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
                             </tr>
                         `;
@@ -335,32 +357,62 @@
                             <td>${t.items}</td>
                             <td>$${t.cashTotal.toFixed(2)}</td>
                             <td>${t.doorCount}</td>
+                            <td>${t.cashierName}</td>
                             <td>${t.note || ''}</td>
                         </tr>
                     `).join('');
 
-                    // Graph Data: Cumulative Door Count by Cashier
-                    const cashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    const datasets = cashiers.map(cashier => ({
-                        label: cashier,
+                    // Graph Data: Cumulative Counts by Payment Type
+                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+                    const datasets = types.map(type => ({
+                        label: type,
                         data: [],
-                        borderColor: getColorForType(cashier),
+                        borderColor: getColorForType(type),
                         fill: false
                     }));
-                    let cumulativeDoorCounts = {};
-                    cashiers.forEach(cashier => cumulativeDoorCounts[cashier] = 0);
+                    const totalDataset = {
+                        label: 'Total',
+                        data: [],
+                        borderColor: '#ffffff',
+                        fill: false
+                    };
+                    let cumulativeCounts = {};
+                    types.forEach(type => cumulativeCounts[type] = 0);
+                    let cumulativeTotal = 0;
 
                     transactions.forEach(t => {
-                        cumulativeDoorCounts[t.cashierName] += t.doorCount || 0;
-                        cashiers.forEach(cashier => {
-                            datasets.find(d => d.label === cashier).data.push({
+                        const items = t.items.split('; ');
+                        let transactionDoorCount = 0;
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const [countStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10) || 0;
+                                transactionDoorCount += count;
+                                let type;
+                                if (key.startsWith('Cash')) type = 'Cash';
+                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                else if (key.startsWith('Comp')) type = 'Comp';
+                                else if (key.startsWith('Ticket')) type = 'Ticket';
+                                if (types.includes(type)) {
+                                    cumulativeCounts[type] += count;
+                                }
+                            }
+                        });
+                        cumulativeTotal += transactionDoorCount;
+                        types.forEach(type => {
+                            datasets.find(d => d.label === type).data.push({
                                 x: t.timestamp,
-                                y: cumulativeDoorCounts[cashier]
+                                y: cumulativeCounts[type]
                             });
+                        });
+                        totalDataset.data.push({
+                            x: t.timestamp,
+                            y: cumulativeTotal
                         });
                     });
 
-                    console.log('Graph Datasets:', datasets);
+                    datasets.push(totalDataset);
 
                     if (chart) {
                         chart.data.datasets = datasets;
@@ -378,7 +430,7 @@
                                     },
                                     y: { 
                                         beginAtZero: true, 
-                                        title: { display: true, text: 'Door Count' } 
+                                        title: { display: true, text: 'Cumulative Count' } 
                                     }
                                 }
                             }
@@ -399,25 +451,19 @@
                 const pdfWidth = doc.internal.pageSize.getWidth();
                 const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
                 doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                doc.save('sales_log.pdf');
+                doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
         }
 
         function getColorForType(type) {
             const colors = {
-                'Cash $5': '#2e7d32',
-                'Cash $10': '#2e7d32',
-                'Cash $15': '#2e7d32',
-                'Cash $20': '#2e7d32',
+                'Cash': '#2e7d32',
                 'Credit Card': '#d32f2f',
+                'Comp': '#ffa500',
                 'Ticket': '#1a73e8',
-                'Comp': '#ffa500'
+                'Total': '#ffffff'
             };
-            if (!colors[type]) {
-                const hash = type.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                return `hsl(${hash % 360}, 70%, 50%)`;
-            }
-            return colors[type];
+            return colors[type] || '#888888';
         }
 
         function isLoggedIn() {
