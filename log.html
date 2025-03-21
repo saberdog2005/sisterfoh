@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Added CSP Meta Tag -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline';">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Updated jsPDF to version 2.5.1 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -53,8 +56,9 @@
             flex-direction: column;
             gap: 10px;
         }
+        /* Increased tally-sheet height from 200px to 300px */
         .tally-sheet {
-            flex: 0 0 200px;
+            flex: 0 0 300px;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
@@ -811,10 +815,11 @@
             }).join('; ');
         }
 
+        /* Updated waitForChartRender to wait 500ms */
         function waitForChartRender(chart) {
             return new Promise(resolve => {
                 chart.update();
-                setTimeout(resolve, 100);
+                setTimeout(resolve, 500);
             });
         }
 
