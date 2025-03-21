@@ -450,13 +450,8 @@
                     sessionSelect.value = selectedSessionId;
                     transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                    const { data: sessionData, error: sessionError } = await supabase
-                        .from('transactions')
-                        .select('eventName')
-                        .eq('sessionId', selectedSessionId)
-                        .single();
-                    if (sessionError) throw new Error(`Error fetching session data: ${sessionError.message}`);
-                    const eventName = sessionData.eventName;
+                    // Get eventName from the first transaction, default to 'No Event' if none exist
+                    const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
