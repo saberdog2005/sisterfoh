@@ -236,7 +236,7 @@
                         <button class="minus">-</button>
                     </div>
                 </div>
-                  <div class="product-item" data-item="Cash $15" data-price="15" data-active="true">
+                <div class="product-item" data-item="Cash $15" data-price="15" data-active="true">
                     <button class="increment-btn cash">Cash $15</button>
                     <div class="control-row">
                         <span class="count">0</span>
@@ -251,23 +251,28 @@
                     </div>
                 </div>
                 <div class="product-item" data-item="Comp" data-price="0" data-active="true">
-        <button class="increment-btn comp">Comp</button>
-        <div class="control-row">
-            <span class="count">0</span>
-            <button class="minus">-</button>
-        </div>
-    </div>
+                    <button class="increment-btn comp">Comp</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
+                <div class="product-item" data-item="Ticket" data-price="10" data-active="true">
+                    <button class="increment-btn ticket">Ticket $10</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                </div>
             </div>
-               <div class="note-section">
+            <div class="note-section">
                 <label for="noteInput">Add a note...</label>
                 <textarea id="noteInput" placeholder="Add a note..."></textarea>
             </div>
-       
             <button id="logSaleBtn">Log Sale</button>
-      
-                    <div class="totals-container">
-                <div>Cash Total: $<span id="cashTotal">0.00</span></div>
-                <div>Thru Door: <span id="doorCount">0</span></div>
+            <div class="totals-container">
+                <h3 style="color: pink;">Cash Total: $<span id="cashTotal">0.00</span></h3>
+                <h3 style="color: pink;">Thru Door: <span id="doorCount">0</span></h3>
             </div>
         </main>
         <footer class="footer">
@@ -289,7 +294,7 @@
 
         <div id="addButtonForm">
             <h3>Add New Button</h3>
-            <input type="text" id="newButtonType" placeholder="Type (e.g., CASH, CC TRANS)">
+            <input type="text" id="newButtonType" placeholder="Type (e.g., CASH, CC TRANS, TICKET, COMP)">
             <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
             <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
             <button id="submitNewButton">Submit</button>
@@ -415,7 +420,7 @@
             }
 
             updateTotals(priceDelta, countDelta, item) {
-                if (item.startsWith('Cash') || item === 'CASH (CUSTOM)') this.state.cashTotal += priceDelta;
+                if (item.startsWith('Cash')) this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
