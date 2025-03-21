@@ -18,6 +18,7 @@
             padding: 10px;
             background-color: #1e1e1e;
             color: #e0e0e0;
+            overflow: hidden; /* Prevents body scrolling */
         }
         .container {
             width: 99%;
@@ -26,9 +27,10 @@
         .grid {
             display: grid;
             grid-template-columns: 2fr 2fr 1.5fr;
-            grid-template-rows: auto; /* No fixed header row */
+            grid-template-rows: auto;
             gap: 10px;
-            height: 100%; /* Fills container */
+            height: 100%;
+            transition: grid-template-columns 0.2s ease; /* Smooth transition */
         }
         .graph {
             grid-column: 1;
@@ -48,7 +50,7 @@
             height: 100%;
         }
         .tally-sheet {
-            height: 300px; /* Fixed height, adjustable if needed */
+            height: 300px;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
@@ -88,13 +90,13 @@
         .filters, .summary {
             flex: 1;
             overflow-y: auto;
-            overflow-x: hidden; /* Prevents horizontal scrolling */
+            overflow-x: hidden;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
         }
         .filters select {
-            max-width: 100%; /* Ensures select fits container */
+            max-width: 100%;
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
@@ -187,8 +189,23 @@
             color: #d32f2f;
             margin-top: 10px;
         }
+        /* Full-screen styles */
         .graph.fullscreen {
-            height: 100%; /* Expands within column */
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: calc(100vw - 20px);
+            height: calc(100vh - 20px);
+            z-index: 1000;
+            background-color: #2e2e2e;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .grid.fullscreen {
+            grid-template-columns: 1fr; /* Switches to 1 column */
+        }
+        .middle-panel.fullscreen, .right-panel.fullscreen {
+            display: none; /* Hides other columns in full-screen */
         }
         .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
@@ -341,7 +358,13 @@
                 });
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graph = document.querySelector('.graph');
+                    const grid = document.querySelector('.grid');
+                    const middlePanel = document.querySelector('.middle-panel');
+                    const rightPanel = document.querySelector('.right-panel');
                     graph.classList.toggle('fullscreen');
+                    grid.classList.toggle('fullscreen');
+                    middlePanel.classList.toggle('fullscreen');
+                    rightPanel.classList.toggle('fullscreen');
                     if (chart) requestAnimationFrame(() => chart.resize());
                 });
             }
@@ -519,8 +542,22 @@
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
-                                    x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Customer Count' } }
+                                    x: {
+                                        type: 'time',
+                                        time: { unit: 'minute', stepSize: 15 },
+                                        title: { display: true, text: 'Time', font: { size: 14 } },
+                                        ticks: { font: { size: 12 } }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Cumulative Customer Count', font: { size: 14 } },
+                                        ticks: { font: { size: 12 } }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        labels: { font: { size: 12 } }
+                                    }
                                 }
                             }
                         });
