@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Updated CSP to include 'data:' in connect-src -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:'; style-src 'self' 'unsafe-inline';">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -133,8 +132,7 @@
             color: #ffffff;
         }
         .scrollable-body {
-            max-height: 210px; /* Adjusted for 6 rows (~35px each) */
-            overflow-y: auto;
+            overflow-y: visible; /* No scrolling for tally sheet */
         }
         .transaction-log .scrollable-body {
             max-height: 300px;
@@ -530,15 +528,6 @@
                         `).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
-                    // Dynamically adjust tally sheet height to show 6 rows
-                    const tallySheetBody = document.querySelector('.tally-sheet .scrollable-body');
-                    const rows = tallySheetBody.querySelectorAll('tr');
-                    if (rows.length > 0) {
-                        const rowHeight = rows[0].getBoundingClientRect().height;
-                        const desiredHeight = rowHeight * 6;
-                        tallySheetBody.style.maxHeight = `${desiredHeight}px`;
-                    }
-
                     const totalsRow = `
                         <tr class="total-row">
                             <td><strong>TOTALS</strong></td>
@@ -639,7 +628,7 @@
                 const graphWidth = pageWidth - 2 * margin;
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
 
-                const dpi = 300;
+                const dpi = 150; // Updated to 150 DPI
                 const pxToIn = (px) => px / dpi;
 
                 doc.setFontSize(16);
@@ -695,7 +684,6 @@
                     styles: { fontSize: 8 }
                 });
 
-                const canvas = document.getElementById('doorCountChart');
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -824,8 +812,11 @@
 
         function waitForChartRender(chart) {
             return new Promise(resolve => {
-                chart.update();
-                setTimeout(resolve, 1000); // Increased to 1000ms to ensure full rendering
+                if (chart.isAnimating()) {
+                    chart.options.animation.onComplete = () => resolve();
+                } else {
+                    resolve();
+                }
             });
         }
 
