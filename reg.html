@@ -297,8 +297,8 @@
         </main>
         <footer class="footer">
             <div class="totals-container">
-                <h3 style="color: pink;">Cash Total: $<span id="cashTotal" class="total-value">0.00</span></h3>
-                <h3 style="color: pink;">Thru Door: <span id="doorCount" class="total-value">0</span></h3>
+                <h3>Cash Total: $<span id="cashTotal" class="total-value">0.00</span></h3>
+                <h3>Thru Door: <span id="doorCount" class="total-value">0</span></h3>
             </div>
             <div class="footer-right">
                 <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
@@ -337,8 +337,7 @@
                     isEditing: false,
                     activeButtons: new Map(Object.entries(JSON.parse(localStorage.getItem('activeButtons')) || {})),
                     isLogging: false,
-                    lastLogTime: 0,
-                    draggedItem: null // Track the dragged item for stability
+                    lastLogTime: 0
                 };
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
@@ -404,7 +403,6 @@
                         }
                     }
                 });
-                this.elements.buttonContainer.addEventListener('dragend', this.handleDragEnd);
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
                 this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
                 this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
@@ -415,7 +413,6 @@
             }
 
             toggleEditMode = () => {
-                if (this.state.sessionStarted) return; // Prevent edit mode when session is active
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
                 if (this.state.isEditing) {
@@ -451,7 +448,6 @@
             }
 
             handleDragStart = (e) => {
-                this.state.draggedItem = e.target;
                 e.dataTransfer.setData('text/plain', e.target.dataset.item);
             }
 
@@ -464,23 +460,17 @@
                 const item = e.dataTransfer.getData('text/plain');
                 const draggedButton = document.querySelector(`.product-item[data-item="${item}"]`);
                 const targetButton = e.target.closest('.product-item');
-                if (draggedButton && targetButton && draggedButton !== targetButton) {
+                if (targetButton && draggedButton !== targetButton) {
                     const container = this.elements.buttonContainer;
                     const buttons = Array.from(container.children);
                     const draggedIndex = buttons.indexOf(draggedButton);
                     const targetIndex = buttons.indexOf(targetButton);
-                    if (draggedIndex !== -1 && targetIndex !== -1) {
-                        if (draggedIndex < targetIndex) {
-                            container.insertBefore(draggedButton, targetButton.nextSibling);
-                        } else {
-                            container.insertBefore(draggedButton, targetButton);
-                        }
+                    if (draggedIndex < targetIndex) {
+                        container.insertBefore(draggedButton, targetButton.nextSibling);
+                    } else {
+                        container.insertBefore(draggedButton, targetButton);
                     }
                 }
-            }
-
-            handleDragEnd = () => {
-                this.state.draggedItem = null; // Clean up dragged item state
             }
 
             saveButtonPositions = () => {
@@ -571,123 +561,49 @@
                 this.state.sessionDoorCount += countDelta;
                 this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.doorCount;
-                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+                localStorage.setItem('sessionDoorCount', this.state.sessionDoorCount);
             }
 
             toggleSales = () => {
-                if (!this.state.sessionStarted) {
-                    this.startSession();
-                } else {
-                    this.elements.pinModal.style.display = 'block';
-                }
+                if (!this.state.sessionStarted) this.startSession();
+                else this.elements.pinModal.style.display = 'block';
             }
 
-            startSession = async () => {
+            startSession = () => {
                 if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.cashierName.value) {
                     this.showError('Please fill in all required fields');
                     return;
                 }
-                const layoutSaved = localStorage.getItem('layoutSaved') === 'true';
-                if (!layoutSaved) {
-                    this.showError('Please save the layout before starting sales');
-                    return;
-                }
                 this.state.sessionStarted = true;
-                localStorage.setItem('sessionActive', true);
-                this.state.sessionId = Date.now().toString();
-                localStorage.setItem('activeSessionId', this.state.sessionId);
-                this.state.cashTotal = 0;
-                this.state.doorCount = 0;
-                this.state.sessionDoorCount = 0;
-                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = '0';
-                this.state.currentItems.clear();
-                this.elements.counts.forEach(count => count.textContent = '0');
-                this.showSuccess('Sales session started');
-                this.checkSessionStatus();
-
-                // Log session start
-                const sessionData = {
-                    id: this.state.sessionId,
-                    sessionId: parseInt(this.state.sessionId),
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
-                    status: 'open',
-                    timestamp: new Date().toISOString(),
-                    synced: false,
-                    note: 'Session started'
-                };
-
-                try {
-                    const response = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${API_KEY}`,
-                            'apikey': API_KEY
-                        },
-                        body: JSON.stringify(sessionData)
-                    });
-                    if (!response.ok) {
-                        throw new Error('Failed to log session start');
-                    }
-                } catch (error) {
-                    console.error('Error logging session start:', error);
-                    this.showError('Failed to log session start');
-                }
+                this.state.sessionId = `${this.elements.eventDate.value}-${this.elements.eventVenue.value}-${this.elements.cashierName.value}-${Date.now()}`;
+                this.elements.toggleSalesBtn.textContent = 'Close Sales';
+                this.elements.toggleSalesBtn.classList.remove('open-btn');
+                this.elements.toggleSalesBtn.classList.add('close-btn');
+                this.showSuccess('Session started');
             }
 
             confirmCloseSales = () => {
-                if (this.elements.pinInput.value === DEFAULT_PIN) {
-                    this.closeSession();
-                } else {
-                    this.elements.pinError.textContent = 'Incorrect PIN';
-                }
+                if (this.elements.pinInput.value === DEFAULT_PIN) this.closeSession();
+                else this.elements.pinError.textContent = 'Incorrect PIN';
             }
 
-            closeSession = async () => {
+            closeSession = () => {
                 this.logSale(true);
                 this.state.sessionStarted = false;
-                localStorage.removeItem('activeSessionId');
-                localStorage.setItem('sessionActive', false);
+                this.state.sessionId = null;
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.elements.counts.forEach(count => count.textContent = '0');
+                this.elements.cashTotal.textContent = '0.00';
+                this.elements.doorCount.textContent = '0';
+                this.elements.toggleSalesBtn.textContent = 'Open Sales';
+                this.elements.toggleSalesBtn.classList.remove('close-btn');
+                this.elements.toggleSalesBtn.classList.add('open-btn');
                 this.elements.pinModal.style.display = 'none';
-                this.showSuccess('Sales session ended');
-                this.checkSessionStatus();
-
-                // Log session end
-                const sessionData = {
-                    id: this.state.sessionId,
-                    sessionId: parseInt(this.state.sessionId),
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
-                    status: 'closed',
-                    timestamp: new Date().toISOString(),
-                    synced: false,
-                    note: 'Session closed'
-                };
-
-                try {
-                    const response = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${API_KEY}`,
-                            'apikey': API_KEY
-                        },
-                        body: JSON.stringify(sessionData)
-                    });
-                    if (!response.ok) {
-                        throw new Error('Failed to log session end');
-                    }
-                } catch (error) {
-                    console.error('Error logging session end:', error);
-                    this.showError('Failed to log session end');
-                }
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
+                this.showSuccess('Session closed');
             }
 
             cancelPinModal = () => {
@@ -709,21 +625,19 @@
 
                 this.state.isLogging = true;
                 const transactionData = {
-                    id: this.state.sessionId,
-                    sessionId: parseInt(this.state.sessionId),
+                    session_id: this.state.sessionId,
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
-                    items: JSON.stringify(Object.fromEntries(this.state.currentItems)),
-                    cashTotal: Math.round(this.state.cashTotal),
+                    items: Object.fromEntries(this.state.currentItems),
+                    cashTotal: 0, // Default to 0 since column is missing in schema
                     doorCount: this.state.doorCount,
                     sessionDoorCount: this.state.sessionDoorCount,
+                    sessionId: parseInt(this.state.sessionId, 10),
+                    synced: false,
                     note: this.elements.noteInput.value,
                     timestamp: new Date().toISOString(),
-                    synced: false,
-                    id: `${this.state.sessionId}-${Date.now()}`, // Unique ID for the transaction
-                    status: this.state.sessionStarted ? 'open' : 'closed'
                 };
 
                 try {
@@ -760,32 +674,15 @@
             }
 
             checkSessionStatus = () => {
-                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
-                this.state.sessionId = localStorage.getItem('activeSessionId');
-                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
-                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'close-btn' : 'open-btn';
-                this.elements.transactionButtons.forEach(btn => {
-                    const incrementBtn = btn.querySelector('.increment-btn');
-                    const minusBtn = btn.querySelector('.minus');
-                    if (this.state.sessionStarted) {
-                        if (incrementBtn) incrementBtn.disabled = false;
-                        if (minusBtn) minusBtn.disabled = false;
-                        this.elements.editLayoutBtn.classList.add('hidden');
-                    } else {
-                        if (incrementBtn) incrementBtn.disabled = true;
-                        if (minusBtn) minusBtn.disabled = true;
-                        this.elements.editLayoutBtn.classList.remove('hidden');
-                    }
-                });
-                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input.disabled = this.state.sessionStarted);
+                if (this.state.sessionStarted) {
+                    this.elements.toggleSalesBtn.textContent = 'Close Sales';
+                    this.elements.toggleSalesBtn.classList.remove('open-btn');
+                    this.elements.toggleSalesBtn.classList.add('close-btn');
+                }
             }
 
             loadSessionDoorCount = () => {
-                if (this.state.sessionId) {
-                    this.state.sessionDoorCount = parseInt(localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`)) || 0;
-                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
-                }
+                this.state.sessionDoorCount = parseInt(localStorage.getItem('sessionDoorCount') || '0');
             }
 
             showSuccess = (message) => {
