@@ -20,24 +20,32 @@
             color: #e0e0e0;
         }
         .container {
-            width: 90%;
-            max-width: 1200px;
-            margin: auto;
+            width: 99%; /* Updated to 99% of screen width */
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 2fr 1fr; /* Three columns: graph, transaction log, right panel */
             grid-template-rows: 50px auto;
             gap: 10px;
         }
         .header {
-            grid-column: 1 / 3;
+            grid-column: 1 / -1; /* Spans all three columns */
             grid-row: 1;
             text-align: center;
             font-size: 24px;
         }
+        .graph {
+            grid-column: 1; /* First column for graph */
+            grid-row: 2;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+            height: 720px; /* Fixed height */
+            display: flex;
+            flex-direction: column;
+        }
         .transaction-log {
-            grid-column: 1;
+            grid-column: 2; /* Second column for transaction log */
             grid-row: 2;
             background-color: #2e2e2e;
             padding: 20px;
@@ -46,7 +54,7 @@
             overflow-y: auto;
         }
         .right-panel {
-            grid-column: 2;
+            grid-column: 3; /* Third column for filters, summary, tally sheet */
             grid-row: 2;
             display: flex;
             flex-direction: column;
@@ -54,23 +62,14 @@
             height: 720px;
         }
         .filters, .summary, .tally-sheet {
-            flex: 0 0 100px;
+            flex: 0 0 100px; /* Fixed height for each section */
             overflow-y: auto;
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
         }
-        .graph {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
         .graph-wrapper {
-            flex: 1;
+            flex: 1; /* Allows graph to fill remaining space */
             min-height: 0;
         }
         #doorCountChart {
@@ -198,6 +197,13 @@
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <h1 class="header">Sales Log</h1>
+            <div class="graph">
+                <h2>Payment Counts Over Time</h2>
+                <button id="toggleGraphSize">Toggle Full Screen</button>
+                <div class="graph-wrapper">
+                    <canvas id="doorCountChart"></canvas>
+                </div>
+            </div>
             <div class="transaction-log">
                 <h2>Transaction Log</h2>
                 <table>
@@ -231,13 +237,6 @@
                     <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                     <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                     <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
-                </div>
-                <div class="graph">
-                    <h2>Payment Counts Over Time</h2>
-                    <button id="toggleGraphSize">Toggle Full Screen</button>
-                    <div class="graph-wrapper">
-                        <canvas id="doorCountChart"></canvas>
-                    </div>
                 </div>
                 <div class="tally-sheet">
                     <h2>Tally Sheet</h2>
