@@ -22,7 +22,7 @@
         }
         .container {
             width: 99%;
-            height: calc(100vh - 20px); /* Fits viewport minus padding */
+            height: calc(98.5vh - 20px); /* Adjusted to 98.5% of viewport height minus padding */
         }
         .grid {
             display: grid;
@@ -41,6 +41,7 @@
             display: flex;
             flex-direction: column;
             transition: all 0.2s ease;
+            position: relative; /* Added for resize-handle positioning */
         }
         .middle-panel {
             grid-column: 2;
@@ -207,6 +208,16 @@
         .middle-panel.fullscreen, .right-panel.fullscreen {
             display: none; /* Hides other columns in full-screen */
         }
+        /* Resize handle styles */
+        .resize-handle {
+            height: 10px;
+            background-color: #444;
+            cursor: ns-resize;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
         .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
         .comp-header { color: #ffdab9; }
@@ -229,11 +240,12 @@
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <div class="graph">
-                <h2>Customer Count Over Time</h2>
+                <h2>Sales Log</h2>
                 <button id="toggleGraphSize">Toggle Full Screen</button>
                 <div class="graph-wrapper">
                     <canvas id="doorCountChart"></canvas>
                 </div>
+                <div class="resize-handle"></div> <!-- Added resize handle -->
             </div>
             <div class="middle-panel">
                 <div class="tally-sheet">
@@ -367,6 +379,38 @@
                     rightPanel.classList.toggle('fullscreen');
                     if (chart) requestAnimationFrame(() => chart.resize());
                 });
+
+                // Resize handle functionality
+                let isResizing = false;
+                let startY;
+                let startHeight;
+
+                const resizeHandle = document.querySelector('.resize-handle');
+                const graph = document.querySelector('.graph');
+
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startY = e.clientY;
+                    startHeight = parseInt(window.getComputedStyle(graph).height, 10);
+                    document.addEventListener('mousemove', resize);
+                    document.addEventListener('mouseup', stopResize);
+                });
+
+                function resize(e) {
+                    if (!isResizing) return;
+                    const dy = e.clientY - startY;
+                    const newHeight = startHeight + dy;
+                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                        graph.style.height = `${newHeight}px`;
+                        chart.resize();
+                    }
+                }
+
+                function stopResize() {
+                    isResizing = false;
+                    document.removeEventListener('mousemove', resize);
+                    document.removeEventListener('mouseup', stopResize);
+                }
             }
 
             async init() {
