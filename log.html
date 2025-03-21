@@ -550,67 +550,39 @@
                         </tr>
                     `).join('');
 
-                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-                    const datasets = types.map(type => ({
-                        label: type,
-                        data: [],
-                        borderColor: getColorForType(type),
-                        fill: false
-                    }));
-                    const totalDataset = {
-                        label: 'Total',
-                        data: [],
+                    // Updated graph dataset to display number of transactions
+                    const transactionCounts = {};
+                    const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+                    transactions.forEach(t => {
+                        const txTime = new Date(t.timestamp).getTime();
+                        const bin = Math.floor(txTime / interval) * interval;
+                        if (!transactionCounts[bin]) transactionCounts[bin] = 0;
+                        transactionCounts[bin]++;
+                    });
+
+                    const labels = Object.keys(transactionCounts).map(bin => new Date(parseInt(bin)));
+                    const data = Object.values(transactionCounts);
+
+                    const dataset = {
+                        label: 'Number of Transactions',
+                        data: labels.map((label, index) => ({ x: label, y: data[index] })),
                         borderColor: '#808080',
                         fill: false
                     };
-                    let cumulativeCounts = {};
-                    types.forEach(type => cumulativeCounts[type] = 0);
-                    let cumulativeTotal = 0;
-
-                    transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        let transactionDoorCount = 0;
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const [countStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10) || 0;
-                                transactionDoorCount += count;
-                                let type;
-                                if (key.startsWith('Cash')) type = 'Cash';
-                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                                else if (key.startsWith('Comp')) type = 'Comp';
-                                else if (key.startsWith('Ticket')) type = 'Ticket';
-                                if (types.includes(type)) cumulativeCounts[type] += count;
-                            }
-                        });
-                        cumulativeTotal += transactionDoorCount;
-                        types.forEach(type => {
-                            datasets.find(d => d.label === type).data.push({
-                                x: t.timestamp,
-                                y: cumulativeCounts[type]
-                            });
-                        });
-                        totalDataset.data.push({
-                            x: t.timestamp,
-                            y: cumulativeTotal
-                        });
-                    });
-
-                    datasets.push(totalDataset);
 
                     if (chart) {
-                        chart.data.datasets = datasets;
+                        chart.data.datasets = [dataset];
                         chart.update();
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
-                            data: { datasets },
+                            data: { datasets: [dataset] },
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
                                     x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count' } }
+                                    y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions' } }
                                 }
                             }
                         });
@@ -695,7 +667,7 @@
                         maintainAspectRatio: false,
                         scales: {
                             x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time', font: { size: 16 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Cumulative Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
                         plugins: {
                             legend: { labels: { font: { size: 14 } } }
@@ -812,7 +784,7 @@
 
         function waitForChartRender(chart) {
             return new Promise(resolve => {
-                if (chart.isAnimating()) {
+                if (chart.animating) {
                     chart.options.animation.onComplete = () => resolve();
                 } else {
                     resolve();
