@@ -26,47 +26,86 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-        .grid.fullscreen-mode .col-1,
-        .grid.fullscreen-mode .col-2,
-        .grid.fullscreen-mode .col-4 {
-            display: none;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 50px 100px 100px 200px 200px;
+            gap: 10px;
         }
         .header {
             grid-column: 1 / -1;
+            grid-row: 1;
             text-align: center;
         }
-        .col-1, .col-2, .col-3, .col-4, .col-5 {
+        .filters {
+            grid-column: 2;
+            grid-row: 2;
             background-color: #2e2e2e;
-            padding: 20px;
+            padding: 10px;
             border-radius: 5px;
         }
-        .col-1 label, .col-1 select, .col-1 button {
-            display: block;
-            margin: 10px 0;
-            width: 100%;
+        .summary {
+            grid-column: 2;
+            grid-row: 3;
+            background-color: #2e2e2e;
             padding: 10px;
+            border-radius: 5px;
         }
-        .col-1 select {
+        .graph {
+            grid-column: 1;
+            grid-row: 2 / span 4;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .transaction-log {
+            grid-column: 2;
+            grid-row: 4;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .tally-sheet {
+            grid-column: 2;
+            grid-row: 5;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .filters label, .filters select, .filters button {
+            display: block;
+            margin: 5px 0;
+            width: 100%;
+            padding: 5px;
+        }
+        .filters select {
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
         }
-        .col-1 button {
+        .filters button {
             background-color: #0288d1;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
-        .summary-table table, .transaction-table table {
+        .graph-wrapper {
+            height: 100%;
+            width: 100%;
+        }
+        #doorCountChart {
+            width: 100%;
+            height: 100%;
+        }
+        .transaction-log table, .tally-sheet table {
             width: 100%;
             border-collapse: collapse;
         }
-        .summary-table th, .summary-table td, .transaction-table th, .transaction-table td {
-            padding: 10px;
+        .transaction-log th, .transaction-log td, .tally-sheet th, .tally-sheet td {
+            padding: 8px;
             text-align: left;
             border-bottom: 1px solid #444;
         }
@@ -76,7 +115,7 @@
         }
         #exportBtn {
             margin-top: 10px;
-            padding: 10px;
+            padding: 8px;
             background-color: #2e7d32;
             color: white;
             border: none;
@@ -121,11 +160,7 @@
             color: #d32f2f;
             margin-top: 10px;
         }
-        .col-3 {
-            display: flex;
-            flex-direction: column;
-        }
-        .col-3.fullscreen {
+        .graph.fullscreen {
             position: fixed;
             top: 0;
             left: 0;
@@ -136,38 +171,16 @@
             padding: 20px;
             box-sizing: border-box;
         }
-        .graph-wrapper {
-            height: 430px; /* Fixed height in normal mode */
-            width: 100%;
-        }
-        .col-3.fullscreen .graph-wrapper {
-            height: calc(100vh - 40px); /* Full height minus padding in full-screen */
-        }
-        #doorCountChart {
-            width: 100%;
-            height: 100%;
-        }
-        .transaction-table {
-            max-height: 300px;
-            overflow-y: auto;
+        .graph.fullscreen .graph-wrapper {
+            height: calc(100vh - 40px);
         }
         /* Color-coded headers */
-        .cash-header {
-            color: #2e7d32; /* Green for cash */
-        }
-        .items-header {
-            color: #d32f2f; /* Red for items (includes card, comp, ticket) */
-        }
-        .payment-type-header {
-            color: #1a73e8; /* Blue for payment type (covers all types) */
-        }
+        .cash-header { color: #2e7d32; }
+        .items-header { color: #d32f2f; }
+        .payment-type-header { color: #1a73e8; }
         /* Totals in orange */
-        .col-2 h3 span {
-            color: orange;
-        }
-        .total-row td {
-            color: orange;
-        }
+        .summary h3 span { color: orange; }
+        .total-row td { color: orange; }
     </style>
 </head>
 <body>
@@ -184,60 +197,58 @@
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <h1 class="header">Sales Log</h1>
-            <div class="col-1">
+            <div class="filters">
                 <h2>Filters</h2>
-                <label>Cashier Session: 
+                <label>Cashier Session:
                     <select id="sessionSelect">
                         <option value="">Select Cashier Session</option>
                     </select>
-                </label><br>
+                </label>
                 <button id="applyFilters">Apply</button>
             </div>
-            <div class="col-2">
+            <div class="summary">
                 <h2>Summary</h2>
                 <div id="sessionInfo"></div>
                 <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                 <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                 <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
             </div>
-            <div class="col-3">
+            <div class="graph">
                 <h2>Payment Counts Over Time</h2>
                 <button id="toggleGraphSize">Toggle Full Screen</button>
                 <div class="graph-wrapper">
                     <canvas id="doorCountChart"></canvas>
                 </div>
-                <div class="transaction-table">
-                    <h2>Transaction Log</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th class="items-header">Items</th>
-                                <th class="cash-header">Cash Total</th>
-                                <th>Door Count</th>
-                                <th>Cashier</th>
-                                <th>Note</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionLogBody"></tbody>
-                    </table>
-                </div>
             </div>
-            <div class="col-4">
+            <div class="transaction-log">
+                <h2>Transaction Log</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th class="items-header">Items</th>
+                            <th class="cash-header">Cash Total</th>
+                            <th>Door Count</th>
+                            <th>Cashier</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionLogBody"></tbody>
+                </table>
+            </div>
+            <div class="tally-sheet">
                 <h2>Tally Sheet</h2>
-                <div class="summary-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="payment-type-header">Payment Type</th>
-                                <th>People</th>
-                                <th>Total Amount</th>
-                                <th>Price per Person</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summaryBody"></tbody>
-                    </table>
-                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="payment-type-header">Payment Type</th>
+                            <th>People</th>
+                            <th>Total Amount</th>
+                            <th>Price per Person</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryBody"></tbody>
+                </table>
                 <button id="exportBtn">Export to PDF</button>
             </div>
         </div>
@@ -310,17 +321,14 @@
                     this.updateLog();
                 });
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
-                    const graphContainer = document.querySelector('.col-3');
-                    const grid = document.querySelector('.grid');
-                    if (graphContainer.classList.contains('fullscreen')) {
-                        graphContainer.classList.remove('fullscreen');
-                        grid.classList.remove('fullscreen-mode');
+                    const graph = document.querySelector('.graph');
+                    if (graph.classList.contains('fullscreen')) {
+                        graph.classList.remove('fullscreen');
                     } else {
-                        graphContainer.classList.add('fullscreen');
-                        grid.classList.add('fullscreen-mode');
+                        graph.classList.add('fullscreen');
                     }
                     if (chart) {
-                        setTimeout(() => chart.resize(), 100); // Delay resize for DOM update
+                        setTimeout(() => chart.resize(), 100);
                     }
                 });
             }
@@ -547,7 +555,7 @@
                     styles: { fontSize: 10 }
                 });
 
-                const tallyTable = document.querySelector('.summary-table table');
+                const tallyTable = document.querySelector('.tally-sheet table');
                 const tallyData = Array.from(tallyTable.querySelectorAll('tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -559,7 +567,7 @@
                     styles: { fontSize: 8 }
                 });
 
-                const transactionTable = document.querySelector('.transaction-table table');
+                const transactionTable = document.querySelector('.transaction-log table');
                 const transactionData = Array.from(transactionTable.querySelectorAll('tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
