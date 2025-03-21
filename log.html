@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline';">
+    <!-- Updated CSP to include 'data:' in connect-src -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:'; style-src 'self' 'unsafe-inline';">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -54,7 +55,6 @@
             flex-direction: column;
             gap: 10px;
         }
-        /* Increased tally-sheet height from 200px to 300px */
         .tally-sheet {
             flex: 0 0 300px;
             background-color: #2e2e2e;
@@ -133,7 +133,7 @@
             color: #ffffff;
         }
         .scrollable-body {
-            max-height: 150px;
+            max-height: 210px; /* Adjusted for 6 rows (~35px each) */
             overflow-y: auto;
         }
         .transaction-log .scrollable-body {
@@ -530,6 +530,15 @@
                         `).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
+                    // Dynamically adjust tally sheet height to show 6 rows
+                    const tallySheetBody = document.querySelector('.tally-sheet .scrollable-body');
+                    const rows = tallySheetBody.querySelectorAll('tr');
+                    if (rows.length > 0) {
+                        const rowHeight = rows[0].getBoundingClientRect().height;
+                        const desiredHeight = rowHeight * 6;
+                        tallySheetBody.style.maxHeight = `${desiredHeight}px`;
+                    }
+
                     const totalsRow = `
                         <tr class="total-row">
                             <td><strong>TOTALS</strong></td>
@@ -813,11 +822,10 @@
             }).join('; ');
         }
 
-        /* Updated waitForChartRender to wait 500ms */
         function waitForChartRender(chart) {
             return new Promise(resolve => {
                 chart.update();
-                setTimeout(resolve, 500);
+                setTimeout(resolve, 1000); // Increased to 1000ms to ensure full rendering
             });
         }
 
