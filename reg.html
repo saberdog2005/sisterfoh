@@ -619,10 +619,10 @@
                 this.state.isLogging = true;
                 const transactionData = {
                     session_id: this.state.sessionId,
-                    event_date: this.elements.eventDate.value,
-                    event_venue: this.elements.eventVenue.value,
-                    event_name: this.elements.eventName.value,
-                    cashier_name: this.elements.cashierName.value,
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
                     items: Object.fromEntries(this.state.currentItems),
                     cashTotal: 0, // Default to 0 since column is missing in schema
                     door_count: this.state.doorCount,
