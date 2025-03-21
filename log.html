@@ -6,9 +6,9 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
-        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:';
+        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co;
         style-src 'self' 'unsafe-inline';
-        img-src 'self' 'data:';
+        img-src 'self' data:;
     ">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -303,7 +303,8 @@
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
-                                <th class="cash-header">Cash Total</th>
+                                <th>Items</th>
+                                <th>Cash Total</th>
                                 <th>Door Count</th>
                                 <th>Cashier</th>
                                 <th>Note</th>
@@ -555,7 +556,6 @@
                         </tr>
                     `).join('');
 
-                    // Updated graph dataset to display transactions by type and total
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
                     const transactionCounts = {};
                     const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
