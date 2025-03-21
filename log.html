@@ -42,7 +42,7 @@
         .tally-sheet th, .transaction-log th { background-color: #3e3e3e; position: static; }
         .tally-sheet td, .transaction-log td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
         th { background-color: #3e3e3e; color: #ffffff; }
-        .tally-sheet .scrollable-body { max-height: 200px; overflow-y: auto; } /* Added for scrolling */
+        .tally-sheet .scrollable-body { max-height: 200px; overflow-y: auto; }
         .transaction-log .scrollable-body { max-height: 300px; overflow-y: auto; }
         .summary h3 { font-size: 18px; }
         .filters label, .filters select, .filters button { display: block; margin: 10px 0; width: 100%; padding: 8px; font-size: 16px; }
@@ -59,7 +59,7 @@
         .middle-panel.fullscreen, .right-panel.fullscreen { display: none; }
         .resize-handle { height: 10px; background-color: #444; cursor: ns-resize; position: absolute; bottom: 0; left: 0; right: 0; }
         .cash-header { color: #2e7d32; }
-        .credit-card-header { color: #d32f2f; }
+        .cc-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
         .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
@@ -174,7 +174,8 @@
         let chart;
         let selectedSessionId = null;
 
-        // Updated formatItems function to handle undefined price and count
+        const paymentTypes = ['CASH', 'CC', 'COMP', 'TICKET'];
+
         function formatItems(items) {
             if (!items) return '';
             return Object.entries(items).map(([key, data]) => {
@@ -185,15 +186,25 @@
         }
 
         function colorCodeItems(items) {
-            const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
             return items.split('; ').map(item => {
-                const type = types.find(t => item.startsWith(t));
+                const type = paymentTypes.find(t => item.startsWith(t));
                 if (type) {
                     const rest = item.slice(type.length);
-                    return `<span class="${type.toLowerCase().replace(' ', '-')}-header">${type}</span>${rest}`;
+                    return `<span class="${type.toLowerCase()}-header">${type}</span>${rest}`;
                 }
                 return item;
             }).join('; ');
+        }
+
+        function getColorForType(type) {
+            const colors = {
+                'CASH': '#2e7d32',
+                'CC': '#d32f2f',
+                'COMP': '#ffa500',
+                'TICKET': '#1a73e8',
+                'Total Door Count': '#808080'
+            };
+            return colors[type] || '#888888';
         }
 
         class SalesLog {
@@ -297,7 +308,7 @@
                     const { data: allTransactions, error } = await supabase
                         .from('transactions')
                         .select('*')
-                        .order('timestamp', { ascending: true }); // Order by timestamp ascending for cumulative calculations
+                        .order('timestamp', { ascending: true });
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
                     const validTransactions = allTransactions.filter(t => t.sessionId != null);
@@ -331,15 +342,11 @@
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
 
-                    // Sort transactions by timestamp ascending for cumulative calculations
                     transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
-
-                    // Get all unique payment types from transactions
-                    const allTypes = [...new Set(transactions.flatMap(t => Object.keys(t.items)))];
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -349,9 +356,10 @@
                         Object.entries(t.items).forEach(([key, data]) => {
                             const count = data.count || 0;
                             const price = data.price || 0;
-                            if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
-                            itemSummary[key].people += count;
-                            itemSummary[key].total += count * price;
+                            const type = paymentTypes.find(pt => key.startsWith(pt)) || key;
+                            if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0, price };
+                            itemSummary[type].people += count;
+                            itemSummary[type].total += count * price;
                         });
                         totalDoorCount += t.doorCount || 0;
                         totalSales += t.cashTotal || 0;
@@ -361,15 +369,17 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
-                    const summaryRows = Object.entries(itemSummary)
-                        .map(([key, data]) => `
+                    const summaryRows = paymentTypes.map(type => {
+                        const data = itemSummary[type] || { people: 0, total: 0, price: 0 };
+                        return `
                             <tr>
-                                <td>${key}</td>
+                                <td>${type}</td>
                                 <td>${data.people}</td>
                                 <td>$${data.total.toFixed(2)}</td>
-                                <td>$${data.price.toFixed(2)}</td>
+                                <td>$${data.people ? (data.total / data.people).toFixed(2) : '0.00'}</td>
                             </tr>
-                        `).join('');
+                        `;
+                    }).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
                     const totalsRow = `
@@ -382,7 +392,6 @@
                     `;
                     document.getElementById('totalsBody').innerHTML = totalsRow;
 
-                    // Filter nonzero transactions
                     const nonzeroTransactions = transactions.filter(t => Object.values(t.items).some(item => item.count > 0));
                     const transactionLogBody = document.getElementById('transactionLogBody');
                     transactionLogBody.innerHTML = nonzeroTransactions.map(t => `
@@ -396,18 +405,18 @@
                         </tr>
                     `).join('');
 
-                    // Calculate cumulative door count
                     let cumulativeDoorCount = 0;
                     const doorCountData = transactions.map(t => {
                         cumulativeDoorCount += t.doorCount || 0;
                         return { x: new Date(t.timestamp), y: cumulativeDoorCount };
                     });
 
-                    // Calculate cumulative counts for each payment type
-                    const typeDatasets = allTypes.map(type => {
+                    const typeDatasets = paymentTypes.map(type => {
                         let cumulativeCount = 0;
                         const data = transactions.map(t => {
-                            const count = t.items[type]?.count || 0;
+                            const count = Object.entries(t.items)
+                                .filter(([key]) => key.startsWith(type))
+                                .reduce((sum, [_, data]) => sum + (data.count || 0), 0);
                             cumulativeCount += count;
                             return { x: new Date(t.timestamp), y: cumulativeCount };
                         });
@@ -419,16 +428,14 @@
                         };
                     });
 
-                    // Add the total door count dataset
                     typeDatasets.push({
                         label: 'Total Door Count',
                         data: doorCountData,
-                        borderColor: '#808080',
+                        borderColor: getColorForType('Total Door Count'),
                         fill: false
                     });
 
                     if (chart) {
-                        chart.data.labels = transactions.map(t => new Date(t.timestamp));
                         chart.data.datasets = typeDatasets;
                         chart.update();
                     } else {
@@ -516,13 +523,11 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Start interval bar charts on a new page
                 doc.addPage();
 
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
-                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+                const interval = 30 * 60 * 1000;
 
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
                     const intervalStart = new Date(time);
@@ -534,17 +539,13 @@
 
                     if (intervalTransactions.length > 0) {
                         const intervalSummary = {};
-                        types.forEach(type => intervalSummary[type] = 0);
+                        paymentTypes.forEach(type => intervalSummary[type] = 0);
                         let intervalTotal = 0;
 
                         intervalTransactions.forEach(t => {
                             Object.entries(t.items).forEach(([key, data]) => {
-                                let type;
-                                if (key.startsWith('Cash')) type = 'Cash';
-                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                                else if (key.startsWith('Comp')) type = 'Comp';
-                                else if (key.startsWith('Ticket')) type = 'Ticket';
-                                if (types.includes(type)) intervalSummary[type] += data.count;
+                                const type = paymentTypes.find(pt => key.startsWith(pt));
+                                if (type) intervalSummary[type] += data.count;
                             });
                             intervalTotal += t.doorCount || 0;
                         });
@@ -557,11 +558,11 @@
                         const barChart = new Chart(tempCtx, {
                             type: 'bar',
                             data: {
-                                labels: types.concat('Total'),
+                                labels: paymentTypes.concat('Total'),
                                 datasets: [{
                                     label: 'Count',
-                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
-                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
+                                    data: paymentTypes.map(type => intervalSummary[type]).concat(intervalTotal),
+                                    backgroundColor: paymentTypes.map(type => getColorForType(type)).concat('#808080'),
                                 }]
                             },
                             options: {
@@ -586,7 +587,6 @@
                     }
                 }
 
-                // Main chart on the last page
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -617,18 +617,6 @@
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
-        }
-
-        function getColorForType(type) {
-            const colors = {
-                'Cash': '#2e7d32',
-                'Credit Card': '#d32f2f',
-                'Comp': '#ffa500',
-                'Ticket': '#1a73e8',
-                'Total': '#808080'
-            };
-            // Generate a color if type is not predefined
-            return colors[type] || '#' + Math.floor(Math.random()*16777215).toString(16);
         }
 
         function waitForChartRender(chart) {
