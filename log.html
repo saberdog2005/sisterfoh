@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
@@ -124,6 +125,10 @@
             background-color: #1e1e1e;
             padding: 20px;
             box-sizing: border-box;
+        }
+        .transaction-table {
+            max-height: 300px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -255,8 +260,18 @@
                 });
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graphContainer = document.querySelector('.col-3');
-                    graphContainer.classList.toggle('fullscreen');
-                    chart.resize(); // Resize chart to fit new container size
+                    const grid = document.querySelector('.grid');
+                    const otherCols = document.querySelectorAll('.col-1, .col-2, .col-4');
+                    if (graphContainer.classList.contains('fullscreen')) {
+                        graphContainer.classList.remove('fullscreen');
+                        grid.style.display = 'grid';
+                        otherCols.forEach(col => col.style.display = 'block');
+                    } else {
+                        graphContainer.classList.add('fullscreen');
+                        grid.style.display = 'block';
+                        otherCols.forEach(col => col.style.display = 'none');
+                    }
+                    chart.resize();
                 });
             }
 
@@ -461,14 +476,69 @@
 
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                const content = document.querySelector('.container');
-                const canvas = await html2canvas(content, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = doc.getImageProperties(imgData);
-                const pdfWidth = doc.internal.pageSize.getWidth();
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 10;
+
+                // Title
+                doc.setFontSize(16);
+                doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
+
+                // Session Info
+                const sessionInfo = document.getElementById('sessionInfo').innerText;
+                doc.setFontSize(12);
+                doc.text(sessionInfo, margin, margin + 10);
+
+                // Summary Data
+                const summaryData = [
+                    ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
+                    ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
+                    ['Total Transactions', document.getElementById('totalTransactions').innerText]
+                ];
+                doc.autoTable({
+                    startY: margin + 20,
+                    head: [['Metric', 'Value']],
+                    body: summaryData,
+                    theme: 'grid',
+                    styles: { fontSize: 10 }
+                });
+
+                // Tally Sheet
+                const tallyTable = document.querySelector('.summary-table table');
+                const tallyData = Array.from(tallyTable.querySelectorAll('tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 10,
+                    head: [tallyData[0]],
+                    body: tallyData.slice(1),
+                    theme: 'grid',
+                    styles: { fontSize: 8 }
+                });
+
+                // Transaction Log
+                const transactionTable = document.querySelector('.transaction-table table');
+                const transactionData = Array.from(transactionTable.querySelectorAll('tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 10,
+                    head: [transactionData[0]],
+                    body: transactionData.slice(1),
+                    theme: 'grid',
+                    styles: { fontSize: 8 }
+                });
+
+                // Graph
+                const canvas = document.getElementById('doorCountChart');
+                const graphImage = canvas.toDataURL('image/png');
+                const imgProps = doc.getImageProperties(graphImage);
+                const graphWidth = pageWidth - 2 * margin;
+                const graphHeight = (imgProps.height * graphWidth) / imgProps.width;
+                doc.addPage();
+                doc.text('Payment Counts Over Time', pageWidth / 2, margin, { align: 'center' });
+                doc.addImage(graphImage, 'PNG', margin, margin + 10, graphWidth, graphHeight);
+
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
         }
