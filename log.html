@@ -623,8 +623,13 @@
                 const margin = 0.5;
                 const graphWidth = pageWidth - 2 * margin;
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
-
                 const dpi = 150;
+
+                // Check if chart data is available
+                if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
+                    console.error('No chart data available for export.');
+                    return;
+                }
 
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
@@ -683,6 +688,7 @@
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
+                document.body.appendChild(mainCanvas); // Temporarily add to DOM
                 const mainCtx = mainCanvas.getContext('2d');
                 const tempChart = new Chart(mainCtx, {
                     type: 'line',
@@ -700,8 +706,9 @@
                     }
                 });
                 tempChart.update();
-                await new Promise(resolve => requestAnimationFrame(resolve));
+                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for rendering
                 doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                document.body.removeChild(mainCanvas); // Clean up
                 tempChart.destroy();
 
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
@@ -743,6 +750,7 @@
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = graphWidth * dpi;
                         tempCanvas.height = graphHeight * dpi;
+                        document.body.appendChild(tempCanvas); // Temporarily add to DOM
                         const tempCtx = tempCanvas.getContext('2d');
                         const barChart = new Chart(tempCtx, {
                             type: 'bar',
@@ -766,13 +774,13 @@
                             }
                         });
                         barChart.update();
-                        await new Promise(resolve => requestAnimationFrame(resolve));
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for rendering
                         doc.addPage();
                         doc.setFontSize(16);
                         doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
                         doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                        document.body.removeChild(tempCanvas); // Clean up
                         barChart.destroy();
-                        tempCanvas.remove();
                     }
                 }
 
