@@ -104,6 +104,22 @@
             border-collapse: collapse;
             font-size: 14px;
         }
+        .tally-sheet table, .totals table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) {
+            width: 25%;
+        }
         .transaction-log th, .tally-sheet th {
             position: sticky;
             top: 0;
@@ -301,8 +317,8 @@
                     <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                     <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                     <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
+                    <button id="exportBtn">Export to PDF</button>
                 </div>
-                <button id="exportBtn">Export to PDF</button>
             </div>
         </div>
     </div>
@@ -450,7 +466,6 @@
                     sessionSelect.value = selectedSessionId;
                     transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                    // Get eventName from the first transaction, default to 'No Event' if none exist
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
