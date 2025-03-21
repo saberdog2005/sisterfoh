@@ -625,7 +625,6 @@
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
 
                 const dpi = 150;
-                const pxToIn = (px) => px / dpi;
 
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
@@ -680,6 +679,7 @@
                     styles: { fontSize: 8 }
                 });
 
+                // Main chart (line chart)
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -699,8 +699,9 @@
                         }
                     }
                 });
-                await waitForChartRender(tempChart);
-                const mainGraphImage = mainCanvas.toDataURL('image/png', 1.0);
+                tempChart.update();
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
                 tempChart.destroy();
 
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
@@ -742,7 +743,8 @@
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = graphWidth * dpi;
                         tempCanvas.height = graphHeight * dpi;
-                        const barChart = new Chart(tempCanvas, {
+                        const tempCtx = tempCanvas.getContext('2d');
+                        const barChart = new Chart(tempCtx, {
                             type: 'bar',
                             data: {
                                 labels: types.concat('Total'),
@@ -763,14 +765,12 @@
                                 }
                             }
                         });
-
-                        await waitForChartRender(barChart);
-                        const barChartImage = tempCanvas.toDataURL('image/png', 1.0);
+                        barChart.update();
+                        await new Promise(resolve => requestAnimationFrame(resolve));
                         doc.addPage();
                         doc.setFontSize(16);
                         doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
-                        doc.addImage(barChartImage, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-
+                        doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
                         barChart.destroy();
                         tempCanvas.remove();
                     }
@@ -779,7 +779,7 @@
                 doc.addPage();
                 doc.setFontSize(16);
                 doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
-                doc.addImage(mainGraphImage, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
