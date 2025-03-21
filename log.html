@@ -24,7 +24,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: 2fr 2fr 1fr;
+            grid-template-columns: 2fr 2fr 1.5fr; /* Adjusted for wider right panel */
             grid-template-rows: 50px auto;
             gap: 10px;
         }
@@ -43,6 +43,7 @@
             height: calc(100vh - 80px);
             display: flex;
             flex-direction: column;
+            transition: all 0.2s ease; /* Smooth transition for full-screen */
         }
         .middle-panel {
             grid-column: 2;
@@ -52,7 +53,7 @@
             height: calc(100vh - 80px);
         }
         .tally-sheet {
-            height: 200px;
+            height: 300px; /* Increased height for more room */
             background-color: #2e2e2e;
             padding: 20px;
             border-radius: 5px;
@@ -203,9 +204,9 @@
         .graph.fullscreen .graph-wrapper {
             height: calc(100vh - 40px);
         }
-        .cash-header { color: #2e7d32; }
+        .cash-header { color: #2e7d32; } /* Green for cash */
         .credit-card-header { color: #d32f2f; }
-        .comp-header { color: #ffa500; }
+        .comp-header { color: #ffdab9; } /* Peach for comp */
         .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
@@ -285,7 +286,6 @@
                         </select>
                     </label>
                     <button id="applyFilters">Apply</button>
-                    <button id="exportBtn">Export to PDF</button>
                 </div>
                 <div class="summary">
                     <h2>Summary</h2>
@@ -293,6 +293,7 @@
                     <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                     <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                     <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
+                    <button id="exportBtn">Export to PDF</button>
                 </div>
             </div>
         </div>
@@ -356,7 +357,7 @@
                 document.getElementById('toggleGraphSize').addEventListener('click', () => {
                     const graph = document.querySelector('.graph');
                     graph.classList.toggle('fullscreen');
-                    if (chart) setTimeout(() => chart.resize(), 100);
+                    if (chart) setTimeout(() => chart.resize(), 200); // Increased delay
                 });
             }
 
@@ -414,7 +415,7 @@
                     transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Session ID: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${selectedSessionId}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -467,7 +468,7 @@
                         <tr>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
                             <td>${colorCodeItems(t.items)}</td>
-                            <td>$${t.cashTotal.toFixed(2)}</td>
+                            <td class="cash-header">$${t.cashTotal.toFixed(2)}</td>
                             <td>${t.doorCount}</td>
                             <td>${t.cashierName}</td>
                             <td>${t.note || ''}</td>
@@ -686,7 +687,7 @@
             const colors = {
                 'Cash': '#2e7d32',
                 'Credit Card': '#d32f2f',
-                'Comp': '#ffa500',
+                'Comp': '#ffdab9', // Updated to peach
                 'Ticket': '#1a73e8',
                 'Total': '#808080'
             };
@@ -708,7 +709,7 @@
         function waitForChartRender(chart) {
             return new Promise(resolve => {
                 chart.update();
-                setTimeout(resolve, 100);
+                setTimeout(resolve, 200); // Increased delay for chart render
             });
         }
 
