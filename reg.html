@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com 'unsafe-inline'; object-src 'none';">
+    <!-- Updated CSP to allow Supabase script -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -419,7 +420,6 @@
             }
 
             toggleEditMode = () => {
-                console.log('Edit Layout button clicked'); // Debug log
                 if (this.state.sessionStarted) {
                     this.showError('Cannot edit layout while sales session is active');
                     return;
@@ -437,6 +437,7 @@
                     });
                     this.elements.buttonContainer.addEventListener('dragover', this.handleDragOver);
                     this.elements.buttonContainer.addEventListener('drop', this.handleDrop);
+                    this.elements.addButtonForm.style.display = 'block';
                 } else {
                     this.elements.editInstructions.classList.add('hidden');
                     const allButtons = document.querySelectorAll('.product-item');
@@ -452,12 +453,11 @@
                     this.elements.buttonContainer.removeEventListener('drop', this.handleDrop);
                     localStorage.setItem('activeButtons', JSON.stringify(Object.fromEntries(this.state.activeButtons)));
                     this.saveButtonPositions();
+                    this.elements.addButtonForm.style.display = 'none';
                 }
-                this.elements.addButtonForm.style.display = this.state.isEditing ? 'block' : 'none';
             }
 
             toggleSales = () => {
-                console.log('Open Sales button clicked'); // Debug log
                 if (!this.state.sessionStarted) this.startSession();
                 else this.elements.pinModal.style.display = 'block';
             }
@@ -527,31 +527,22 @@
                 this.state.isLogging = true;
                 const transactionData = {
                     session_id: this.state.sessionId,
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
+                    event_date: this.elements.eventDate.value,
+                    event_venue: this.elements.eventVenue.value,
+                    event_name: this.elements.eventName.value,
+                    cashier_name: this.elements.cashierName.value,
                     items: Object.fromEntries(this.state.currentItems),
-                    cashTotal: this.state.cashTotal,
-                    doorCount: this.state.doorCount,
+                    cash_total: this.state.cashTotal,
+                    door_count: this.state.doorCount,
                     note: this.elements.noteInput.value,
-                    timestamp: new Date().toISOString(),
+                    timestamp: new Date().toISOString()
                 };
 
                 try {
-                    // Placeholder for actual server URL and API key
-                    const SERVER_URL = 'YOUR_SERVER_URL';
-                    const API_KEY = 'YOUR_API_KEY';
-                    const response = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${API_KEY}`,
-                            'apikey': API_KEY
-                        },
-                        body: JSON.stringify(transactionData)
-                    });
-                    if (!response.ok) throw new Error('Network response was not ok');
+                    const { data, error } = await supabase
+                        .from('transactions')
+                        .insert([transactionData]);
+                    if (error) throw error;
                     channel.postMessage({ type: 'transaction', data: transactionData });
                     if (!isClosing) {
                         this.state.currentItems.clear();
@@ -604,6 +595,90 @@
                 setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
             }
 
+            handleIncrement = (btn) => {
+                if (!this.state.sessionStarted) {
+                    this.showError('Please start a session first');
+                    return;
+                }
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const count = (this.state.currentItems.get(item) || 0) + 1;
+                this.state.currentItems.set(item, count);
+                this.elements.counts.get(item).textContent = count;
+                this.state.cashTotal += price;
+                this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                if (item === 'Ticket') {
+                    this.state.doorCount += 1;
+                    this.state.sessionDoorCount += 1;
+                    this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
+                    localStorage.setItem('sessionDoorCount', this.state.sessionDoorCount);
+                }
+            }
+
+            handleDecrement = (btn) => {
+                if (!this.state.sessionStarted) {
+                    this.showError('Please start a session first');
+                    return;
+                }
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const count = this.state.currentItems.get(item) || 0;
+                if (count > 0) {
+                    const newCount = count - 1;
+                    this.state.currentItems.set(item, newCount);
+                    this.elements.counts.get(item).textContent = newCount;
+                    this.state.cashTotal -= price;
+                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                    if (item === 'Ticket' && this.state.doorCount > 0) {
+                        this.state.doorCount -= 1;
+                        this.state.sessionDoorCount -= 1;
+                        this.elements.sessionDoorCount.textContent = this.state.sessionDoorCount;
+                        localStorage.setItem('sessionDoorCount', this.state.sessionDoorCount);
+                    }
+                }
+            }
+
+            toggleButtonState = (btn) => {
+                if (!this.state.isEditing) return;
+                const isActive = btn.dataset.active === 'true';
+                btn.dataset.active = !isActive;
+                btn.style.opacity = !isActive ? '1' : '0.5';
+            }
+
+            addNewButton = () => {
+                const type = this.elements.newButtonType.value;
+                const name = this.elements.newButtonName.value;
+                const value = parseFloat(this.elements.newButtonValue.value) || 0;
+                if (!type || !name) {
+                    this.showError('Please fill in all fields for the new button');
+                    return;
+                }
+                const classMap = {
+                    'CASH': 'cash',
+                    'CC TRANS': 'cc',
+                    'TICKET': 'ticket',
+                    'COMP': 'comp'
+                };
+                const btnClass = classMap[type] || 'cash';
+                const newButton = document.createElement('div');
+                newButton.className = 'product-item';
+                newButton.dataset.item = name;
+                newButton.dataset.price = value;
+                newButton.dataset.active = 'true';
+                newButton.innerHTML = `
+                    <button class="increment-btn ${btnClass}">${name}</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus">-</button>
+                    </div>
+                `;
+                this.elements.buttonContainer.appendChild(newButton);
+                this.elements.counts.set(name, newButton.querySelector('.count'));
+                this.state.activeButtons.set(name, true);
+                this.cancelAddButton();
+                this.showSuccess('New button added');
+            }
+
             cancelAddButton = () => {
                 this.elements.newButtonType.value = '';
                 this.elements.newButtonName.value = '';
@@ -611,16 +686,53 @@
                 this.elements.addButtonForm.style.display = 'none';
             }
 
-            // Placeholder methods to avoid errors (implement as needed)
-            handleIncrement = (btn) => { console.log('Increment:', btn.dataset.item); };
-            handleDecrement = (btn) => { console.log('Decrement:', btn.dataset.item); };
-            toggleButtonState = (btn) => { console.log('Toggle state:', btn.dataset.item); };
-            addNewButton = () => { console.log('Add new button'); };
-            handleDragStart = (e) => { e.dataTransfer.setData('text/plain', e.target.dataset.item); };
-            handleDragOver = (e) => { e.preventDefault(); };
-            handleDrop = (e) => { e.preventDefault(); console.log('Drop event'); };
-            saveButtonPositions = () => { console.log('Save button positions'); };
-            loadButtonPositions = () => { console.log('Load button positions'); };
+            handleDragStart = (e) => {
+                e.dataTransfer.setData('text/plain', e.target.closest('.product-item').dataset.item);
+            }
+
+            handleDragOver = (e) => {
+                e.preventDefault();
+            }
+
+            handleDrop = (e) => {
+                e.preventDefault();
+                const item = e.dataTransfer.getData('text/plain');
+                const draggedElement = document.querySelector(`.product-item[data-item="${item}"]`);
+                const dropTarget = e.target.closest('.product-item');
+                if (dropTarget && draggedElement !== dropTarget) {
+                    const container = this.elements.buttonContainer;
+                    const allButtons = Array.from(container.children);
+                    const fromIndex = allButtons.indexOf(draggedElement);
+                    const toIndex = allButtons.indexOf(dropTarget);
+                    if (fromIndex < toIndex) {
+                        container.insertBefore(draggedElement, dropTarget.nextSibling);
+                    } else {
+                        container.insertBefore(draggedElement, dropTarget);
+                    }
+                }
+            }
+
+            saveButtonPositions = () => {
+                const positions = Array.from(this.elements.buttonContainer.children).map(btn => btn.dataset.item);
+                localStorage.setItem('buttonPositions', JSON.stringify(positions));
+            }
+
+            loadButtonPositions = () => {
+                const positions = JSON.parse(localStorage.getItem('buttonPositions') || '[]');
+                if (positions.length > 0) {
+                    const container = this.elements.buttonContainer;
+                    const buttons = new Map(Array.from(container.children).map(btn => [btn.dataset.item, btn]));
+                    container.innerHTML = '';
+                    positions.forEach(item => {
+                        if (buttons.has(item)) container.appendChild(buttons.get(item));
+                    });
+                    buttons.forEach((btn, item) => {
+                        if (!positions.includes(item)) container.appendChild(btn);
+                    });
+                    this.elements.transactionButtons = document.querySelectorAll('.product-item');
+                    this.initializeButtonStates();
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => new Register());
