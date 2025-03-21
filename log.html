@@ -6,9 +6,9 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
-        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co;
+        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co 'data:';
         style-src 'self' 'unsafe-inline';
-        img-src 'self' data:;
+        img-src 'self' 'data:';
     ">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -303,7 +303,6 @@
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
-                                <th class="items-header">Items</th>
                                 <th class="cash-header">Cash Total</th>
                                 <th>Door Count</th>
                                 <th>Cashier</th>
@@ -556,6 +555,7 @@
                         </tr>
                     `).join('');
 
+                    // Updated graph dataset to display transactions by type and total
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
                     const transactionCounts = {};
                     const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -599,4 +599,269 @@
                         chart.data.datasets = datasets;
                         chart.update();
                     } else {
-                        chart = new Chart(document
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: { labels, datasets },
+                            options: {
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time' } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions' } }
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating log:', error);
+                }
+            }
+
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 0.5;
+                const graphWidth = pageWidth - 2 * margin;
+                const graphHeight = graphWidth * (11.69 / 8.27) / 2;
+
+                const dpi = 150;
+                const pxToIn = (px) => px / dpi;
+
+                doc.setFontSize(16);
+                doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
+
+                const sessionInfo = document.getElementById('sessionInfo').innerText;
+                doc.setFontSize(12);
+                doc.text(sessionInfo, margin, margin + 0.2);
+
+                const summaryData = [
+                    ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
+                    ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
+                    ['Total Transactions', document.getElementById('totalTransactions').innerText]
+                ];
+                doc.autoTable({
+                    startY: margin + 0.4,
+                    head: [['Metric', 'Value']],
+                    body: summaryData,
+                    theme: 'grid',
+                    styles: { fontSize: 12 }
+                });
+
+                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
+                    body: tallyData,
+                    theme: 'grid',
+                    styles: { fontSize: 10 }
+                });
+
+                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['', 'People', 'Total Amount', 'Price per Person']],
+                    body: totalsData,
+                    theme: 'grid',
+                    styles: { fontSize: 10 }
+                });
+
+                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
+                    body: transactionData,
+                    theme: 'grid',
+                    styles: { fontSize: 8 }
+                });
+
+                const mainCanvas = document.createElement('canvas');
+                mainCanvas.width = graphWidth * dpi;
+                mainCanvas.height = graphHeight * dpi;
+                const mainCtx = mainCanvas.getContext('2d');
+                const tempChart = new Chart(mainCtx, {
+                    type: 'line',
+                    data: chart.data,
+                    options: {
+                        animation: { duration: 0 },
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'minute', stepSize: 15 }, title: { display: true, text: 'Time', font: { size: 16 } } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                        },
+                        plugins: {
+                            legend: { labels: { font: { size: 14 } } }
+                        }
+                    }
+                });
+                await waitForChartRender(tempChart);
+                const mainGraphImage = mainCanvas.toDataURL('image/png', 1.0);
+                tempChart.destroy();
+
+                const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
+                const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
+                const interval = 15 * 60 * 1000;
+                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+
+                for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
+                    const intervalStart = new Date(time);
+                    const intervalEnd = new Date(time + interval);
+                    const intervalTransactions = this.transactions.filter(t => {
+                        const txTime = new Date(t.timestamp);
+                        return txTime >= intervalStart && txTime < intervalEnd;
+                    });
+
+                    if (intervalTransactions.length > 0) {
+                        const intervalSummary = {};
+                        types.forEach(type => intervalSummary[type] = 0);
+                        let intervalTotal = 0;
+
+                        intervalTransactions.forEach(t => {
+                            const items = t.items.split('; ');
+                            items.forEach(item => {
+                                const [key, value] = item.split(': ');
+                                if (key && value) {
+                                    const [countStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
+                                    let type;
+                                    if (key.startsWith('Cash')) type = 'Cash';
+                                    else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                    else if (key.startsWith('Comp')) type = 'Comp';
+                                    else if (key.startsWith('Ticket')) type = 'Ticket';
+                                    if (types.includes(type)) intervalSummary[type] += count;
+                                }
+                            });
+                            intervalTotal += t.doorCount || 0;
+                        });
+
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = graphWidth * dpi;
+                        tempCanvas.height = graphHeight * dpi;
+                        const barChart = new Chart(tempCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: types.concat('Total'),
+                                datasets: [{
+                                    label: 'Count',
+                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
+                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
+                                }]
+                            },
+                            options: {
+                                animation: { duration: 0 },
+                                scales: {
+                                    y: { beginAtZero: true, title: { display: true, text: 'Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
+                                    x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                                },
+                                plugins: {
+                                    legend: { labels: { font: { size: 14 } } }
+                                }
+                            }
+                        });
+
+                        await waitForChartRender(barChart);
+                        const barChartImage = tempCanvas.toDataURL('image/png', 1.0);
+                        doc.addPage();
+                        doc.setFontSize(16);
+                        doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
+                        doc.addImage(barChartImage, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+
+                        barChart.destroy();
+                        tempCanvas.remove();
+                    }
+                }
+
+                doc.addPage();
+                doc.setFontSize(16);
+                doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
+                doc.addImage(mainGraphImage, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+
+                doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
+            }
+        }
+
+        function getColorForType(type) {
+            const colors = {
+                'Cash': '#2e7d32',
+                'Credit Card': '#d32f2f',
+                'Comp': '#ffa500',
+                'Ticket': '#1a73e8',
+                'Total': '#808080'
+            };
+            return colors[type] || '#888888';
+        }
+
+        function colorCodeItems(items) {
+            const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+            return items.split('; ').map(item => {
+                const type = types.find(t => item.startsWith(t));
+                if (type) {
+                    const rest = item.slice(type.length);
+                    return `<span class="${type.toLowerCase().replace(' ', '-')}-header">${type}</span>${rest}`;
+                }
+                return item;
+            }).join('; ');
+        }
+
+        function waitForChartRender(chart) {
+            return new Promise(resolve => {
+                if (chart.options.animation && chart.options.animation.duration > 0) {
+                    chart.options.animation.onComplete = () => resolve();
+                } else {
+                    resolve();
+                }
+            });
+        }
+
+        function isLoggedIn() {
+            return localStorage.getItem('isLoggedIn') === 'true';
+        }
+
+        function setLoggedIn(value) {
+            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
+        }
+
+        function logout() {
+            clearTimeout(sessionTimeoutId);
+            setLoggedIn(false);
+            if (salesLogInstance) salesLogInstance.stop();
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
+        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
+            salesLogContainer.style.display = 'block';
+            loginModal.style.display = 'none';
+            salesLogInstance = new SalesLog();
+            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
+            sessionTimeoutId = setTimeout(logout, remainingTime);
+        } else {
+            setLoggedIn(false);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === adminUsername && password === adminPassword) {
+                setLoggedIn(true);
+                localStorage.setItem('loginTime', Date.now().toString());
+                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
+                loginModal.style.display = 'none';
+                salesLogContainer.style.display = 'block';
+                salesLogInstance = new SalesLog();
+                errorMsg.textContent = '';
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+            }
+        });
+    </script>
+</body>
+</html>
