@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Updated CSP to allow Supabase script -->
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -371,7 +370,6 @@
                     errorMessage: document.getElementById('errorMessage')
                 };
 
-                // Set default date and load last event/cashier names
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.elements.eventName.value = localStorage.getItem('lastEventName') || '';
                 this.elements.cashierName.value = localStorage.getItem('lastCashierName') || '';
@@ -535,7 +533,8 @@
                     cash_total: this.state.cashTotal,
                     door_count: this.state.doorCount,
                     note: this.elements.noteInput.value,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    status: 'completed'
                 };
 
                 try {
@@ -554,8 +553,8 @@
                         this.showSuccess('Sale logged');
                     }
                 } catch (error) {
-                    console.error('Error logging sale:', error);
-                    this.showError(`Failed to log sale: ${error.message}`);
+                    console.error('Detailed error:', error);
+                    this.showError('Unable to log sale. Please try again or contact support.');
                 } finally {
                     this.state.isLogging = false;
                 }
