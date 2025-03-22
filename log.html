@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="
@@ -243,6 +244,15 @@
             left: 0;
             right: 0;
         }
+        .vertical-resize-handle {
+            width: 10px;
+            background-color: #444;
+            cursor: ew-resize;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+        }
         .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
@@ -272,6 +282,7 @@
                     <canvas id="doorCountChart"></canvas>
                 </div>
                 <div class="resize-handle"></div>
+                <div class="vertical-resize-handle"></div>
             </div>
             <div class="middle-panel">
                 <div class="tally-sheet">
@@ -360,7 +371,6 @@
         let chart;
         let selectedSessionId = null;
 
-        // Updated typeMap to handle both old "Credit Card" records and new prefixes
         const typeMap = {
             'CASH': 'Cash',
             'Cash': 'Cash',
@@ -372,12 +382,10 @@
             'Comp': 'Comp'
         };
 
-        // Updated getType to correctly map both old and new item keys
         function getType(key) {
             return typeMap[key] || typeMap[key.split(' ')[0]] || key;
         }
 
-        // Function to apply color coding based on standardized type
         function colorCodeItems(items) {
             return items.split('; ').map(item => {
                 const [key, rest] = item.split(': ');
@@ -448,10 +456,38 @@
                     if (chart) setTimeout(() => chart.resize(), 100);
                 });
 
+                let isResizingHorizontally = false;
+                let startX, startWidth;
+                const verticalResizeHandle = document.querySelector('.vertical-resize-handle');
+                const graph = document.querySelector('.graph');
+
+                verticalResizeHandle.addEventListener('mousedown', (e) => {
+                    isResizingHorizontally = true;
+                    startX = e.clientX;
+                    startWidth = parseInt(window.getComputedStyle(graph).width, 10);
+                    document.addEventListener('mousemove', horizontalResize);
+                    document.addEventListener('mouseup', stopHorizontalResize);
+                });
+
+                function horizontalResize(e) {
+                    if (!isResizingHorizontally) return;
+                    const dx = e.clientX - startX;
+                    const newWidth = startWidth + dx;
+                    if (newWidth > 100 && newWidth < window.innerWidth * 0.8) {
+                        graph.style.width = `${newWidth}px`;
+                        chart.resize();
+                    }
+                }
+
+                function stopHorizontalResize() {
+                    isResizingHorizontally = false;
+                    document.removeEventListener('mousemove', horizontalResize);
+                    document.removeEventListener('mouseup', stopHorizontalResize);
+                }
+
                 let isResizing = false;
                 let startY, startHeight;
                 const resizeHandle = document.querySelector('.resize-handle');
-                const graph = document.querySelector('.graph');
 
                 resizeHandle.addEventListener('mousedown', (e) => {
                     isResizing = true;
@@ -547,7 +583,7 @@
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const type = getType(key); // Use updated getType for consistent categorization
+                                const type = getType(key);
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10) || 0;
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
@@ -616,7 +652,7 @@
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const type = getType(key); // Use updated getType for graph data
+                                const type = getType(key);
                                 if (types.includes(type)) {
                                     const [countStr] = value.split(' @ ');
                                     const count = parseInt(countStr, 10) || 0;
@@ -695,36 +731,27 @@
                     return;
                 }
 
-                // Add title
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
 
-                // Add session info and event date as separate lines
                 const sessionInfo = document.getElementById('sessionInfo').innerText;
                 const eventDate = document.getElementById('eventDateDisplay').innerText;
                 doc.setFontSize(12);
-                const lines = [sessionInfo, eventDate];
-                let y = margin + 0.4; // Start below the title
-                lines.forEach(line => {
-                    doc.text(line, margin, y);
-                    y += 12 / 72; // Move down by font size (12pt = 0.167in)
-                });
+                doc.text(sessionInfo + '\n' + eventDate, margin, margin + 0.2);
 
-                // Summary table starts at the bottom half of the page
                 const summaryData = [
                     ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
                     ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
                     ['Total Transactions', document.getElementById('totalTransactions').innerText]
                 ];
                 doc.autoTable({
-                    startY: 6, // Fixed at 6 inches (bottom half, below 5.845in)
+                    startY: margin + 0.4,
                     head: [['Metric', 'Value']],
                     body: summaryData,
                     theme: 'grid',
                     styles: { fontSize: 12 }
                 });
 
-                // Tally sheet table
                 const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -736,7 +763,6 @@
                     styles: { fontSize: 10 }
                 });
 
-                // Totals table
                 const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -748,7 +774,6 @@
                     styles: { fontSize: 10 }
                 });
 
-                // Transaction log table
                 const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -760,8 +785,8 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Bar charts on new pages
                 doc.addPage();
+
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
                 const interval = 30 * 60 * 1000;
@@ -833,7 +858,6 @@
                     }
                 }
 
-                // Full session line chart
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -924,3 +948,4 @@
     </script>
 </body>
 </html>
+<!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
