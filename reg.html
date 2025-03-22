@@ -54,9 +54,8 @@
             text-align: center;
             cursor: move;
         }
-        .product-item.inactive {
-            opacity: 0.5;
-            pointer-events: none;
+        .product-item.hidden {
+            display: none;
         }
         .increment-btn {
             width: 100%;
@@ -90,11 +89,6 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        .totals-container {
-            padding: 10px;
-            background-color: #2e2e2e;
-            border-top: 1px solid #444;
-        }
         .note-section {
             padding: 10px;
         }
@@ -124,11 +118,15 @@
             justify-content: space-between;
             align-items: center;
         }
-        .footer .totals {
+        .footer-totals {
             display: flex;
             gap: 20px;
         }
-        .footer .buttons {
+        .footer-messages {
+            flex: 1;
+            text-align: center;
+        }
+        .footer-buttons {
             display: flex;
             gap: 10px;
         }
@@ -201,7 +199,7 @@
             <label for="eventVenue">Venue:</label>
             <input type="text" id="eventVenue" value="Sister Bar" required>
             <label for="eventName">Event Name:</label>
-            <input type="text" id="eventName" placeholder="Event Name">
+            <input type="text" id="eventName" placeholder="Event Name" required>
             <label for="cashierName">Cashier Name:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
@@ -215,17 +213,17 @@
                 <textarea id="noteInput" placeholder="Add a note..."></textarea>
             </div>
             <button id="logSaleBtn">Log Sale</button>
-            <div class="totals-container">
+        </main>
+        <footer class="footer">
+            <div class="footer-totals">
                 <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal" style="color: white;">0.00</span></h3>
                 <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
             </div>
-        </main>
-        <footer class="footer">
-            <div class="totals">
+            <div class="footer-messages">
                 <span id="successMessage" aria-live="polite"></span>
                 <span id="errorMessage" aria-live="polite"></span>
             </div>
-            <div class="buttons">
+            <div class="footer-buttons">
                 <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
                 <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
                 <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
@@ -312,6 +310,7 @@
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.loadLayout();
+                this.updateButtonVisibility();
                 this.checkSessionStatus();
                 this.loadSessionDoorCount();
                 this.enableDragAndDrop();
@@ -343,7 +342,6 @@
                     });
                 }
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
-                this.sortButtons();
             }
 
             createProductItem(itemData) {
@@ -352,7 +350,7 @@
                 item.dataset.item = itemData.name;
                 item.dataset.price = itemData.price;
                 item.dataset.active = itemData.active;
-                if (!itemData.active) item.classList.add('inactive');
+                if (!itemData.active) item.classList.add('hidden');
                 item.draggable = true;
                 item.innerHTML = `
                     <button class="increment-btn ${itemData.type}">${itemData.name}</button>
@@ -422,14 +420,20 @@
                 localStorage.setItem('layout', JSON.stringify(items));
             }
 
-            sortButtons() {
-                const buttons = Array.from(this.elements.buttonContainer.children);
-                buttons.sort((a, b) => {
-                    const aActive = a.dataset.active === 'true';
-                    const bActive = b.dataset.active === 'true';
-                    return aActive === bActive ? 0 : aActive ? -1 : 1;
+            updateButtonVisibility() {
+                this.elements.transactionButtons.forEach(btn => {
+                    if (this.state.isEditing) {
+                        btn.classList.remove('hidden');
+                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
+                    } else {
+                        if (btn.dataset.active === 'true') {
+                            btn.classList.remove('hidden');
+                            btn.style.opacity = '1';
+                        } else {
+                            btn.classList.add('hidden');
+                        }
+                    }
                 });
-                buttons.forEach(btn => this.elements.buttonContainer.appendChild(btn));
             }
 
             toggleEditMode() {
@@ -438,24 +442,12 @@
                 if (this.state.isEditing) {
                     this.elements.editInstructions.classList.remove('hidden');
                     this.elements.addNewButtonBtn.classList.remove('hidden');
-                    this.elements.transactionButtons.forEach(btn => {
-                        btn.classList.remove('inactive');
-                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
-                    });
                 } else {
                     this.saveLayout();
-                    this.sortButtons();
                     this.elements.editInstructions.classList.add('hidden');
                     this.elements.addNewButtonBtn.classList.add('hidden');
-                    this.elements.transactionButtons.forEach(btn => {
-                        btn.style.opacity = '1';
-                        if (btn.dataset.active !== 'true') {
-                            btn.classList.add('inactive');
-                        } else {
-                            btn.classList.remove('inactive');
-                        }
-                    });
                 }
+                this.updateButtonVisibility();
             }
 
             toggleButtonState(btn) {
@@ -481,6 +473,7 @@
                 this.elements.newButtonValue.value = '';
                 this.elements.addButtonModal.style.display = 'none';
                 this.showSuccess('New button added');
+                this.updateButtonVisibility();
             }
 
             cancelAddButton() {
@@ -557,6 +550,10 @@
             }
 
             startSession() {
+                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+                    this.showError('Please fill in all required fields');
+                    return;
+                }
                 this.state.sessionStarted = true;
                 this.state.sessionId = Date.now().toString();
                 localStorage.setItem('sessionActive', true);
