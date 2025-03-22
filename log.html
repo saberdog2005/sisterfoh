@@ -19,7 +19,6 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        /* Your original CSS remains unchanged */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -139,7 +138,7 @@
             color: #ffffff;
         }
         .scrollable-body {
-            overflow-y: visible;
+            overflow-y: visible; /* No scrolling for tally sheet */
         }
         .transaction-log .scrollable-body {
             max-height: 300px;
@@ -361,21 +360,24 @@
         let chart;
         let selectedSessionId = null;
 
-        // Define type mapping for new items
+        // Updated typeMap to handle both old "Credit Card" records and new prefixes
         const typeMap = {
             'CASH': 'Cash',
+            'Cash': 'Cash',
             'CC': 'Credit Card',
+            'Credit Card': 'Credit Card',
             'TICKET': 'Ticket',
-            'COMP': 'Comp'
+            'Ticket': 'Ticket',
+            'COMP': 'Comp',
+            'Comp': 'Comp'
         };
 
-        // Function to extract type from item key
+        // Updated getType to correctly map both old and new item keys
         function getType(key) {
-            const firstWord = key.split(' ')[0];
-            return typeMap[firstWord] || firstWord; // Map new prefixes or use key directly for old items
+            return typeMap[key] || typeMap[key.split(' ')[0]] || key;
         }
 
-        // Updated colorCodeItems to use getType
+        // Function to apply color coding based on standardized type
         function colorCodeItems(items) {
             return items.split('; ').map(item => {
                 const [key, rest] = item.split(': ');
@@ -545,7 +547,7 @@
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const type = getType(key); // Use getType for consistent categorization
+                                const type = getType(key); // Use updated getType for consistent categorization
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10) || 0;
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
@@ -614,7 +616,7 @@
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const type = getType(key); // Use getType for graph data
+                                const type = getType(key); // Use updated getType for graph data
                                 if (types.includes(type)) {
                                     const [countStr] = value.split(' @ ');
                                     const count = parseInt(countStr, 10) || 0;
@@ -772,7 +774,7 @@
                             items.forEach(item => {
                                 const [key, value] = item.split(': ');
                                 if (key && value) {
-                                    const type = getType(key); // Use getType in PDF export
+                                    const type = getType(key); // Use updated getType in PDF export
                                     if (types.includes(type)) {
                                         const [countStr] = value.split(' @ ');
                                         const count = parseInt(countStr, 10) || 0;
