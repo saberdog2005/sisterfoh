@@ -318,8 +318,8 @@
                             <tr>
                                 <th>Timestamp</th>
                                 <th>Items</th>
-                                <th>Total</th>
-                                <th>Count</th>
+                                <th>Cash Total</th>
+                                <th>Door Count</th>
                                 <th>Cashier</th>
                                 <th>Note</th>
                             </tr>
@@ -396,6 +396,31 @@
                 const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
                 return `<span class="${colorClass}">${key}</span>: ${rest}`;
             }).join('; ');
+        }
+
+        function getColorForType(type) {
+            const colors = {
+                'Cash': '#2e7d32',
+                'Credit Card': '#d32f2f',
+                'Comp': '#ffa500',
+                'Ticket': '#1a73e8',
+                'Total': '#808080'
+            };
+            return colors[type] || '#888888';
+        }
+
+        function getPaymentTypeColor(paymentType) {
+            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) {
+                return '#2e7d32'; // Cash color (green)
+            } else if (paymentType === 'Credit Card') {
+                return '#d32f2f'; // Credit Card color (red)
+            } else if (paymentType === 'Comp') {
+                return '#ffa500'; // Comp color (orange)
+            } else if (paymentType === 'Ticket') {
+                return '#1a73e8'; // Ticket color (blue)
+            } else {
+                return '#000000'; // Default to black
+            }
         }
 
         class SalesLog {
@@ -781,27 +806,37 @@
                     return;
                 }
 
+                // Add title
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
 
+                // Add session info and event date as separate lines
                 const sessionInfo = document.getElementById('sessionInfo').innerText;
                 const eventDate = document.getElementById('eventDateDisplay').innerText;
                 doc.setFontSize(12);
-                doc.text(sessionInfo + '\n' + eventDate, margin, margin + 0.2);
+                let y = margin + 0.2; // Start below the title
+                const lineHeight = 12 / 72; // 12pt font height in inches
+                const headerLines = [sessionInfo, eventDate];
+                headerLines.forEach(line => {
+                    doc.text(line, margin, y);
+                    y += lineHeight;
+                });
 
+                // Add summary table
                 const summaryData = [
                     ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
                     ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
                     ['Total Transactions', document.getElementById('totalTransactions').innerText]
                 ];
                 doc.autoTable({
-                    startY: margin + 0.4,
+                    startY: y + 0.2, // Add a small gap after header
                     head: [['Metric', 'Value']],
                     body: summaryData,
                     theme: 'grid',
                     styles: { fontSize: 12 }
                 });
 
+                // Add tally sheet table with color coding
                 const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -810,9 +845,17 @@
                     head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
                     body: tallyData,
                     theme: 'grid',
-                    styles: { fontSize: 10 }
+                    styles: { fontSize: 10 },
+                    didParseCell: (data) => {
+                        if (data.section === 'body' && data.column.index === 0) {
+                            const paymentType = data.cell.raw;
+                            const color = getPaymentTypeColor(paymentType);
+                            data.cell.styles.textColor = color;
+                        }
+                    }
                 });
 
+                // Add totals table
                 const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -824,6 +867,7 @@
                     styles: { fontSize: 10 }
                 });
 
+                // Add transaction log table
                 const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -938,17 +982,6 @@
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
-        }
-
-        function getColorForType(type) {
-            const colors = {
-                'Cash': '#2e7d32',
-                'Credit Card': '#d32f2f',
-                'Comp': '#ffa500',
-                'Ticket': '#1a73e8',
-                'Total': '#808080'
-            };
-            return colors[type] || '#888888';
         }
 
         function isLoggedIn() {
