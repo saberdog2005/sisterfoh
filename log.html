@@ -358,7 +358,7 @@
         let sessionTimeoutId;
         let salesLogInstance;
         let chart;
-        let selectedSessionId = localStorage.getItem('activeSessionId') || null;
+        let selectedSessionId = null;
 
         class SalesLog {
             constructor() {
@@ -375,10 +375,8 @@
                     if (exportFlag === 'true') this.exportPDF();
                     this.updateInterval = setInterval(() => this.updateLog(), 5000);
                     channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') {
-                            console.log('New transaction message received');
-                            this.updateLog();
-                        } else if (event.data.type === 'new_session') {
+                        if (event.data.type === 'new_transaction') this.updateLog();
+                        else if (event.data.type === 'new_session') {
                             selectedSessionId = event.data.sessionId;
                             this.updateLog();
                         }
@@ -386,7 +384,7 @@
                     supabase
                         .channel('public:transactions')
                         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
-                            console.log('New transaction inserted, updating log');
+                            console.log('Real-time update triggered');
                             this.updateLog();
                         })
                         .subscribe(status => console.log('Subscription status:', status));
@@ -474,21 +472,15 @@
                     console.log('Fetched transactions:', allTransactions);
 
                     const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
-                    const activeSessionId = localStorage.getItem('activeSessionId');
-                    if (!selectedSessionId && activeSessionId && allSessionIds.includes(activeSessionId)) {
-                        selectedSessionId = activeSessionId;
-                    } else if (!selectedSessionId && allSessionIds.length > 0) {
-                        selectedSessionId = allSessionIds[0];
-                    }
                     const sessionSelect = document.getElementById('sessionSelect');
                     sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
                         allSessionIds.map(id => {
                             const sessionTx = allTransactions.find(t => t.sessionId === id);
                             const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
-                            const activeText = id === activeSessionId ? ' (Active)' : '';
-                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}${activeText}</option>`;
+                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
                         }).join('');
 
+                    if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
                     console.log('Selected Session ID:', selectedSessionId);
 
                     if (!selectedSessionId) {
@@ -625,7 +617,7 @@
                         borderColor: '#808080',
                         fill: false,
                         stepped: true
-                    }));
+                    });
                     console.log('Chart datasets:', datasets);
 
                     if (chart) {
