@@ -62,12 +62,14 @@
         .cc-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
         .ticket-header { color: #1a73e8; }
+        .other-header { color: #888888; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
         .cash-row { background-color: #2e7d32; color: white; }
         .cc-row { background-color: #d32f2f; color: white; }
         .comp-row { background-color: #ffa500; color: white; }
         .ticket-row { background-color: #1a73e8; color: white; }
+        .other-row { background-color: #888888; color: white; }
     </style>
 </head>
 <body>
@@ -178,12 +180,12 @@
         let chart;
         let selectedSessionId = null;
 
-        const paymentTypes = ['CASH', 'CC', 'COMP', 'TICKET'];
+        const paymentTypes = ['CASH', 'CC', 'COMP', 'TICKET', 'OTHER'];
 
         function formatItems(items) {
             if (!items) return '';
             return Object.entries(items)
-                .filter(([key, data]) => data.count > 0) // Only show non-zero items
+                .filter(([key, data]) => data.count > 0)
                 .map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`)
                 .join('; ');
         }
@@ -205,6 +207,7 @@
                 'CC': '#d32f2f',
                 'COMP': '#ffa500',
                 'TICKET': '#1a73e8',
+                'OTHER': '#888888',
                 'Total Door Count': '#808080'
             };
             return colors[type] || '#888888';
@@ -313,7 +316,7 @@
                     const { data: allTransactions, error } = await supabase
                         .from('transactions')
                         .select('*')
-                        .order('timestamp', { ascending: true });
+                        .order('timestamp', { ascending: false }); // Fetch in descending order for transaction log
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
                     const validTransactions = allTransactions.filter(t => t.sessionId != null);
@@ -347,8 +350,6 @@
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
 
-                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
                     const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'N/A';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
@@ -362,8 +363,8 @@
                         Object.entries(t.items).forEach(([key, data]) => {
                             const count = data.count || 0;
                             const price = data.price || 0;
-                            const type = paymentTypes.find(pt => key.startsWith(pt)) || key;
-                            if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0, price };
+                            const type = paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER';
+                            if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
                             itemSummary[type].people += count;
                             itemSummary[type].total += count * price;
                         });
@@ -376,7 +377,7 @@
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
                     const summaryRows = paymentTypes.map(type => {
-                        const data = itemSummary[type] || { people: 0, total: 0, price: 0 };
+                        const data = itemSummary[type] || { people: 0, total: 0 };
                         const colorClass = type.toLowerCase();
                         return `
                             <tr class="${colorClass}-row">
@@ -411,17 +412,20 @@
                         </tr>
                     `).join('');
 
+                    // Sort transactions ascending for graph cumulative counts
+                    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
                     let cumulativeDoorCount = 0;
-                    const doorCountData = transactions.map(t => {
+                    const doorCountData = sortedTransactions.map(t => {
                         cumulativeDoorCount += t.doorCount || 0;
                         return { x: new Date(t.timestamp), y: cumulativeDoorCount };
                     });
 
                     const typeDatasets = paymentTypes.map(type => {
                         let cumulativeCount = 0;
-                        const data = transactions.map(t => {
+                        const data = sortedTransactions.map(t => {
                             const count = Object.entries(t.items)
-                                .filter(([key]) => key.startsWith(type))
+                                .filter(([key]) => (paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER') === type)
                                 .reduce((sum, [_, data]) => sum + (data.count || 0), 0);
                             cumulativeCount += count;
                             return { x: new Date(t.timestamp), y: cumulativeCount };
@@ -554,8 +558,8 @@
 
                         intervalTransactions.forEach(t => {
                             Object.entries(t.items).forEach(([key, data]) => {
-                                const type = paymentTypes.find(pt => key.startsWith(pt));
-                                if (type) intervalSummary[type] += data.count;
+                                const type = paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER';
+                                intervalSummary[type] += data.count;
                             });
                             intervalTotal += t.doorCount || 0;
                         });
