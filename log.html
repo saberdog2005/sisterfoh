@@ -62,14 +62,12 @@
         .cc-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
         .ticket-header { color: #1a73e8; }
-        .other-header { color: #888888; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
         .cash-row { background-color: #2e7d32; color: white; }
         .cc-row { background-color: #d32f2f; color: white; }
         .comp-row { background-color: #ffa500; color: white; }
         .ticket-row { background-color: #1a73e8; color: white; }
-        .other-row { background-color: #888888; color: white; }
     </style>
 </head>
 <body>
@@ -180,14 +178,15 @@
         let chart;
         let selectedSessionId = null;
 
-        const paymentTypes = ['CASH', 'CC', 'COMP', 'TICKET', 'OTHER'];
+        const paymentTypes = ['CASH', 'CC', 'COMP', 'TICKET'];
 
         function formatItems(items) {
             if (!items) return '';
-            return Object.entries(items)
-                .filter(([key, data]) => data.count > 0)
-                .map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`)
-                .join('; ');
+            return Object.entries(items).map(([key, data]) => {
+                const count = data.count !== undefined ? data.count : 0;
+                const price = data.price !== undefined ? data.price : 0;
+                return `${key}: ${count} @ $${price.toFixed(2)}`;
+            }).join('; ');
         }
 
         function colorCodeItems(items) {
@@ -207,7 +206,6 @@
                 'CC': '#d32f2f',
                 'COMP': '#ffa500',
                 'TICKET': '#1a73e8',
-                'OTHER': '#888888',
                 'Total Door Count': '#808080'
             };
             return colors[type] || '#888888';
@@ -255,19 +253,17 @@
                     const middlePanel = document.querySelector('.middle-panel');
                     const rightPanel = document.querySelector('.right-panel');
                     
-                    if (graph.classList.contains('fullscreen')) {
-                        graph.classList.remove('fullscreen');
-                        grid.classList.remove('fullscreen');
-                        middlePanel.classList.remove('fullscreen');
-                        rightPanel.classList.remove('fullscreen');
-                        graph.style.height = graph.dataset.originalHeight || 'auto';
-                    } else {
+                    if (!graph.dataset.originalHeight) {
                         graph.dataset.originalHeight = window.getComputedStyle(graph).height;
-                        graph.classList.add('fullscreen');
-                        grid.classList.add('fullscreen');
-                        middlePanel.classList.add('fullscreen');
-                        rightPanel.classList.add('fullscreen');
-                        graph.style.height = '100vh';
+                    }
+                    
+                    graph.classList.toggle('fullscreen');
+                    grid.classList.toggle('fullscreen');
+                    middlePanel.classList.toggle('fullscreen');
+                    rightPanel.classList.toggle('fullscreen');
+                    
+                    if (!graph.classList.contains('fullscreen')) {
+                        graph.style.height = graph.dataset.originalHeight;
                     }
                     
                     if (chart) setTimeout(() => chart.resize(), 100);
@@ -316,7 +312,7 @@
                     const { data: allTransactions, error } = await supabase
                         .from('transactions')
                         .select('*')
-                        .order('timestamp', { ascending: false }); // Fetch in descending order for transaction log
+                        .order('timestamp', { ascending: true });
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
                     const validTransactions = allTransactions.filter(t => t.sessionId != null);
@@ -350,10 +346,13 @@
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
 
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
-                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'N/A';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Event Date: ${eventDate}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+
+                    const allTypes = [...new Set(transactions.flatMap(t => Object.keys(t.items)))];
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -363,10 +362,9 @@
                         Object.entries(t.items).forEach(([key, data]) => {
                             const count = data.count || 0;
                             const price = data.price || 0;
-                            const type = paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER';
-                            if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
-                            itemSummary[type].people += count;
-                            itemSummary[type].total += count * price;
+                            if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
+                            itemSummary[key].people += count;
+                            itemSummary[key].total += count * price;
                         });
                         totalDoorCount += t.doorCount || 0;
                         totalSales += t.cashTotal || 0;
@@ -376,18 +374,15 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
-                    const summaryRows = paymentTypes.map(type => {
-                        const data = itemSummary[type] || { people: 0, total: 0 };
-                        const colorClass = type.toLowerCase();
-                        return `
-                            <tr class="${colorClass}-row">
-                                <td>${type}</td>
+                    const summaryRows = Object.entries(itemSummary)
+                        .map(([key, data]) => `
+                            <tr class="${key.toLowerCase()}-row">
+                                <td>${key}</td>
                                 <td>${data.people}</td>
                                 <td>$${data.total.toFixed(2)}</td>
                                 <td>$${data.people ? (data.total / data.people).toFixed(2) : '0.00'}</td>
                             </tr>
-                        `;
-                    }).join('');
+                        `).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
                     const totalsRow = `
@@ -400,8 +395,9 @@
                     `;
                     document.getElementById('totalsBody').innerHTML = totalsRow;
 
+                    const nonzeroTransactions = transactions.filter(t => Object.values(t.items).some(item => item.count > 0));
                     const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = transactions.map(t => `
+                    transactionLogBody.innerHTML = nonzeroTransactions.map(t => `
                         <tr>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
                             <td>${colorCodeItems(formatItems(t.items))}</td>
@@ -412,21 +408,16 @@
                         </tr>
                     `).join('');
 
-                    // Sort transactions ascending for graph cumulative counts
-                    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
                     let cumulativeDoorCount = 0;
-                    const doorCountData = sortedTransactions.map(t => {
+                    const doorCountData = transactions.map(t => {
                         cumulativeDoorCount += t.doorCount || 0;
                         return { x: new Date(t.timestamp), y: cumulativeDoorCount };
                     });
 
-                    const typeDatasets = paymentTypes.map(type => {
+                    const typeDatasets = allTypes.map(type => {
                         let cumulativeCount = 0;
-                        const data = sortedTransactions.map(t => {
-                            const count = Object.entries(t.items)
-                                .filter(([key]) => (paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER') === type)
-                                .reduce((sum, [_, data]) => sum + (data.count || 0), 0);
+                        const data = transactions.map(t => {
+                            const count = t.items[type]?.count || 0;
                             cumulativeCount += count;
                             return { x: new Date(t.timestamp), y: cumulativeCount };
                         });
@@ -434,8 +425,6 @@
                             label: type,
                             data,
                             borderColor: getColorForType(type),
-                            pointBackgroundColor: getColorForType(type),
-                            pointBorderColor: getColorForType(type),
                             fill: false
                         };
                     });
@@ -443,13 +432,12 @@
                     typeDatasets.push({
                         label: 'Total Door Count',
                         data: doorCountData,
-                        borderColor: getColorForType('Total Door Count'),
-                        pointBackgroundColor: getColorForType('Total Door Count'),
-                        pointBorderColor: getColorForType('Total Door Count'),
+                        borderColor: '#808080',
                         fill: false
                     });
 
                     if (chart) {
+                        chart.data.labels = transactions.map(t => new Date(t.timestamp));
                         chart.data.datasets = typeDatasets;
                         chart.update();
                     } else {
@@ -558,8 +546,8 @@
 
                         intervalTransactions.forEach(t => {
                             Object.entries(t.items).forEach(([key, data]) => {
-                                const type = paymentTypes.find(pt => key.startsWith(pt)) || 'OTHER';
-                                intervalSummary[type] += data.count;
+                                const type = paymentTypes.find(pt => key.startsWith(pt));
+                                if (type) intervalSummary[type] += data.count;
                             });
                             intervalTotal += t.doorCount || 0;
                         });
@@ -631,16 +619,6 @@
 
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
-        }
-
-        function waitForChartRender(chart) {
-            return new Promise(resolve => {
-                if (chart.options.animation && chart.options.animation.duration > 0) {
-                    chart.options.animation.onComplete = () => resolve();
-                } else {
-                    resolve();
-                }
-            });
         }
 
         function isLoggedIn() {
