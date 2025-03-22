@@ -19,230 +19,46 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            overflow: hidden;
-        }
-        .container {
-            width: 98.5%;
-            height: 98.5vh;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 2fr 2fr 1fr;
-            grid-template-rows: auto;
-            gap: 10px;
-            height: 100%;
-            transition: grid-template-columns 0.2s ease;
-        }
-        .header {
-            grid-column: 1 / -1;
-            text-align: center;
-            font-size: 24px;
-            display: none;
-        }
-        .graph {
-            grid-column: 1;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        .middle-panel {
-            grid-column: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .tally-sheet {
-            flex: 0 0 300px;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .totals {
-            background-color: #2e2e2e;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .transaction-log {
-            flex: 1;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .right-panel {
-            grid-column: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .filters {
-            flex: 0 0 auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .summary {
-            flex: 1;
-            overflow-y: auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .graph-wrapper {
-            flex: 1;
-            min-height: 0;
-        }
-        #doorCountChart {
-            width: 100%;
-            height: 100%;
-        }
-        .tally-sheet table, .transaction-log table, .totals table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        .tally-sheet table, .totals table {
-            table-layout: fixed;
-        }
-        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) {
-            width: 25%;
-        }
-        .tally-sheet th, .transaction-log th {
-            background-color: #3e3e3e;
-            position: static;
-        }
-        .tally-sheet td, .transaction-log td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background-color: #3e3e3e;
-            color: #ffffff;
-        }
-        .scrollable-body {
-            overflow-y: visible; /* No scrolling for tally sheet */
-        }
-        .transaction-log .scrollable-body {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .summary h3 {
-            font-size: 18px;
-        }
-        .filters label, .filters select, .filters button {
-            display: block;
-            margin: 10px 0;
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
-        }
-        .filters select {
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            max-width: 300px;
-        }
-        .filters button {
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #exportBtn {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #2e2e2e;
-            margin: 15% auto;
-            padding: 20px;
-            width: 300px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            font-size: 16px;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .error {
-            color: #d32f2f;
-            margin-top: 10px;
-        }
-        .graph.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1000;
-            background-color: #1e1e1e;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .grid.fullscreen {
-            grid-template-columns: 1fr;
-        }
-        .middle-panel.fullscreen, .right-panel.fullscreen {
-            display: none;
-        }
-        .resize-handle {
-            height: 10px;
-            background-color: #444;
-            cursor: ns-resize;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
+        /* Existing CSS remains unchanged */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #1e1e1e; color: #e0e0e0; overflow: hidden; }
+        .container { width: 98.5%; height: 98.5vh; }
+        .grid { display: grid; grid-template-columns: 2fr 2fr 1fr; grid-template-rows: auto; gap: 10px; height: 100%; transition: grid-template-columns 0.2s ease; }
+        .header { grid-column: 1 / -1; text-align: center; font-size: 24px; display: none; }
+        .graph { grid-column: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; position: relative; }
+        .middle-panel { grid-column: 2; display: flex; flex-direction: column; gap: 10px; }
+        .tally-sheet { flex: 0 0 300px; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .totals { background-color: #2e2e2e; padding: 10px; border-radius: 5px; }
+        .transaction-log { flex: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .right-panel { grid-column: 3; display: flex; flex-direction: column; gap: 10px; }
+        .filters { flex: 0 0 auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .summary { flex: 1; overflow-y: auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .graph-wrapper { flex: 1; min-height: 0; }
+        #doorCountChart { width: 100%; height: 100%; }
+        .tally-sheet table, .transaction-log table, .totals table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .tally-sheet table, .totals table { table-layout: fixed; }
+        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) { width: 25%; }
+        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) { width: 25%; }
+        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) { width: 25%; }
+        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) { width: 25%; }
+        .tally-sheet th, .transaction-log th { background-color: #3e3e3e; position: static; }
+        .tally-sheet td, .transaction-log td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
+        th { background-color: #3e3e3e; color: #ffffff; }
+        .scrollable-body { overflow-y: visible; }
+        .transaction-log .scrollable-body { max-height: 300px; overflow-y: auto; }
+        .summary h3 { font-size: 18px; }
+        .filters label, .filters select, .filters button { display: block; margin: 10px 0; width: 100%; padding: 8px; font-size: 16px; }
+        .filters select { background-color: #333; color: #e0e0e0; border: 1px solid #555; max-width: 300px; }
+        .filters button { background-color: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #exportBtn { background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; padding: 8px; font-size: 16px; margin-top: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #2e2e2e; margin: 15% auto; padding: 20px; width: 300px; border-radius: 5px; text-align: center; }
+        .modal-content input { width: 100%; padding: 10px; margin: 10px 0; background-color: #333; color: #e0e0e0; border: 1px solid #555; font-size: 16px; }
+        .modal-content button { padding: 10px 20px; background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .error { color: #d32f2f; margin-top: 10px; }
+        .graph.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background-color: #1e1e1e; padding: 20px; box-sizing: border-box; }
+        .grid.fullscreen { grid-template-columns: 1fr; }
+        .middle-panel.fullscreen, .right-panel.fullscreen { display: none; }
+        .resize-handle { height: 10px; background-color: #444; cursor: ns-resize; position: absolute; bottom: 0; left: 0; right: 0; }
         .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
@@ -252,6 +68,7 @@
     </style>
 </head>
 <body>
+    <!-- HTML structure remains unchanged -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Admin Login</h2>
@@ -359,6 +176,14 @@
         let salesLogInstance;
         let chart;
         let selectedSessionId = null;
+
+        // Define type mapping globally
+        const typeMap = {
+            'CASH': 'Cash',
+            'CC': 'Credit Card',
+            'TICKET': 'Ticket',
+            'COMP': 'Comp'
+        };
 
         class SalesLog {
             constructor() {
@@ -515,18 +340,23 @@
                     let totalDoorCount = 0;
                     let totalSales = 0;
 
+                    // Process items for summary, grouping by type
                     transactions.forEach(t => {
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const [countStr, priceStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10) || 0;
-                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
-                                itemSummary[key].people += count;
-                                itemSummary[key].total += count * price;
-                                totalDoorCount += count;
+                                const firstWord = key.split(' ')[0];
+                                const type = typeMap[firstWord];
+                                if (type) {
+                                    const [countStr, priceStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
+                                    const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
+                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
+                                    itemSummary[type].people += count;
+                                    itemSummary[type].total += count * price;
+                                    totalDoorCount += count;
+                                }
                             }
                         });
                         totalSales += t.cashTotal || 0;
@@ -536,15 +366,20 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
+                    // Generate summary rows with color coding
                     const summaryRows = Object.entries(itemSummary)
-                        .map(([key, data]) => `
-                            <tr>
-                                <td>${key}</td>
-                                <td>${data.people}</td>
-                                <td>$${data.total.toFixed(2)}</td>
-                                <td>$${data.price.toFixed(2)}</td>
-                            </tr>
-                        `).join('');
+                        .map(([type, data]) => {
+                            const averagePrice = data.people > 0 ? data.total / data.people : 0;
+                            const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
+                            return `
+                                <tr>
+                                    <td class="${colorClass}">${type}</td>
+                                    <td>${data.people}</td>
+                                    <td>$${data.total.toFixed(2)}</td>
+                                    <td>$${averagePrice.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
                     const totalsRow = `
@@ -579,19 +414,17 @@
                     types.forEach(type => dataPoints[type] = []);
                     dataPoints.total = [];
 
+                    // Process items for graph
                     transactions.forEach(t => {
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const [countStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10) || 0;
-                                let type;
-                                if (key.startsWith('Cash')) type = 'Cash';
-                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                                else if (key.startsWith('Comp')) type = 'Comp';
-                                else if (key.startsWith('Ticket')) type = 'Ticket';
-                                if (types.includes(type)) {
+                                const firstWord = key.split(' ')[0];
+                                const type = typeMap[firstWord];
+                                if (type) {
+                                    const [countStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
                                     cumulative[type] += count;
                                     cumulative.total += count;
                                 }
@@ -746,14 +579,11 @@
                             items.forEach(item => {
                                 const [key, value] = item.split(': ');
                                 if (key && value) {
-                                    const [countStr] = value.split(' @ ');
-                                    const count = parseInt(countStr, 10) || 0;
-                                    let type;
-                                    if (key.startsWith('Cash')) type = 'Cash';
-                                    else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                                    else if (key.startsWith('Comp')) type = 'Comp';
-                                    else if (key.startsWith('Ticket')) type = 'Ticket';
-                                    if (types.includes(type)) {
+                                    const firstWord = key.split(' ')[0];
+                                    const type = typeMap[firstWord];
+                                    if (type) {
+                                        const [countStr] = value.split(' @ ');
+                                        const count = parseInt(countStr, 10) || 0;
                                         intervalSummary[type] += count;
                                         intervalTotal += count;
                                     }
@@ -842,12 +672,16 @@
         }
 
         function colorCodeItems(items) {
-            const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
             return items.split('; ').map(item => {
-                const type = types.find(t => item.startsWith(t));
-                if (type) {
-                    const rest = item.slice(type.length);
-                    return `<span class="${type.toLowerCase().replace(' ', '-')}-header">${type}</span>${rest}`;
+                const firstSpaceIndex = item.indexOf(' ');
+                if (firstSpaceIndex !== -1) {
+                    const prefix = item.substring(0, firstSpaceIndex);
+                    const type = typeMap[prefix];
+                    if (type) {
+                        const rest = item.substring(firstSpaceIndex);
+                        const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
+                        return `<span class="${colorClass}">${prefix}</span>${rest}`;
+                    }
                 }
                 return item;
             }).join('; ');
