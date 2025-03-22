@@ -516,9 +516,9 @@
                                 if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
                                 itemSummary[key].people += count;
                                 itemSummary[key].total += count * price;
+                                totalDoorCount += count;
                             }
                         });
-                        totalDoorCount += t.doorCount || 0;
                         totalSales += t.cashTotal || 0;
                     });
 
@@ -560,39 +560,45 @@
                     `).join('');
 
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-                    const transactionCounts = {};
+                    const doorCounts = {};
                     const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
 
                     transactions.forEach(t => {
                         const txTime = new Date(t.timestamp).getTime();
                         const bin = Math.floor(txTime / interval) * interval;
-                        if (!transactionCounts[bin]) {
-                            transactionCounts[bin] = { total: 0 };
-                            types.forEach(type => transactionCounts[bin][type] = 0);
+                        if (!doorCounts[bin]) {
+                            doorCounts[bin] = { total: 0 };
+                            types.forEach(type => doorCounts[bin][type] = 0);
                         }
-                        transactionCounts[bin].total++;
-                        const firstItem = t.items.split('; ')[0];
-                        const key = firstItem.split(': ')[0];
-                        let type;
-                        if (key.startsWith('Cash')) type = 'Cash';
-                        else if (key.startsWith('Credit Card')) type = 'Credit Card';
-                        else if (key.startsWith('Comp')) type = 'Comp';
-                        else if (key.startsWith('Ticket')) type = 'Ticket';
-                        if (types.includes(type)) {
-                            transactionCounts[bin][type]++;
-                        }
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const [countStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10) || 0;
+                                let type;
+                                if (key.startsWith('Cash')) type = 'Cash';
+                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                else if (key.startsWith('Comp')) type = 'Comp';
+                                else if (key.startsWith('Ticket')) type = 'Ticket';
+                                if (types.includes(type)) {
+                                    doorCounts[bin][type] += count;
+                                    doorCounts[bin].total += count;
+                                }
+                            }
+                        });
                     });
 
-                    const labels = Object.keys(transactionCounts).map(bin => new Date(parseInt(bin)));
+                    const labels = Object.keys(doorCounts).map(bin => new Date(parseInt(bin)));
                     const datasets = types.map(type => ({
                         label: type,
-                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()][type] || 0 })),
+                        data: labels.map(label => ({ x: label, y: doorCounts[label.getTime()][type] || 0 })),
                         borderColor: getColorForType(type),
                         fill: false
                     }));
                     datasets.push({
                         label: 'Total',
-                        data: labels.map(label => ({ x: label, y: transactionCounts[label.getTime()].total || 0 })),
+                        data: labels.map(label => ({ x: label, y: doorCounts[label.getTime()].total || 0 })),
                         borderColor: '#808080',
                         fill: false
                     });
@@ -616,7 +622,7 @@
                                     },
                                     y: { 
                                         beginAtZero: true, 
-                                        title: { display: true, text: 'Number of Transactions', font: { size: 16 } },
+                                        title: { display: true, text: 'Door Count', font: { size: 16 } },
                                         ticks: { font: { size: 14 } }
                                     }
                                 },
@@ -731,10 +737,12 @@
                                     else if (key.startsWith('Credit Card')) type = 'Credit Card';
                                     else if (key.startsWith('Comp')) type = 'Comp';
                                     else if (key.startsWith('Ticket')) type = 'Ticket';
-                                    if (types.includes(type)) intervalSummary[type] += count;
+                                    if (types.includes(type)) {
+                                        intervalSummary[type] += count;
+                                        intervalTotal += count;
+                                    }
                                 }
                             });
-                            intervalTotal += t.doorCount || 0;
                         });
 
                         const tempCanvas = document.createElement('canvas');
@@ -747,7 +755,7 @@
                             data: {
                                 labels: types.concat('Total'),
                                 datasets: [{
-                                    label: 'Count',
+                                    label: 'Door Count',
                                     data: types.map(type => intervalSummary[type]).concat(intervalTotal),
                                     backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
                                 }]
@@ -755,7 +763,7 @@
                             options: {
                                 animation: { duration: 0 },
                                 scales: {
-                                    y: { beginAtZero: true, title: { display: true, text: 'Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
+                                    y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
                                     x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                                 },
                                 plugins: {
@@ -787,7 +795,7 @@
                         maintainAspectRatio: false,
                         scales: {
                             x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                            y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
                         plugins: {
                             legend: { labels: { font: { size: 14 } } }
