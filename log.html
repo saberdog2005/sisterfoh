@@ -331,6 +331,7 @@
                 <div class="summary">
                     <h2>Summary</h2>
                     <div id="sessionInfo"></div>
+                    <p id="eventDateDisplay"></p>
                     <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
                     <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
                     <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
@@ -475,6 +476,7 @@
                     if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
                     if (!selectedSessionId) {
                         document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
+                        document.getElementById('eventDateDisplay').innerHTML = '';
                         if (chart) {
                             chart.data.datasets = [];
                             chart.update();
@@ -494,9 +496,10 @@
                     transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
-
+                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'No Date';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
 
                     const itemSummary = {};
                     let totalDoorCount = 0;
@@ -605,8 +608,20 @@
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
-                                    x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time' } },
-                                    y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions' } }
+                                    x: { 
+                                        type: 'time', 
+                                        time: { unit: 'minute', stepSize: 30 }, 
+                                        title: { display: true, text: 'Time', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    },
+                                    y: { 
+                                        beginAtZero: true, 
+                                        title: { display: true, text: 'Number of Transactions', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    }
+                                },
+                                plugins: {
+                                    legend: { labels: { font: { size: 14 } } }
                                 }
                             }
                         });
@@ -634,8 +649,9 @@
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
 
                 const sessionInfo = document.getElementById('sessionInfo').innerText;
+                const eventDate = document.getElementById('eventDateDisplay').innerText;
                 doc.setFontSize(12);
-                doc.text(sessionInfo, margin, margin + 0.2);
+                doc.text(sessionInfo + '\n' + eventDate, margin, margin + 0.2);
 
                 const summaryData = [
                     ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
@@ -683,12 +699,11 @@
                     styles: { fontSize: 8 }
                 });
 
-                // Start interval bar charts on a new page
                 doc.addPage();
 
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 30 * 60 * 1000; // 30 minutes in milliseconds
+                const interval = 30 * 60 * 1000;
                 const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
 
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
@@ -759,7 +774,6 @@
                     }
                 }
 
-                // Main chart on the last page
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -772,7 +786,7 @@
                         animation: { duration: 0 },
                         maintainAspectRatio: false,
                         scales: {
-                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } } },
+                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
                             y: { beginAtZero: true, title: { display: true, text: 'Number of Transactions', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
                         plugins: {
@@ -813,16 +827,6 @@
                 }
                 return item;
             }).join('; ');
-        }
-
-        function waitForChartRender(chart) {
-            return new Promise(resolve => {
-                if (chart.options.animation && chart.options.animation.duration > 0) {
-                    chart.options.animation.onComplete = () => resolve();
-                } else {
-                    resolve();
-                }
-            });
         }
 
         function isLoggedIn() {
