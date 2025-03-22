@@ -68,7 +68,6 @@
     </style>
 </head>
 <body>
-    <!-- HTML structure remains unchanged -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>Admin Login</h2>
@@ -123,8 +122,6 @@
                                 <th>Items</th>
                                 <th>Cash Total</th>
                                 <th>Door Count</th>
-                                <th>Cashier</th>
-                                <th>Note</th>
                             </tr>
                         </thead>
                     </table>
@@ -340,23 +337,18 @@
                     let totalDoorCount = 0;
                     let totalSales = 0;
 
-                    // Process items for summary, grouping by type
                     transactions.forEach(t => {
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const firstWord = key.split(' ')[0];
-                                const type = typeMap[firstWord];
-                                if (type) {
-                                    const [countStr, priceStr] = value.split(' @ ');
-                                    const count = parseInt(countStr, 10) || 0;
-                                    const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
-                                    itemSummary[type].people += count;
-                                    itemSummary[type].total += count * price;
-                                    totalDoorCount += count;
-                                }
+                                const [countStr, priceStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10) || 0;
+                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
+                                if (!itemSummary[key]) itemSummary[key] = { people: 0, total: 0, price };
+                                itemSummary[key].people += count;
+                                itemSummary[key].total += count * price;
+                                totalDoorCount += count;
                             }
                         });
                         totalSales += t.cashTotal || 0;
@@ -366,20 +358,15 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
-                    // Generate summary rows with color coding
                     const summaryRows = Object.entries(itemSummary)
-                        .map(([type, data]) => {
-                            const averagePrice = data.people > 0 ? data.total / data.people : 0;
-                            const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                            return `
-                                <tr>
-                                    <td class="${colorClass}">${type}</td>
-                                    <td>${data.people}</td>
-                                    <td>$${data.total.toFixed(2)}</td>
-                                    <td>$${averagePrice.toFixed(2)}</td>
-                                </tr>
-                            `;
-                        }).join('');
+                        .map(([key, data]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td>${data.people}</td>
+                                <td>$${data.total.toFixed(2)}</td>
+                                <td>$${data.price.toFixed(2)}</td>
+                            </tr>
+                        `).join('');
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
                     const totalsRow = `
@@ -399,8 +386,6 @@
                             <td>${colorCodeItems(t.items)}</td>
                             <td>$${t.cashTotal.toFixed(2)}</td>
                             <td>${t.doorCount}</td>
-                            <td>${t.cashierName}</td>
-                            <td>${t.note || ''}</td>
                         </tr>
                     `).join('');
                     console.log('Transaction log HTML:', transactionLogBody.innerHTML);
@@ -414,17 +399,19 @@
                     types.forEach(type => dataPoints[type] = []);
                     dataPoints.total = [];
 
-                    // Process items for graph
                     transactions.forEach(t => {
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
                             if (key && value) {
-                                const firstWord = key.split(' ')[0];
-                                const type = typeMap[firstWord];
-                                if (type) {
-                                    const [countStr] = value.split(' @ ');
-                                    const count = parseInt(countStr, 10) || 0;
+                                const [countStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10) || 0;
+                                let type;
+                                if (key.startsWith('Cash')) type = 'Cash';
+                                else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                else if (key.startsWith('Comp')) type = 'Comp';
+                                else if (key.startsWith('Ticket')) type = 'Ticket';
+                                if (types.includes(type)) {
                                     cumulative[type] += count;
                                     cumulative.total += count;
                                 }
@@ -548,7 +535,7 @@
                 );
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
+                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count']],
                     body: transactionData,
                     theme: 'grid',
                     styles: { fontSize: 8 }
@@ -579,11 +566,14 @@
                             items.forEach(item => {
                                 const [key, value] = item.split(': ');
                                 if (key && value) {
-                                    const firstWord = key.split(' ')[0];
-                                    const type = typeMap[firstWord];
-                                    if (type) {
-                                        const [countStr] = value.split(' @ ');
-                                        const count = parseInt(countStr, 10) || 0;
+                                    const [countStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
+                                    let type;
+                                    if (key.startsWith('Cash')) type = 'Cash';
+                                    else if (key.startsWith('Credit Card')) type = 'Credit Card';
+                                    else if (key.startsWith('Comp')) type = 'Comp';
+                                    else if (key.startsWith('Ticket')) type = 'Ticket';
+                                    if (types.includes(type)) {
                                         intervalSummary[type] += count;
                                         intervalTotal += count;
                                     }
@@ -672,16 +662,12 @@
         }
 
         function colorCodeItems(items) {
+            const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
             return items.split('; ').map(item => {
-                const firstSpaceIndex = item.indexOf(' ');
-                if (firstSpaceIndex !== -1) {
-                    const prefix = item.substring(0, firstSpaceIndex);
-                    const type = typeMap[prefix];
-                    if (type) {
-                        const rest = item.substring(firstSpaceIndex);
-                        const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                        return `<span class="${colorClass}">${prefix}</span>${rest}`;
-                    }
+                const type = types.find(t => item.startsWith(t));
+                if (type) {
+                    const rest = item.slice(type.length);
+                    return `<span class="${type.toLowerCase().replace(' ', '-')}-header">${type}</span>${rest}`;
                 }
                 return item;
             }).join('; ');
