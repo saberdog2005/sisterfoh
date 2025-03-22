@@ -525,15 +525,15 @@
                     .join('; ');
 
                 const transaction = {
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
+                    event_date: this.elements.eventDate.value,
+                    event_venue: this.elements.eventVenue.value,
+                    event_name: this.elements.eventName.value,
+                    cashier_name: this.elements.cashierName.value,
                     items: items || 'No items',
-                    cashTotal: Number(this.state.cashTotal),
-                    doorCount: Number(this.state.sessionDoorCount),
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
                     note: this.elements.noteInput.value,
-                    sessionId: this.state.sessionId,
+                    session_id: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
