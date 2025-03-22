@@ -518,22 +518,27 @@
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
                 this.elements.logSaleBtn.disabled = true;
+
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
                     .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toFixed(2)}`)
                     .join('; ');
+
                 const transaction = {
                     event_date: this.elements.eventDate.value,
                     event_venue: this.elements.eventVenue.value,
                     event_name: this.elements.eventName.value,
                     cashier_name: this.elements.cashierName.value,
                     items: items || 'No items',
-                    cash_total: this.state.cashTotal,
-                    door_count: this.state.sessionDoorCount,
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
                     note: this.elements.noteInput.value,
                     session_id: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
+
+                console.log('Transaction data:', transaction);
+
                 try {
                     const response = await fetch(SERVER_URL, {
                         method: 'POST',
@@ -544,7 +549,13 @@
                         },
                         body: JSON.stringify(transaction)
                     });
-                    if (!response.ok) throw new Error('Failed to log sale');
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Server error:', errorData);
+                        throw new Error(`Failed to log sale: ${errorData.message || 'Unknown error'}`);
+                    }
+
                     channel.postMessage({ type: 'transaction', data: transaction });
                     this.resetCurrentItems();
                     this.elements.noteInput.value = '';
