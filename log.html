@@ -259,6 +259,9 @@
         .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
+        .cash-breakdown td:first-child {
+            padding-left: 20px;
+        }
     </style>
 </head>
 <body>
@@ -575,6 +578,7 @@
                     document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
 
                     const itemSummary = {};
+                    const cashBreakdown = {};
                     let totalDoorCount = 0;
                     let totalSales = 0;
 
@@ -587,9 +591,18 @@
                                 const [countStr, priceStr] = value.split(' @ ');
                                 const count = parseInt(countStr, 10) || 0;
                                 const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
-                                itemSummary[type].people += count;
-                                itemSummary[type].total += count * price;
+                                if (type === 'Cash') {
+                                    if (!cashBreakdown[key]) cashBreakdown[key] = { people: 0, total: 0, price };
+                                    cashBreakdown[key].people += count;
+                                    cashBreakdown[key].total += count * price;
+                                    if (!itemSummary['Cash']) itemSummary['Cash'] = { people: 0, total: 0 };
+                                    itemSummary['Cash'].people += count;
+                                    itemSummary['Cash'].total += count * price;
+                                } else {
+                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
+                                    itemSummary[type].people += count;
+                                    itemSummary[type].total += count * price;
+                                }
                                 totalDoorCount += count;
                             }
                         });
@@ -600,11 +613,46 @@
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
                     document.getElementById('totalTransactions').textContent = transactions.length;
 
-                    const summaryRows = Object.entries(itemSummary)
-                        .map(([type, data]) => {
+                    let summaryRows = '';
+
+                    // Add Cash total row
+                    if (itemSummary['Cash']) {
+                        const data = itemSummary['Cash'];
+                        const averagePrice = data.people > 0 ? data.total / data.people : 0;
+                        summaryRows += `
+                            <tr>
+                                <td class="cash-header">Cash</td>
+                                <td>${data.people}</td>
+                                <td>$${data.total.toFixed(2)}</td>
+                                <td>$${averagePrice.toFixed(2)}</td>
+                            </tr>
+                        `;
+
+                        // Add cash breakdown rows, sorted by dollar amount
+                        Object.keys(cashBreakdown).sort((a, b) => {
+                            const amountA = parseFloat(a.split('$')[1]);
+                            const amountB = parseFloat(b.split('$')[1]);
+                            return amountA - amountB;
+                        }).forEach(subKey => {
+                            const subData = cashBreakdown[subKey];
+                            const subAveragePrice = subData.people > 0 ? subData.total / subData.people : 0;
+                            summaryRows += `
+                                <tr class="cash-breakdown">
+                                    <td> - ${subKey}</td>
+                                    <td>${subData.people}</td>
+                                    <td>$${subData.total.toFixed(2)}</td>
+                                    <td>$${subAveragePrice.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+
+                    // Add other payment types
+                    Object.entries(itemSummary).forEach(([type, data]) => {
+                        if (type !== 'Cash') {
                             const averagePrice = data.people > 0 ? data.total / data.people : 0;
                             const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                            return `
+                            summaryRows += `
                                 <tr>
                                     <td class="${colorClass}">${type}</td>
                                     <td>${data.people}</td>
@@ -612,7 +660,9 @@
                                     <td>$${averagePrice.toFixed(2)}</td>
                                 </tr>
                             `;
-                        }).join('');
+                        }
+                    });
+
                     document.getElementById('summaryBody').innerHTML = summaryRows;
 
                     const totalsRow = `
