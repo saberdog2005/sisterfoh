@@ -695,27 +695,36 @@
                     return;
                 }
 
+                // Add title
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
 
+                // Add session info and event date as separate lines
                 const sessionInfo = document.getElementById('sessionInfo').innerText;
                 const eventDate = document.getElementById('eventDateDisplay').innerText;
                 doc.setFontSize(12);
-                doc.text(sessionInfo + '\n' + eventDate, margin, margin + 0.2);
+                const lines = [sessionInfo, eventDate];
+                let y = margin + 0.4; // Start below the title
+                lines.forEach(line => {
+                    doc.text(line, margin, y);
+                    y += 12 / 72; // Move down by font size (12pt = 0.167in)
+                });
 
+                // Summary table starts at the bottom half of the page
                 const summaryData = [
                     ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
                     ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
                     ['Total Transactions', document.getElementById('totalTransactions').innerText]
                 ];
                 doc.autoTable({
-                    startY: margin + 0.4,
+                    startY: 6, // Fixed at 6 inches (bottom half, below 5.845in)
                     head: [['Metric', 'Value']],
                     body: summaryData,
                     theme: 'grid',
                     styles: { fontSize: 12 }
                 });
 
+                // Tally sheet table
                 const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -727,6 +736,7 @@
                     styles: { fontSize: 10 }
                 });
 
+                // Totals table
                 const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -738,6 +748,7 @@
                     styles: { fontSize: 10 }
                 });
 
+                // Transaction log table
                 const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
                     Array.from(row.cells).map(cell => cell.innerText)
                 );
@@ -749,8 +760,8 @@
                     styles: { fontSize: 8 }
                 });
 
+                // Bar charts on new pages
                 doc.addPage();
-
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
                 const interval = 30 * 60 * 1000;
@@ -774,7 +785,7 @@
                             items.forEach(item => {
                                 const [key, value] = item.split(': ');
                                 if (key && value) {
-                                    const type = getType(key); // Use updated getType in PDF export
+                                    const type = getType(key);
                                     if (types.includes(type)) {
                                         const [countStr] = value.split(' @ ');
                                         const count = parseInt(countStr, 10) || 0;
@@ -822,6 +833,7 @@
                     }
                 }
 
+                // Full session line chart
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
