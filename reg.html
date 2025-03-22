@@ -54,8 +54,9 @@
             text-align: center;
             cursor: move;
         }
-        .product-item.hidden {
-            display: none;
+        .product-item.inactive {
+            opacity: 0.5;
+            pointer-events: none;
         }
         .increment-btn {
             width: 100%;
@@ -158,7 +159,7 @@
             border-radius: 5px;
             text-align: center;
         }
-        .modal-content input {
+        .modal-content input, .modal-content select {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -176,21 +177,6 @@
         }
         #submitPinBtn { background-color: #2e7d32; }
         #cancelPinBtn { background-color: #d32f2f; }
-        #addButtonForm {
-            display: none;
-            background-color: #2e2e2e;
-            padding: 20px;
-            margin: 10px;
-            border-radius: 5px;
-        }
-        #addButtonForm select, #addButtonForm input {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-        }
         #submitNewButton { background-color: #2e7d32; }
         #cancelNewButton { background-color: #d32f2f; }
         #editInstructions {
@@ -230,8 +216,8 @@
             </div>
             <button id="logSaleBtn">Log Sale</button>
             <div class="totals-container">
-                <h3 style="color: white;">Cash Total: $<span id="cashTotal">0.00</span></h3>
-                <h3 style="color: white;">Thru Door: <span id="doorCount">0</span></h3>
+                <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal" style="color: white;">0.00</span></h3>
+                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
             </div>
         </main>
         <footer class="footer">
@@ -242,6 +228,7 @@
             <div class="buttons">
                 <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
                 <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
+                <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
             </div>
         </footer>
 
@@ -255,19 +242,21 @@
             </div>
         </div>
 
-        <div id="addButtonForm">
-            <h3>Add New Button</h3>
-            <select id="newButtonType">
-                <option value="">Select Type</option>
-                <option value="CASH">CASH</option>
-                <option value="CC">CC</option>
-                <option value="TICKET">TICKET</option>
-                <option value="COMP">COMP</option>
-            </select>
-            <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
-            <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
-            <button id="submitNewButton">Submit</button>
-            <button id="cancelNewButton">Cancel</button>
+        <div id="addButtonModal" class="modal">
+            <div class="modal-content">
+                <h3>Add New Button</h3>
+                <select id="newButtonType">
+                    <option value="">Select Type</option>
+                    <option value="cash">CASH</option>
+                    <option value="cc">CC</option>
+                    <option value="ticket">TICKET</option>
+                    <option value="comp">COMP</option>
+                </select>
+                <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
+                <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
+                <button id="submitNewButton">Submit</button>
+                <button id="cancelNewButton">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -301,11 +290,12 @@
                     cashierName: document.getElementById('cashierName'),
                     toggleSalesBtn: document.getElementById('toggleSalesBtn'),
                     editLayoutBtn: document.getElementById('editLayoutBtn'),
+                    addNewButtonBtn: document.getElementById('addNewButtonBtn'),
                     logSaleBtn: document.getElementById('logSaleBtn'),
                     cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
                     noteInput: document.getElementById('noteInput'),
-                    addButtonForm: document.getElementById('addButtonForm'),
+                    addButtonModal: document.getElementById('addButtonModal'),
                     newButtonType: document.getElementById('newButtonType'),
                     newButtonName: document.getElementById('newButtonName'),
                     newButtonValue: document.getElementById('newButtonValue'),
@@ -353,6 +343,7 @@
                     });
                 }
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
+                this.sortButtons();
             }
 
             createProductItem(itemData) {
@@ -361,7 +352,7 @@
                 item.dataset.item = itemData.name;
                 item.dataset.price = itemData.price;
                 item.dataset.active = itemData.active;
-                if (!itemData.active) item.classList.add('hidden');
+                if (!itemData.active) item.classList.add('inactive');
                 item.draggable = true;
                 item.innerHTML = `
                     <button class="increment-btn ${itemData.type}">${itemData.name}</button>
@@ -388,6 +379,7 @@
                 });
                 this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
                 this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
                 this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
                 this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
                 this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
@@ -430,19 +422,38 @@
                 localStorage.setItem('layout', JSON.stringify(items));
             }
 
+            sortButtons() {
+                const buttons = Array.from(this.elements.buttonContainer.children);
+                buttons.sort((a, b) => {
+                    const aActive = a.dataset.active === 'true';
+                    const bActive = b.dataset.active === 'true';
+                    return aActive === bActive ? 0 : aActive ? -1 : 1;
+                });
+                buttons.forEach(btn => this.elements.buttonContainer.appendChild(btn));
+            }
+
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
                 this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
                 if (this.state.isEditing) {
                     this.elements.editInstructions.classList.remove('hidden');
-                    this.elements.addButtonForm.style.display = 'block';
+                    this.elements.addNewButtonBtn.classList.remove('hidden');
+                    this.elements.transactionButtons.forEach(btn => {
+                        btn.classList.remove('inactive');
+                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
+                    });
                 } else {
                     this.saveLayout();
+                    this.sortButtons();
                     this.elements.editInstructions.classList.add('hidden');
-                    this.elements.addButtonForm.style.display = 'none';
+                    this.elements.addNewButtonBtn.classList.add('hidden');
                     this.elements.transactionButtons.forEach(btn => {
                         btn.style.opacity = '1';
-                        if (btn.dataset.active !== 'true') btn.classList.add('hidden');
+                        if (btn.dataset.active !== 'true') {
+                            btn.classList.add('inactive');
+                        } else {
+                            btn.classList.remove('inactive');
+                        }
                     });
                 }
             }
@@ -454,7 +465,7 @@
             }
 
             addNewButton() {
-                const type = this.elements.newButtonType.value.toLowerCase();
+                const type = this.elements.newButtonType.value;
                 const name = this.elements.newButtonName.value;
                 const value = parseFloat(this.elements.newButtonValue.value);
                 if (!type || !name || isNaN(value)) {
@@ -468,7 +479,7 @@
                 this.elements.newButtonType.value = '';
                 this.elements.newButtonName.value = '';
                 this.elements.newButtonValue.value = '';
-                this.elements.addButtonForm.style.display = 'none';
+                this.elements.addButtonModal.style.display = 'none';
                 this.showSuccess('New button added');
             }
 
@@ -476,7 +487,7 @@
                 this.elements.newButtonType.value = '';
                 this.elements.newButtonName.value = '';
                 this.elements.newButtonValue.value = '';
-                this.elements.addButtonForm.style.display = 'none';
+                this.elements.addButtonModal.style.display = 'none';
             }
 
             handleIncrement(btn) {
@@ -514,72 +525,26 @@
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
 
-            async logSale() {
-                if (!this.state.sessionStarted || this.state.isLogging) return;
-                this.state.isLogging = true;
-                this.elements.logSaleBtn.disabled = true;
-
-                const items = Array.from(this.state.currentItems.entries())
-                    .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toFixed(2)}`)
-                    .join('; ');
-
-                const transaction = {
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
-                    items: items || 'No items',
-                    cashTotal: Number(this.state.cashTotal),
-                    doorCount: Number(this.state.sessionDoorCount),
-                    note: this.elements.noteInput.value,
-                    sessionId: this.state.sessionId,
-                    timestamp: new Date().toISOString()
-                };
-
-                console.log('Transaction data:', transaction);
-
-                try {
-                    const response = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'apikey': API_KEY,
-                            'Authorization': `Bearer ${API_KEY}`
-                        },
-                        body: JSON.stringify(transaction)
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        console.error('Server error:', errorData);
-                        throw new Error(`Failed to log sale: ${errorData.message || 'Unknown error'}`);
-                    }
-
-                    channel.postMessage({ type: 'transaction', data: transaction });
-                    this.resetCurrentItems();
-                    this.elements.noteInput.value = '';
-                    this.showSuccess('Sale logged successfully');
-                } catch (error) {
-                    console.error('Error logging sale:', error);
-                    this.showError('Failed to log sale');
-                } finally {
-                    this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
+            loadSessionDoorCount() {
+                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
+                if (savedCount) {
+                    this.state.sessionDoorCount = parseInt(savedCount, 10);
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 }
             }
 
-            debounceLogSale() {
-                const now = Date.now();
-                if (now - this.state.lastLogTime > 1000) {
-                    this.state.lastLogTime = now;
-                    this.logSale();
+            checkSessionStatus() {
+                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'close-btn' : 'open-btn';
+                if (this.state.sessionStarted) {
+                    this.elements.editLayoutBtn.classList.add('hidden');
+                } else {
+                    this.elements.editLayoutBtn.classList.remove('hidden');
                 }
-            }
-
-            resetCurrentItems() {
-                this.state.currentItems.clear();
-                this.elements.counts.forEach(count => count.textContent = '0');
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
             toggleSales() {
@@ -594,10 +559,18 @@
             startSession() {
                 this.state.sessionStarted = true;
                 this.state.sessionId = Date.now().toString();
-                this.elements.toggleSalesBtn.textContent = 'Close Sales';
-                this.elements.toggleSalesBtn.classList.remove('open-btn');
-                this.elements.toggleSalesBtn.classList.add('close-btn');
+                localStorage.setItem('sessionActive', true);
+                localStorage.setItem('activeSessionId', this.state.sessionId);
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.state.sessionDoorCount = 0;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+                this.elements.cashTotal.textContent = '0.00';
+                this.elements.doorCount.textContent = '0';
+                this.state.currentItems.clear();
+                this.elements.counts.forEach(count => count.textContent = '0');
                 this.showSuccess('Sales session started');
+                this.checkSessionStatus();
             }
 
             async confirmCloseSales() {
@@ -615,6 +588,8 @@
                     await this.logSale();
                 }
                 this.state.sessionStarted = false;
+                localStorage.removeItem('sessionActive');
+                localStorage.removeItem('activeSessionId');
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
@@ -628,6 +603,7 @@
                 this.elements.pinInput.value = '';
                 this.elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
+                this.checkSessionStatus();
             }
 
             cancelPinModal() {
@@ -636,17 +612,76 @@
                 this.elements.pinError.textContent = '';
             }
 
-            checkSessionStatus() {
-                // Simplified for this example; in practice, check localStorage or server
+            async logSale() {
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
+                this.elements.logSaleBtn.disabled = true;
+
+                const items = Array.from(this.state.currentItems.entries())
+                    .filter(([_, value]) => value.count > 0)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toFixed(2)}`)
+                    .join('; ');
+
+                if (!items) {
+                    this.showError('No items to log');
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
+                    return;
+                }
+
+                const transaction = {
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
+                    items,
+                    cashTotal: Number(this.state.cashTotal),
+                    doorCount: Number(this.state.sessionDoorCount),
+                    note: this.elements.noteInput.value,
+                    sessionId: this.state.sessionId,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    const response = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': API_KEY,
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify(transaction)
+                    });
+
+                    if (!response.ok) throw new Error('Failed to log sale');
+
+                    channel.postMessage({ type: 'transaction', data: transaction });
+                    this.resetCurrentItems();
+                    this.elements.noteInput.value = '';
+                    this.showSuccess('Sale logged successfully');
+                } catch (error) {
+                    this.showError('Failed to log sale: ' + error.message);
+                } finally {
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
+                }
             }
 
-            loadSessionDoorCount() {
-                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
-                if (savedCount) {
-                    this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    this.state.doorCount = this.state.sessionDoorCount;
-                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+            debounceLogSale() {
+                const now = Date.now();
+                if (now - this.state.lastLogTime > 1000) {
+                    this.state.lastLogTime = now;
+                    this.logSale();
                 }
+            }
+
+            resetCurrentItems() {
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.elements.cashTotal.textContent = '0.00';
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                this.elements.counts.forEach(count => count.textContent = '0');
             }
 
             showSuccess(message) {
