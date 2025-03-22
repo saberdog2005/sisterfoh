@@ -64,6 +64,10 @@
         .ticket-header { color: #1a73e8; }
         .summary h3 span { color: orange; }
         .total-row td { color: orange; }
+        .cash-row { background-color: #2e7d32; color: white; }
+        .cc-row { background-color: #d32f2f; color: white; }
+        .comp-row { background-color: #ffa500; color: white; }
+        .ticket-row { background-color: #1a73e8; color: white; }
     </style>
 </head>
 <body>
@@ -178,11 +182,10 @@
 
         function formatItems(items) {
             if (!items) return '';
-            return Object.entries(items).map(([key, data]) => {
-                const count = data.count !== undefined ? data.count : 0;
-                const price = data.price !== undefined ? data.price : 0;
-                return `${key}: ${count} @ $${price.toFixed(2)}`;
-            }).join('; ');
+            return Object.entries(items)
+                .filter(([key, data]) => data.count > 0) // Only show non-zero items
+                .map(([key, data]) => `${key}: ${data.count} @ $${data.price.toFixed(2)}`)
+                .join('; ');
         }
 
         function colorCodeItems(items) {
@@ -249,17 +252,19 @@
                     const middlePanel = document.querySelector('.middle-panel');
                     const rightPanel = document.querySelector('.right-panel');
                     
-                    if (!graph.dataset.originalHeight) {
+                    if (graph.classList.contains('fullscreen')) {
+                        graph.classList.remove('fullscreen');
+                        grid.classList.remove('fullscreen');
+                        middlePanel.classList.remove('fullscreen');
+                        rightPanel.classList.remove('fullscreen');
+                        graph.style.height = graph.dataset.originalHeight || 'auto';
+                    } else {
                         graph.dataset.originalHeight = window.getComputedStyle(graph).height;
-                    }
-                    
-                    graph.classList.toggle('fullscreen');
-                    grid.classList.toggle('fullscreen');
-                    middlePanel.classList.toggle('fullscreen');
-                    rightPanel.classList.toggle('fullscreen');
-                    
-                    if (!graph.classList.contains('fullscreen')) {
-                        graph.style.height = graph.dataset.originalHeight;
+                        graph.classList.add('fullscreen');
+                        grid.classList.add('fullscreen');
+                        middlePanel.classList.add('fullscreen');
+                        rightPanel.classList.add('fullscreen');
+                        graph.style.height = '100vh';
                     }
                     
                     if (chart) setTimeout(() => chart.resize(), 100);
@@ -372,8 +377,9 @@
 
                     const summaryRows = paymentTypes.map(type => {
                         const data = itemSummary[type] || { people: 0, total: 0, price: 0 };
+                        const colorClass = type.toLowerCase();
                         return `
-                            <tr>
+                            <tr class="${colorClass}-row">
                                 <td>${type}</td>
                                 <td>${data.people}</td>
                                 <td>$${data.total.toFixed(2)}</td>
@@ -424,6 +430,8 @@
                             label: type,
                             data,
                             borderColor: getColorForType(type),
+                            pointBackgroundColor: getColorForType(type),
+                            pointBorderColor: getColorForType(type),
                             fill: false
                         };
                     });
@@ -432,6 +440,8 @@
                         label: 'Total Door Count',
                         data: doorCountData,
                         borderColor: getColorForType('Total Door Count'),
+                        pointBackgroundColor: getColorForType('Total Door Count'),
+                        pointBorderColor: getColorForType('Total Door Count'),
                         fill: false
                     });
 
