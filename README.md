@@ -37,7 +37,7 @@ Built with HTML, CSS, JavaScript, jQuery, and IndexedDB for local storage, this 
 
 
 
-<h2>New in Version 0.9.1</h2>
+<h2>New in Version 0.9.2</h2>
 
     Enhanced transaction logging with additional metadata for improved tracking.
     Improved error handling for Google Sheets integration.
