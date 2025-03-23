@@ -4,7 +4,9 @@
 A web-based point-of-sale (POS) application for managing event ticket sales at Sister Bar.
 
 <h2>Overview</h2>
-The Sister Bar Event Register is a web-based POS application designed to streamline event ticket sales management at Sister Bar. It provides an efficient solution for:
+The Sister Bar Event Register is a web-based POS application designed to streamline event ticket sales management at Sister Bar. It provides an efficient solution for logging customer transactions, tracking sales totals, exporting data, syncing with Google Sheets, generating daily reports, and closing out sales. Built with HTML, CSS, JavaScript, jQuery, and IndexedDB for local storage, this tool integrates seamlessly with Google Sheets for cloud-based record keeping. Its responsive design ensures usability across devices, making it an ideal choice for bar and event management staff.
+
+It provides an efficient solution for:
 
     Logging customer transactions
     Tracking sales totals
@@ -17,26 +19,23 @@ Built with HTML, CSS, JavaScript, jQuery, and IndexedDB for local storage, this 
 
 <h2>Features</h2>
 
-    Transaction Management: Record sales for:
-        Event Tickets ($20)
-        VIP Tickets ($50)
-        Includes customer names, ticket quantities, totals, and cash received.
-    Real-Time Updates: Display a live transaction log with:
-        Timestamps
-        Customer details
-        Items
-        Totals
-        Attendee counts
-    Export to Excel: Download transaction data as an Excel (.xlsx) file for offline analysis.
-    Google Sheets Integration: Sync transaction data to a Google Spreadsheet (requires Google API credentials).
-    Daily Reports: Generate HTML reports summarizing daily interactions and transactions.
-    Sales Closeout: Reset daily sales and view comprehensive totals for:
-        Sales
-        Cash
-        Attendees
-        Unique customers
-    Local Storage: Store transactions and logs locally using IndexedDB.
-    Responsive Design: Enjoy a modern, mobile-friendly interface with a clean UI.
+<b>Transaction Management:</b> Record sales for Event Tickets ($20) and VIP Tickets ($50), including customer names, ticket quantities, totals, and cash received.
+
+<b>Real-Time Updates:</b> Display a live transaction log with timestamps, customer details, items, totals, and attendee counts.
+
+<b>Export to Excel:</b> Download transaction data as an Excel (.xlsx) file for offline analysis.
+
+<b>Google Sheets Integration: </b>Sync transaction data to a Google Spreadsheet (requires Google API credentials).
+
+<b>Daily Reports:</b> Generate HTML reports summarizing daily interactions and transactions.
+
+<b>Sales Closeout:</b> Reset daily sales and view comprehensive totals for sales, cash, attendees, and unique customers.
+
+<b>Local Storage:</b> Store transactions and logs locally using IndexedDB.
+
+<b>Responsive Design:</b> Enjoy a modern, mobile-friendly interface with a clean UI.
+
+
 
 <h2>New in Version 0.9.1</h2>
 
@@ -77,3 +76,17 @@ To run the application, ensure you have:
         bash
         python3 -m http.server 8000
   Access the app in your browser at http://localhost:8000/index.html.
+
+<h2>Contact</h2>
+For questions or support, contact the project maintainer:
+
+Email: j4sunofficia@gmail.com
+
+GitHub: saberdog2005
+
+    PLEASE ENJOY,
+
+    SABERDOG LLC SOFTWARE DEVELOPMENT TEAM.
+            "We Build People a Platform"
+    SINCE 2005
+  
