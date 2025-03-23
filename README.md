@@ -26,7 +26,7 @@ Responsive Design: Offer a mobile-friendly interface with a clean, modern UI.
         
 Usage
     Launch the Application:
-        Open http://localhost:8000/register.html in your browser.
+        Open http://localhost:8000/index.html in your browser.  Select Sales Log or Cash Register.
     Log a Sale:
         Enter a customer name in the "Customer Name" field.
         Use the "+" or "-" buttons to adjust quantities of Event Tickets ($20) or VIP tickets ($50).
