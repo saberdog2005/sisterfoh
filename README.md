@@ -36,7 +36,7 @@ Usage
         Click "Export to Excel" to download a .xlsx file with all transactions and totals.
     Sync with Google Sheets:
         Ensure Google API credentials are set up.
-        After logging sales, click "Export to Excel" to sync data to the Google Spreadsheet (ID: 1J7rCLXuCOgdtUGE_37dysfx0GFS5h1t8cFvS4_vQDtc).
+        After logging sales, click "Export to Excel" to sync data to the Google Spreadsheet (ID: YOUR_SPREADSHEET_ID).
     Generate Daily Report:
         Click "Debug Log & Daily Report" to download an HTML file (daily.html) summarizing daily interactions and transactions.
     Close Out Sales:
