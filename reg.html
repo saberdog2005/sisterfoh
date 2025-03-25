@@ -200,6 +200,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            grid-column: 4;
+            grid-row: 4;
         }
         .thru-door h3 {
             margin-bottom: 5px;
@@ -227,10 +229,7 @@
                 <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
                 <div class="button-container">
                     <!-- Product items will be dynamically loaded here, with "Thru Door" as a separate div at the bottom right. -->
-                    <div class="thru-door">
-                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
-                        <p style="color: yellow;">Session Time: <span id="timeSeconds">0</span> seconds</p>
-                    </div>
+
                 </div>
                 <div class="note-section">
                     <textarea id="noteInput" placeholder="Add a note..."></textarea>
@@ -364,6 +363,16 @@
                         this.elements.counts.set(itemData.name, item.querySelector('.count'));
                     });
                 }
+                // Add Thru Door as a separate div
+                const thruDoorDiv = document.createElement('div');
+                thruDoorDiv.classList.add('thru-door');
+                thruDoorDiv.innerHTML = `
+                    <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                    <p style="color: yellow;">Session Time: <span id="timeSeconds">0</span> seconds</p>
+                `;
+                this.elements.buttonContainer.appendChild(thruDoorDiv);
+                this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
+                this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
             }
 
@@ -426,7 +435,7 @@
                     e.preventDefault();
                     const draggedItem = document.querySelector(`[data-item="${e.dataTransfer.getData('text/plain')}"]`);
                     const targetItem = e.target.closest('.product-item');
-                    if (targetItem && draggedItem !== targetItem) {
+                    if (targetItem && draggedItem != targetItem) {
                         this.elements.buttonContainer.insertBefore(draggedItem, targetItem);
                     }
                     draggedItem.style.opacity = '1';
