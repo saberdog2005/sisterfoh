@@ -4,7 +4,7 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script_src 'self' https://code.jquery.com https://unpkg.com 'unsafe_inline'; object_src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -50,8 +50,6 @@
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
-            max-width: 90%;
-            margin: 0 auto;
             position: relative;
         }
         .product-item {
@@ -139,12 +137,6 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            max-width: 90%;
-            margin: 0 auto;
-        }
-        .footer-left, .footer-right {
-            display: flex;
-            align-items: center;
         }
         .footer-messages {
             flex: 1;
@@ -229,6 +221,12 @@
             justify-content: center;
             align-items: center;
         }
+        .thru-door h3 {
+            margin-bottom: 10px;
+        }
+        .thru-door span {
+            color: yellow;
+        }
     </style>
 </head>
 <body>
@@ -250,6 +248,7 @@
                     <!-- Product items will be dynamically loaded here -->
                     <div class="thru-door">
                         <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                        <span id="timeSeconds" style="color: yellow;"></span>
                     </div>
                 </div>
                 <div class="note-section">
@@ -257,9 +256,6 @@
                     <button id="logSaleBtn">Log Sale</button>
                 </div>
                 <footer class="footer">
-                    <div class="footer-left">
-                        <span id="timeSeconds">0</span>
-                    </div>
                     <div class="footer-messages">
                         <span id="successMessage" aria-live="polite"></span>
                         <span id="errorMessage" aria-live="polite"></span>
@@ -294,8 +290,8 @@
                         <option value="ticket">TICKET</option>
                         <option value="comp">COMP</option>
                     </select>
-                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
-                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
+                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
+                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
                     <button id="submitNewButton">Submit</button>
                     <button id="cancelNewButton">Cancel</button>
                 </div>
@@ -468,7 +464,6 @@
             }
 
             updateButtonVisibility() {
-                this.elements.transactionButtons = document.querySelectorAll('.product-item');
                 this.elements.transactionButtons.forEach(btn => {
                     if (this.state.isEditing) {
                         btn.classList.remove('hidden');
@@ -580,11 +575,18 @@
                 this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
                 if (this.state.sessionStarted) {
                     this.elements.editLayoutBtn.classList.add('hidden');
+                    // Disable eventName and cashierName inputs
+                    this.elements.eventName.setAttribute('disabled', 'true');
+                    this.elements.cashierName.setAttribute('disabled', 'true');
                 } else {
                     this.elements.editLayoutBtn.classList.remove('hidden');
+                    // Enable eventName and cashierName inputs
+                    this.elements.eventName.removeAttribute('disabled');
+                    this.elements.cashierName.removeAttribute('disabled');
                 }
-                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input.setAttribute('disabled', this.state.sessionStarted ? 'true' : 'false'));
+                // Keep eventDate and eventVenue disabled once set
+                this.elements.eventDate.setAttribute('disabled', 'true');
+                this.elements.eventVenue.setAttribute('disabled', 'true');
             }
 
             toggleSales() {
@@ -675,17 +677,17 @@
             async logSale() {
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
-                this.elements.logSaleBtn.disabled = true;
+                this.elements.logSaleBtn.setAttribute('disabled', 'true');
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
+                    this.elements.logSaleBtn.removeAttribute('disabled');
                     return;
                 }
 
@@ -722,7 +724,7 @@
                     this.showError('Failed to log sale: ' + error.message);
                 } finally {
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
+                    this.elements.logSaleBtn.removeAttribute('disabled');
                 }
             }
 
