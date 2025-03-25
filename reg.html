@@ -40,19 +40,20 @@
             border: 1px solid #555;
         }
         .content-wrapper {
-            max-width: 90%; /* Adjusted for better fit */
+            max-width: 90%;
             margin: 0 auto;
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(4, minmax(175px, 1fr)); /* Adjusted for four items per row */
+            grid-template-columns: repeat(4, 175px);
             gap: 10px;
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
         }
         .product-item {
-            height: 190px;
+            width: 175px;
+            height: 175px;
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
@@ -130,7 +131,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap; /* Added for better layout on smaller screens */
         }
         .footer-totals {
             display: flex;
@@ -161,7 +161,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgb(0,0,0,0.5);
+        }
+        .modal form {
+            width: 100%;
+            height: 100%;
         }
         .modal-content {
             background-color: #2e2e2e;
@@ -203,6 +207,9 @@
         }
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
+        #timeSeconds {
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -217,60 +224,65 @@
             <label for="cashierName">Cashier:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
-        <main>
-            <div class="content-wrapper">
-                <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
-                <div class="button-container">
-                    <!-- Product items will be dynamically loaded here -->
-                </div>
-                <div class="note-section">
-                    <textarea id="noteInput" placeholder="Add a note..."></textarea>
-                    <button id="logSaleBtn">Log Sale</button>
-                </div>
-                <footer class="footer">
-                    <div class="footer-totals">
-                        <h3><span style="color: pink;">Cash Total:</span> <span id="cashTotal" style="color: white;">0.00</span></h3>
-                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
-                    </div>
-                    <div class="footer-messages">
-                        <span id="timeInSeconds">0</span>
-                        <span id="successMessage" aria-live="polite"></span>
-                        <span id="errorMessage" aria-live="polite"></span>
-                    </div>
-                    <div class="footer-buttons">
-                        <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
-                        <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
-                        <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
-                    </div>
-                </footer>
+        <main class="content-wrapper">
+            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+            <div class="button-container">
+                <!-- Product items will be dynamically loaded here -->
             </div>
+            <div class="note-section">
+                <textarea id="noteInput" placeholder="Add a note..."></textarea>
+            </div>
+            <button id="logSaleBtn">Log Sale</button>
         </main>
+        <footer class="footer">
+            <div class="footer-totals">
+                <h3><span style="color: pink;">Cash Total:</span> <span id="cashTotal">0.00</span></h3>
+                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+            </div>
+            <div class="footer-messages">
+                <span id="timeSeconds">0</span>
+                <span id="successMessage" aria-live="polite"></span>
+                <span id="errorMessage" aria-live="polite"></span>
+            </div>
+            <div class="footer-buttons">
+                <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
+                <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
+                <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
+            </div>
+        </footer>
+
         <div id="pinModal" class="modal">
-            <div class="modal-content">
-                <h2>Enter PIN to Close Sales</h2>
-                <input type="password" id="pinInput" placeholder="PIN">
-                <button id="submitPinBtn">Submit</button>
-                <button id="cancelPinBtn">Cancel</button>
-                <p id="pinError" style="color: red;"></p>
-            </div>
+            <form>
+                <div class="modal-content">
+                    <h2>Enter PIN to Close Sales</h2>
+                    <input type="password" id="pinInput" placeholder="PIN">
+                    <button id="submitPinBtn">Submit</button>
+                    <button id="cancelPinBtn">Cancel</button>
+                    <p id="pinError" style="color: red;"></p>
+                </div>
+            </form>
         </div>
+
         <div id="addButtonModal" class="modal">
-            <div class="modal-content">
-                <h3>Add New Button</h3>
-                <select id="newButtonType">
-                    <option value="">Select Type</option>
-                    <option value="cash">CASH</option>
-                    <option value="cc">CC</option>
-                    <option value="ticket">TICKET</option>
-                    <option value="comp">COMP</option>
-                </select>
-                <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
-                <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
-                <button id="submitNewButton">Submit</button>
-                <button id="cancelNewButton">Cancel</button>
-            </div>
+            <form>
+                <div class="modal-content">
+                    <h3_Add New Button</h3>
+                    <select id="newButtonType">
+                        <option value="">Select Type</option>
+                        <option value="cash">CASH</option>
+                        <option value="cc">CC</option>
+                        <option value="ticket">TICKET</option>
+                        <option value="comp">COMP</option>
+                    </select>
+                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
+                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
+                    <button id="submitNewButton">Submit</button>
+                    <button id="cancelNewButton">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
+
     <script>
         const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
@@ -289,7 +301,9 @@
                     isEditing: false,
                     activeButtons: new Map(),
                     isLogging: false,
-                    lastLogTime: 0
+                    lastLogTime: 0,
+                    timeSeconds: 0,
+                    timeInterval: null
                 };
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
@@ -319,7 +333,8 @@
                     pinError: document.getElementById('pinError'),
                     editInstructions: document.getElementById('editInstructions'),
                     successMessage: document.getElementById('successMessage'),
-                    errorMessage: document.getElementById('errorMessage')
+                    errorMessage: document.getElementById('errorMessage'),
+                    timeSeconds: document.getElementById('timeSeconds')
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.loadLayout();
@@ -526,16 +541,16 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                this.elements.cashTotal.textContent = this.state.cashTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                this.elements.doorCount.textContent = this.state.sessionDoorCount.toString();
-                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount.toString());
+                this.elements.cashTotal.textContent = this.state.cashTotal.tofixed(2);
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
 
             loadSessionDoorCount() {
                 const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
                 if (savedCount) {
                     this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    this.elements.doorCount.textContent = this.state.sessionDoorCount.toString();
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 }
             }
 
@@ -550,7 +565,7 @@
                     this.elements.editLayoutBtn.classList.remove('hidden');
                 }
                 const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input.setAttribute('disabled', this.state.sessionStarted));
+                inputs.forEach(input => input disabled = this.state.sessionStarted);
             }
 
             toggleSales() {
@@ -581,6 +596,19 @@
                 this.elements.counts.forEach(count => count.textContent = '0');
                 this.showSuccess('Sales session started');
                 this.checkSessionStatus();
+                this.state.timeSeconds = 0;
+                this.startTimer();
+            }
+
+            startTimer() {
+                this.state.timeInterval = window.setInterval(() => {
+                    this.state.timeSeconds++;
+                    this.updateTimeDisplay();
+                }, 1000);
+            }
+
+            updateTimeDisplay() {
+                this.elements.timeSeconds.textContent = this.state.timeSeconds;
             }
 
             async confirmCloseSales() {
@@ -614,6 +642,11 @@
                 this.elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
+                this.stopTimer();
+            }
+
+            stopTimer() {
+                window.clearInterval(this.state.timeInterval);
             }
 
             cancelPinModal() {
@@ -625,17 +658,17 @@
             async logSale() {
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
-                this.elements.logSaleBtn.setAttribute('disabled', 'disabled');
+                this.elements.logSaleBtn.disbled = true;
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.tofixed(2)}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.removeAttribute('disabled');
+                    this.elements.logSaleBtn.disbled = false;
                     return;
                 }
 
@@ -672,7 +705,7 @@
                     this.showError('Failed to log sale: ' + error.message);
                 } finally {
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.removeAttribute('disabled');
+                    this.elements.logSaleBtn.disbled = false;
                 }
             }
 
@@ -689,7 +722,7 @@
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
                 this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.sessionDoorCount.toString();
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
 
