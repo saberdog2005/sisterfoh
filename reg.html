@@ -4,7 +4,7 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script[src] 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object[src] 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -25,7 +25,7 @@
             height: 100%;
         }
         .header {
-            padding: 5px; /* Corrected from 'px' to '5px' */
+            padding: 5px;
             background-color: #2e2e2e;
             border-bottom: 1px solid #444;
         }
@@ -39,10 +39,6 @@
             color: #e0e0e0;
             border: 1px solid #555;
         }
-        .content-wrapper {
-            max-width: 70%;
-            margin: 0 auto;
-        }
         .button-container {
             display: grid;
             grid-template-columns: repeat(4, minmax(145px, 1fr));
@@ -50,6 +46,8 @@
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
+            max-width: 70%;
+            margin: 0 auto;
         }
         .product-item {
             height: 150px;
@@ -100,6 +98,8 @@
         }
         .note-section {
             padding: 10px;
+            max-width: 70%;
+            margin: 0 auto;
         }
         #noteInput {
             width: 90%;
@@ -128,6 +128,7 @@
             background-color: #2e2e2e;
             border-top: 1px solid #444;
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
             max-width: 70%;
@@ -218,62 +219,57 @@
             <label for="cashierName">Cashier:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
-        
         <main>
-            <div class="content-wrapper">
-                <div class="button-container">
-                    <!-- Product items will be dynamically loaded here -->
+            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+            <div class="button-container">
+                <!-- Product items will be dynamically loaded here -->
+            </div>
+            <div class="note-section">
+                <textarea id="noteInput" placeholder="Add a note..."></textarea>
+                <button id="logSaleBtn">Log Sale</button>
+            </div>
+            <div class="footer">
+                <div class="footer-totals">
+                    <h3><span style="color: pink;">Cash Total:</span> <span id="cashTotal" style="color: white;">0.00</span></h3>
+                    <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
                 </div>
-                <div class="note-section">
-                    <textarea id="noteInput" placeholder="Add a note..."></textarea>
-                    <button id="logSaleBtn">Log Sale</button>
+                <div class="footer-messages">
+                    <span id="successMessage" aria-live="polite"></span>
+                    <span id="errorMessage" aria-live="polite"></span>
                 </div>
-                <footer class="footer">
-                    <div class="footer-totals">
-                        <h3><span style="color: pink;">Cash Total:</span> <span id="cashTotal" style="color: white;">0.00</span></h3>
-                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
-                    </div>
-                    <div class="footer-messages">
-                        <span id="successMessage" aria-live="polite"></span>
-                        <span id="errorMessage" aria-live="polite"></span>
-                    </div>
-                    <div class="footer-buttons">
-                        <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
-                        <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
-                        <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
-                    </div>
-                </footer>
+                <div class="footer-buttons">
+                    <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
+                    <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
+                    <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
+                </div>
+            </div>
+            <div id="pinModal" class="modal">
+                <div class="modal-content">
+                    <h2>Enter PIN to Close Sales</h2>
+                    <input type="password" id="pinInput" placeholder="PIN">
+                    <button id="submitPinBtn">Submit</button>
+                    <button id="cancelPinBtn">Cancel</button>
+                    <p id="pinError" style="color: red;"></p>
+                </div>
+            </div>
+            <div id="addButtonModal" class="modal">
+                <div class="modal-content">
+                    <h3_Add New Button</h3>
+                    <select id="newButtonType">
+                        <option value="">Select Type</option>
+                        <option value="cash">CASH</option>
+                        <option value="cc">CC</option>
+                        <option value="ticket">TICKET</option>
+                        <option value="comp">COMP</option>
+                    </select>
+                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
+                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
+                    <button id="submitNewButton">Submit</button>
+                    <button id="cancelNewButton">Cancel</button>
+                </div>
             </div>
         </main>
-        
-        <!-- Modals for PIN and new button addition -->
-        <div id="pinModal" class="modal">
-            <div class="modal-content">
-                <h2>Enter PIN to Close Sales</h2>
-                <input type="password" id="pinInput" placeholder="PIN">
-                <button id="submitPinBtn">Submit</button>
-                <button id="cancelPinBtn">Cancel</button>
-                <p id="pinError" style="color: red;"></p>
-            </div>
-        </div>
-        <div id="addButtonModal" class="modal">
-            <div class="modal-content">
-                <h3>Add New Button</h3>
-                <select id="newButtonType">
-                    <option value="">Select Type</option>
-                    <option value="cash">CASH</option>
-                    <option value="cc">CC</option>
-                    <option value="ticket">TICKET</option>
-                    <option value="comp">COMP</option>
-                </select>
-                <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
-                <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
-                <button id="submitNewButton">Submit</button>
-                <button id="cancelNewButton">Cancel</button>
-            </div>
-        </div>
     </div>
-    
     <script>
         const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
@@ -529,7 +525,7 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                this.elements.cashTotal.textContent = this.state.cashTotaltoFixed(2);
+                this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
@@ -622,7 +618,7 @@
             cancelPinModal() {
                 this.elements.pinModal.style.display = 'none';
                 this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
+                this.elements.pinError.textcontent = '';
             }
 
             async logSale() {
@@ -632,7 +628,7 @@
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.pricetoFixed(2)}`)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price-fixed(2)}`)
                     .join('; ');
 
                 if (!items) {
@@ -691,21 +687,21 @@
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.sessionDoorCount;
-                this.elements.counts.forEach(count => count.textContent = '0');
+                this.elements.cashTotal.textcontent = '0.00';
+                this.elements.doorCount.textcontent = this.state.sessionDoorCount;
+                this.elements.counts.forEach(count => count.textcontent = '0');
             }
 
             showSuccess(message) {
-                this.elements.successMessage.textContent = message;
-                this.elements.errorMessage.textContent = '';
-                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+                this.elements.successMessage.textcontent = message;
+                this.elements.errorMessage.textcontent = '';
+                setTimeout(() => this.elements.successMessage.textcontent = '', 3000);
             }
 
             showError(message) {
-                this.elements.errorMessage.textContent = message;
-                this.elements.successMessage.textContent = '';
-                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
+                this.elements.errorMessage.textcontent = message;
+                this.elements.successMessage.textcontent = '';
+                setTimeout(() => this.elements.errorMessage.textcontent = '', 3000);
             }
         }
 
