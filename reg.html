@@ -50,8 +50,8 @@
             margin: 0 auto;
         }
         .product-item {
-            width: 175px;
-            height: 190px;
+            width: 145px;
+            height: 150px;
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
@@ -129,6 +129,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            max-width: 400px;
+            float: right;
         }
         .footer-totals {
             display: flex;
@@ -223,8 +225,7 @@
             <div class="note-section">
                 <textarea id="noteInput" placeholder="Add a note..."></textarea>
             </div>
-            <button id="logSaleBtn">Log Sale</button>
-        </main>
+                </main>
         <footer class="footer">
             <div class="footer-totals">
                 <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
@@ -238,6 +239,9 @@
                 <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
                 <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
             </div>
+
+             <button id="logSaleBtn">Log Sale</button>
+   
         </footer>
 
         <div id="pinModal" class="modal">
