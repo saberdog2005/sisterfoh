@@ -4,7 +4,7 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script_src 'self' https://code.jquery.com https://unpkg.com 'unsafe_inline'; object_src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -50,6 +50,9 @@
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
+            max-width: 90%;
+            margin: 0 auto;
+            position: relative;
         }
         .product-item {
             width: 175px;
@@ -59,6 +62,10 @@
             border-radius: 15px;
             text-align: center;
             cursor: move;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         .product-item.hidden {
             display: none;
@@ -131,10 +138,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            max-width: 90%;
+            margin: 0 auto;
         }
-        .footer-totals {
+        .footer-left, .footer-right {
             display: flex;
-            gap: 20px;
+            align-items: center;
         }
         .footer-messages {
             flex: 1;
@@ -161,7 +171,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgb(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.5);
         }
         .modal form {
             width: 100%;
@@ -207,8 +217,17 @@
         }
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
-        #timeSeconds {
-            color: white;
+        .thru-door {
+            grid-column: 4;
+            grid-row: 4;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
@@ -224,49 +243,50 @@
             <label for="cashierName">Cashier:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
-        <main class="content-wrapper">
-            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
-            <div class="button-container">
-                <!-- Product items will be dynamically loaded here -->
+        <main>
+            <div class="content-wrapper">
+                <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+                <div class="button-container">
+                    <!-- Product items will be dynamically loaded here -->
+                    <div class="thru-door">
+                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                    </div>
+                </div>
+                <div class="note-section">
+                    <textarea id="noteInput" placeholder="Add a note..."></textarea>
+                    <button id="logSaleBtn">Log Sale</button>
+                </div>
+                <footer class="footer">
+                    <div class="footer-left">
+                        <span id="timeSeconds">0</span>
+                    </div>
+                    <div class="footer-messages">
+                        <span id="successMessage" aria-live="polite"></span>
+                        <span id="errorMessage" aria-live="polite"></span>
+                    </div>
+                    <div class="footer-buttons">
+                        <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
+                        <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
+                        <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
+                    </div>
+                </footer>
             </div>
-            <div class="note-section">
-                <textarea id="noteInput" placeholder="Add a note..."></textarea>
-            </div>
-            <button id="logSaleBtn">Log Sale</button>
         </main>
-        <footer class="footer">
-            <div class="footer-totals">
-                <h3><span style="color: pink;">Cash Total:</span> <span id="cashTotal">0.00</span></h3>
-                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
-            </div>
-            <div class="footer-messages">
-                <span id="timeSeconds">0</span>
-                <span id="successMessage" aria-live="polite"></span>
-                <span id="errorMessage" aria-live="polite"></span>
-            </div>
-            <div class="footer-buttons">
-                <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
-                <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
-                <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
-            </div>
-        </footer>
-
         <div id="pinModal" class="modal">
             <form>
                 <div class="modal-content">
                     <h2>Enter PIN to Close Sales</h2>
-                    <input type="password" id="pinInput" placeholder="PIN">
+                    <input type="password" id="pinInput" placeholder="PIN" autocomplete="new-password">
                     <button id="submitPinBtn">Submit</button>
                     <button id="cancelPinBtn">Cancel</button>
                     <p id="pinError" style="color: red;"></p>
                 </div>
             </form>
         </div>
-
         <div id="addButtonModal" class="modal">
             <form>
                 <div class="modal-content">
-                    <h3_Add New Button</h3>
+                    <h3>Add New Button</h3>
                     <select id="newButtonType">
                         <option value="">Select Type</option>
                         <option value="cash">CASH</option>
@@ -274,15 +294,14 @@
                         <option value="ticket">TICKET</option>
                         <option value="comp">COMP</option>
                     </select>
-                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
-                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
+                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
+                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
                     <button id="submitNewButton">Submit</button>
                     <button id="cancelNewButton">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
-
     <script>
         const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
@@ -360,6 +379,15 @@
                         { name: 'Cash $10', type: 'cash', price: 10, active: true },
                         { name: 'Cash $15', type: 'cash', price: 15, active: true },
                         { name: 'Cash $20', type: 'cash', price: 20, active: true },
+                        { name: 'Cash $25', type: 'cash', price: 25, active: true },
+                        { name: 'Cash $30', type: 'cash', price: 30, active: true },
+                        { name: 'Cash $35', type: 'cash', price: 35, active: true },
+                        { name: 'Cash $40', type: 'cash', price: 40, active: true },
+                        { name: 'Cash $45', type: 'cash', price: 45, active: true },
+                        { name: 'Cash $50', type: 'cash', price: 50, active: true },
+                        { name: 'Cash $55', type: 'cash', price: 55, active: true },
+                        { name: 'Cash $60', type: 'cash', price: 60, active: true },
+                        { name: 'Cash $65', type: 'cash', price: 65, active: true },
                         { name: 'Comp', type: 'comp', price: 0, active: true },
                         { name: 'Ticket', type: 'ticket', price: 10, active: true }
                     ];
@@ -449,6 +477,7 @@
             }
 
             updateButtonVisibility() {
+                this.elements.transactionButtons = document.querySelectorAll('.product-item');
                 this.elements.transactionButtons.forEach(btn => {
                     if (this.state.isEditing) {
                         btn.classList.remove('hidden');
@@ -541,7 +570,6 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                this.elements.cashTotal.textContent = this.state.cashTotal.tofixed(2);
                 this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
@@ -565,7 +593,7 @@
                     this.elements.editLayoutBtn.classList.remove('hidden');
                 }
                 const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input disabled = this.state.sessionStarted);
+                inputs.forEach(input => input.setAttribute('disabled', this.state.sessionStarted ? 'true' : 'false'));
             }
 
             toggleSales() {
@@ -590,14 +618,13 @@
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 this.state.currentItems.clear();
                 this.elements.counts.forEach(count => count.textContent = '0');
-                this.showSuccess('Sales session started');
-                this.checkSessionStatus();
                 this.state.timeSeconds = 0;
                 this.startTimer();
+                this.showSuccess('Sales session started');
+                this.checkSessionStatus();
             }
 
             startTimer() {
@@ -609,6 +636,10 @@
 
             updateTimeDisplay() {
                 this.elements.timeSeconds.textContent = this.state.timeSeconds;
+            }
+
+            stopTimer() {
+                window.clearInterval(this.state.timeInterval);
             }
 
             async confirmCloseSales() {
@@ -631,9 +662,9 @@
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
+                this.stopTimer();
                 this.elements.toggleSalesBtn.textContent = 'Open Sales';
                 this.elements.toggleSalesBtn.classList.remove('closebtn');
                 this.elements.toggleSalesBtn.classList.add('openbtn');
@@ -642,11 +673,6 @@
                 this.elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
-                this.stopTimer();
-            }
-
-            stopTimer() {
-                window.clearInterval(this.state.timeInterval);
             }
 
             cancelPinModal() {
@@ -658,17 +684,17 @@
             async logSale() {
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
-                this.elements.logSaleBtn.disbled = true;
+                this.elements.logSaleBtn.disabled = true;
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.tofixed(2)}`)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disbled = false;
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
 
@@ -695,7 +721,7 @@
                         body: JSON.stringify(transaction)
                     });
 
-                    if (!response.ok) throw new Error('Failed to log sale');
+                    if (!response.ok) throw new Error('Failed to log sale: ' + response.statusText);
 
                     channel.postMessage({ type: 'transaction', data: transaction });
                     this.resetCurrentItems();
@@ -705,7 +731,7 @@
                     this.showError('Failed to log sale: ' + error.message);
                 } finally {
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disbled = false;
+                    this.elements.logSaleBtn.disabled = false;
                 }
             }
 
@@ -721,7 +747,6 @@
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
