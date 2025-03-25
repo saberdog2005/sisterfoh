@@ -4,7 +4,7 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -19,10 +19,9 @@
             height: 90vh;
             overflow: hidden;
         }
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+        .content-wrapper {
+            max-width: 70%;
+            margin: 0 auto;
         }
         .header {
             padding: px;
@@ -40,31 +39,27 @@
             border: 1px solid #555;
         }
         .button-container {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(145px, 1fr));
             gap: 10px;
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
-            max-width: 70%;
-            margin: 0 auto;
         }
         .product-item {
-            width: 145px;
             height: 150px;
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
             text-align: center;
             cursor: move;
-            float: left;
         }
         .product-item.hidden {
             display: none;
         }
-        .increment-btn {
+        .increment btn {
             width: 90%;
-            aspect-ratio: 1 / 1;
+            aspect ratio: 1 / 1;
             margin: 0 auto 5px;
             padding: 0;
             border: none;
@@ -102,8 +97,7 @@
             padding: 10px;
         }
         #noteInput {
-            width: 90%;
-            max-width: 99.5%;
+            width: 100%;
             min-height: 25px;
             height: 50px;
             max-height: 120px;
@@ -111,7 +105,6 @@
             color: #e0e0e0;
             border: 1px solid #555;
             padding: 1.5px;
-            margin: 0 auto;
         }
         #logSaleBtn {
             width: 100%;
@@ -120,7 +113,7 @@
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 18px;2px
+            font-size: 18px;
             cursor: pointer;
         }
         .footer {
@@ -130,9 +123,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: auto;
-            float:right;
-            width: 95%;
         }
         .footer-totals {
             display: flex;
@@ -146,17 +136,16 @@
             display: inline-flex;
             gap: 10px;
         }
-        .open-btn, .close-btn, .edit-btn {
+        .openbtn, .closebtn, .editbtn {
             padding: 10px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             color: white;
-          
         }
-        .open-btn { background-color: #2e7d32; }
-        .close-btn { background-color: #d32f2f; }
-        .edit-btn { background-color: #0288d1; }
+        .openbtn { background-color: #2e7d32; }
+        .closebtn { background-color: #d32f2f; }
+        .editbtn { background-color: #0288d1; }
         .modal {
             display: none;
             position: fixed;
@@ -209,7 +198,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="content-wrapper">
         <header class="header">
             <label for="eventDate">Date:</label>
             <input type="date" id="eventDate" required>
@@ -220,17 +209,28 @@
             <label for="cashierName">Cashier:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
-    
-        <main class="container">
-            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
-           
-            <div class="button-container">
-              
-                <!-- Product items will be dynamically loaded here -->
-      
-
-    
-    
+        <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+        <div class="button-container">
+            <!-- Product items will be dynamically loaded here -->
+        </div>
+        <div class="note-section">
+            <textarea id="noteInput" placeholder="Add a note..."></textarea>
+            <button id="logSaleBtn">Log Sale</button>
+        </div>
+        <footer class="footer">
+            <div class="footer-totals">
+                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
+            </div>
+            <div class="footer-messages">
+                <span id="successMessage" aria-live="polite"></span>
+                <span id="errorMessage" aria-live="polite"></span>
+            </div>
+            <div class="footer-buttons">
+                <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
+                <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
+                <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
+            </div>
+        </footer>
         <div id="pinModal" class="modal">
             <div class="modal-content">
                 <h2>Enter PIN to Close Sales</h2>
@@ -255,32 +255,9 @@
                 <button id="submitNewButton">Submit</button>
                 <button id="cancelNewButton">Cancel</button>
             </div>
-              <div class="footer">
-            <div class="footer-totals">
-                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
-            </div>
-            </div>
-            <div class="footer-messages">
-                <span id="successMessage" aria-live="polite"></span>
-                <span id="errorMessage" aria-live="polite"></span>
-            </div>
-            
         </div>
-        </div>
-            <textarea id="noteInput" placeholder="Add a note..."></textarea>
-             <button id="logSaleBtn">Log Sale</button>
-           <div class="footer-totals">
-                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
-            <div class="footer-buttons">
-                <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
-                <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
-                <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
-            </div>
-                
-            </div>
-        </main>
     </div>
-          <script>
+    <script>
         const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const DEFAULT_PIN = '0000';
@@ -312,7 +289,6 @@
                     editLayoutBtn: document.getElementById('editLayoutBtn'),
                     addNewButtonBtn: document.getElementById('addNewButtonBtn'),
                     logSaleBtn: document.getElementById('logSaleBtn'),
-                    cashTotal: document.getElementById('cashTotal'),
                     doorCount: document.getElementById('doorCount'),
                     noteInput: document.getElementById('noteInput'),
                     addButtonModal: document.getElementById('addButtonModal'),
@@ -375,10 +351,10 @@
                 if (!itemData.active) item.classList.add('hidden');
                 item.draggable = true;
                 item.innerHTML = `
-                    <button class="increment-btn ${itemData.type}">${itemData.name}</button>
+                    <button class="increment btn ${itemData.type}">${itemData.name}</button>
                     <div class="control-row">
                         <span class="count">0</span>
-                        <button class="minus">-</button>
+                        <button class="minus">−</button>
                     </div>
                 `;
                 return item;
@@ -387,7 +363,7 @@
             bindEvents() {
                 this.elements.buttonContainer.addEventListener('click', (e) => {
                     const target = e.target;
-                    if (target.classList.contains('increment-btn')) {
+                    if (target.classList.contains('increment btn')) {
                         const btn = target.closest('.product-item');
                         this.handleIncrement(btn);
                     } else if (target.classList.contains('minus')) {
@@ -435,7 +411,7 @@
             saveLayout() {
                 const items = Array.from(this.elements.buttonContainer.querySelectorAll('.product-item')).map(item => ({
                     name: item.dataset.item,
-                    type: item.querySelector('.increment-btn').classList[1],
+                    type: item.querySelector('.increment btn').classList[1],
                     price: parseFloat(item.dataset.price),
                     active: item.dataset.active === 'true'
                 }));
@@ -509,7 +485,7 @@
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
                 const price = parseFloat(btn.dataset.price) || 0;
-                const type = btn.querySelector('.increment-btn').classList[1];
+                const type = btn.querySelector('.increment btn').classList[1];
                 const current = this.state.currentItems.get(item) || { count: 0, price, type };
                 current.count++;
                 this.state.currentItems.set(item, current);
@@ -521,7 +497,7 @@
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
                 const price = parseFloat(btn.dataset.price) || 0;
-                const type = btn.querySelector('.increment-btn').classList[1];
+                const type = btn.querySelector('.increment btn').classList[1];
                 const current = this.state.currentItems.get(item);
                 if (current && current.count > 0) {
                     current.count--;
@@ -535,7 +511,6 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
@@ -552,14 +527,14 @@
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
                 this.state.sessionId = localStorage.getItem('activeSessionId');
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
-                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'close-btn' : 'open-btn';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
                 if (this.state.sessionStarted) {
                     this.elements.editLayoutBtn.classList.add('hidden');
                 } else {
                     this.elements.editLayoutBtn.classList.remove('hidden');
                 }
                 const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input.disabled = this.state.sessionStarted);
+                inputs.forEach(input => input disabled = this.state.sessionStarted);
             }
 
             toggleSales() {
@@ -584,7 +559,6 @@
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                this.elements.cashTotal.textContent = '0.00';
                 this.elements.doorCount.textContent = '0';
                 this.state.currentItems.clear();
                 this.elements.counts.forEach(count => count.textContent = '0');
@@ -597,7 +571,7 @@
                 if (pin === DEFAULT_PIN) {
                     await this.closeSession();
                 } else {
-                    this.elements.pinError.textContent = 'Invalid PIN';
+                    this.elements.pinError.textcontent = 'Invalid PIN';
                     this.elements.pinInput.value = '';
                 }
             }
@@ -612,15 +586,14 @@
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = '0';
+                this.elements.doorCount.textcontent = '0';
                 localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
-                this.elements.toggleSalesBtn.textContent = 'Open Sales';
-                this.elements.toggleSalesBtn.classList.remove('close-btn');
-                this.elements.toggleSalesBtn.classList.add('open-btn');
+                this.elements.toggleSalesBtn.textcontent = 'Open Sales';
+                this.elements.toggleSalesBtn.classList.remove('closebtn');
+                this.elements.toggleSalesBtn.classList.add('openbtn');
                 this.elements.pinModal.style.display = 'none';
                 this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
+                this.elements.pinError.textcontent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
             }
@@ -628,36 +601,36 @@
             cancelPinModal() {
                 this.elements.pinModal.style.display = 'none';
                 this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
+                this.elements.pinError.textcontent = '';
             }
 
             async logSale() {
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
-                this.elements.logSaleBtn.disabled = true;
+                this.elements.logSaleBtn disabled = true;
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ $${value.price.toFixed(2)}`)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.fixed(2)}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
+                    this.elements.logSaleBtn disabled = false;
                     return;
                 }
 
                 const transaction = {
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
+                    event_date: this.elements.eventDate.value,
+                    event_venue: this.elements.eventVenue.value,
+                    event_name: this.elements.eventName.value,
+                    cashier_name: this.elements.cashierName.value,
                     items,
-                    cashTotal: Number(this.state.cashTotal),
-                    doorCount: Number(this.state.sessionDoorCount),
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
                     note: this.elements.noteInput.value,
-                    sessionId: this.state.sessionId,
+                    session_id: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
@@ -666,7 +639,6 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'apikey': API_KEY,
                             'Authorization': `Bearer ${API_KEY}`
                         },
                         body: JSON.stringify(transaction)
@@ -682,7 +654,7 @@
                     this.showError('Failed to log sale: ' + error.message);
                 } finally {
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
+                    this.elements.logSaleBtn disabled = false;
                 }
             }
 
@@ -698,29 +670,23 @@
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
-                this.elements.cashTotal.textContent = '0.00';
-                this.elements.doorCount.textContent = this.state.sessionDoorCount;
-                this.elements.counts.forEach(count => count.textContent = '0');
+                this.elements.counts.forEach(count => count.textcontent = '0');
             }
 
             showSuccess(message) {
-                this.elements.successMessage.textContent = message;
-                this.elements.errorMessage.textContent = '';
-                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+                this.elements.successMessage.textcontent = message;
+                this.elements.errorMessage.textcontent = '';
+                setTimeout(() => this.elements.successMessage.textcontent = '', 3000);
             }
 
             showError(message) {
-                this.elements.errorMessage.textContent = message;
-                this.elements.successMessage.textContent = '';
-                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
+                this.elements.errorMessage.textcontent = message;
+                this.elements.successMessage.textcontent = '';
+                setTimeout(() => this.elements.errorMessage.textcontent = '', 3000);
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => new SalesApp());
     </script>
-        </div>
- </div>
-   
 </body>
 </html>
-<!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
