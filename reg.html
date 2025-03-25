@@ -220,7 +220,61 @@
             <label for="cashierName">Cashier:</label>
             <input type="text" id="cashierName" placeholder="Cashier" required>
         </header>
-         <script>
+       
+        <main class="container">
+            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+            <div class="button-container">
+                         <button id="logSaleBtn">Log Sale</button>
+           
+<textarea id="noteInput" placeholder="Add a note..."></textarea>
+                <!-- Product items will be dynamically loaded here -->
+      
+
+    
+    
+        <div id="pinModal" class="modal">
+            <div class="modal-content">
+                <h2>Enter PIN to Close Sales</h2>
+                <input type="password" id="pinInput" placeholder="PIN">
+                <button id="submitPinBtn">Submit</button>
+                <button id="cancelPinBtn">Cancel</button>
+                <p id="pinError" style="color: red;"></p>
+            </div>
+        </div>
+ <div class="footer">
+        <div id="addButtonModal" class="modal">
+            <div class="modal-content">
+                <h3>Add New Button</h3>
+                <select id="newButtonType">
+                    <option value="">Select Type</option>
+                    <option value="cash">CASH</option>
+                    <option value="cc">CC</option>
+                    <option value="ticket">TICKET</option>
+                    <option value="comp">COMP</option>
+                </select>
+                <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
+                <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
+                <button id="submitNewButton">Submit</button>
+                <button id="cancelNewButton">Cancel</button>
+            </div>
+        </div>
+    </div>
+             
+            <div class="footer-totals">
+                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
+            </div>
+            <div class="footer-messages">
+                <span id="successMessage" aria-live="polite"></span>
+                <span id="errorMessage" aria-live="polite"></span>
+            </div>
+            <div class="footer-buttons">
+                <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
+                <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
+                <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
+            </div>
+        </div>
+        </main>
+          <script>
         const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const DEFAULT_PIN = '0000';
@@ -658,59 +712,6 @@
 
         document.addEventListener('DOMContentLoaded', () => new SalesApp());
     </script>
-        <main class="container">
-            <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
-            <div class="button-container">
-                         <button id="logSaleBtn">Log Sale</button>
-           
-<textarea id="noteInput" placeholder="Add a note..."></textarea>
-                <!-- Product items will be dynamically loaded here -->
-      
-
-    
-    
-        <div id="pinModal" class="modal">
-            <div class="modal-content">
-                <h2>Enter PIN to Close Sales</h2>
-                <input type="password" id="pinInput" placeholder="PIN">
-                <button id="submitPinBtn">Submit</button>
-                <button id="cancelPinBtn">Cancel</button>
-                <p id="pinError" style="color: red;"></p>
-            </div>
-        </div>
-
-        <div id="addButtonModal" class="modal">
-            <div class="modal-content">
-                <h3>Add New Button</h3>
-                <select id="newButtonType">
-                    <option value="">Select Type</option>
-                    <option value="cash">CASH</option>
-                    <option value="cc">CC</option>
-                    <option value="ticket">TICKET</option>
-                    <option value="comp">COMP</option>
-                </select>
-                <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)">
-                <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value">
-                <button id="submitNewButton">Submit</button>
-                <button id="cancelNewButton">Cancel</button>
-            </div>
-        </div>
-    </div>
-              <div class="footer">
-            <div class="footer-totals">
-                <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount" style="color: white;">0</span></h3>
-            </div>
-            <div class="footer-messages">
-                <span id="successMessage" aria-live="polite"></span>
-                <span id="errorMessage" aria-live="polite"></span>
-            </div>
-            <div class="footer-buttons">
-                <button id="toggleSalesBtn" class="open-btn">Open Sales</button>
-                <button id="editLayoutBtn" class="edit-btn">Edit Layout</button>
-                <button id="addNewButtonBtn" class="edit-btn hidden">Add New Button</button>
-            </div>
-        </div>
-        </main>   
         </div>
  </div>
    
