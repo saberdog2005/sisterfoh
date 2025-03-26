@@ -4,7 +4,7 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="script_src 'self' https://code.jquery.com https://unpkg.com 'unsafe_inline'; object_src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
     <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -197,18 +197,22 @@
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
         .thru-door {
+            grid-column: 4;
+            grid-row: 4;
             display: flex;
             flex-direction: column;
             align-items: center;
-            grid-column: 4;
-            grid-row: 4;
+            justify-content: center;
+            font-size: 12px;
         }
         .thru-door h3 {
+            font-size: 14px;
             margin-bottom: 5px;
         }
         .thru-door p {
             color: yellow;
             font-size: 12px;
+            margin: 0;
         }
     </style>
 </head>
@@ -228,8 +232,7 @@
             <div class="content-wrapper">
                 <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
                 <div class="button-container">
-                    <!-- Product items will be dynamically loaded here, with "Thru Door" as a separate div at the bottom right. -->
-
+                    <!-- Product items will be dynamically loaded here -->
                 </div>
                 <div class="note-section">
                     <textarea id="noteInput" placeholder="Add a note..."></textarea>
@@ -312,7 +315,6 @@
                     editLayoutBtn: document.getElementById('editLayoutBtn'),
                     addNewButtonBtn: document.getElementById('addNewButtonBtn'),
                     logSaleBtn: document.getElementById('logSaleBtn'),
-                    doorCount: document.getElementById('doorCount'),
                     noteInput: document.getElementById('noteInput'),
                     addButtonModal: document.getElementById('addButtonModal'),
                     newButtonType: document.getElementById('newButtonType'),
@@ -328,7 +330,8 @@
                     editInstructions: document.getElementById('editInstructions'),
                     successMessage: document.getElementById('successMessage'),
                     errorMessage: document.getElementById('errorMessage'),
-                    timeSeconds: document.getElementById('timeSeconds')
+                    doorCount: null,
+                    timeSeconds: null
                 };
                 this.elements.eventDate.value = new Date().toISOString().split('T')[0];
                 this.loadLayout();
@@ -660,7 +663,7 @@
             async logSale() {
                 if (!this.state.sessionStarted || this.state.isLogging) return;
                 this.state.isLogging = true;
-                this.elements.logSaleBtn disabled = true;
+                this.elements.logSaleBtn.disabled = true;
 
                 const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
@@ -670,20 +673,20 @@
                 if (!items) {
                     this.showError('No items to log');
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn disabled = false;
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
 
                 const transaction = {
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
+                    event_date: this.elements.eventDate.value,
+                    event_venue: this.elements.eventVenue.value,
+                    event_name: this.elements.eventName.value,
+                    cashier_name: this.elements.cashierName.value,
                     items,
-                    cashTotal: Number(this.state.cashTotal),
-                    doorCount: Number(this.state.sessionDoorCount),
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
                     note: this.elements.noteInput.value,
-                    sessionId: this.state.sessionId,
+                    session_id: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
@@ -707,7 +710,7 @@
                     this.showError('Failed to log sale: ' + error.message);
                 } finally {
                     this.state.isLogging = false;
-                    this.elements.logSaleBtn disabled = false;
+                    this.elements.logSaleBtn.disabled = false;
                 }
             }
 
