@@ -53,25 +53,24 @@
         }
         .product-item {
             width: 175px;
-            height: 175px;
+            height: auto; /* Changed from 175px */
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
-            text-align: center;
-            cursor: move;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
+            flex-direction: row; /* Changed from column */
             align-items: center;
+            justify-content: space-between;
+            cursor: move;
         }
         .product-item.hidden {
             display: none;
         }
         .incrementbtn {
-            width: 90%;
-            aspect-ratio: 1 / 1;
-            margin: 0 auto 5px;
-            padding: 0;
+            flex-grow: 1;
+            height: 30px; /* Adjust as needed */
+            margin-right: 10px;
+            padding: 0 10px;
             border: none;
             border-radius: 5px;
             font-size: 14px;
@@ -86,17 +85,14 @@
         .comp { background-color: #ffa500; color: white; }
         .control-row {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 10px;
         }
         .count {
+            margin-right: 10px;
             font-size: 18px;
-            min-width: 20px;
-            text-align: center;
         }
         .minus {
-            padding: 10px 15px;
+            padding: 5px 10px;
             background-color: #555;
             color: white;
             border: none;
@@ -376,7 +372,7 @@
                 thruDoorDiv.classList.add('thru-door');
                 thruDoorDiv.innerHTML = `
                     <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
-                    <p style="color: yellow;">Time: <span id="timeSeconds">0</span> seconds</p>
+                    <p style="color: yellow;">Time Open: <span id="timeSeconds">0</span> seconds</p>
                 `;
                 this.elements.buttonContainer.appendChild(thruDoorDiv);
                 this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
@@ -384,48 +380,7 @@
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
             }
 
-            createProductItem(itemData) {
-                const item = document.createElement('div');
-                item.className = 'product-item';
-                item.dataset.item = itemData.name;
-                item.dataset.price = itemData.price;
-                item.dataset.active = itemData.active;
-                if (!itemData.active) item.classList.add('hidden');
-                item.draggable = true;
-                item.innerHTML = `
-                    <button class="incrementbtn ${itemData.type}">${itemData.name}</button>
-                    <div class="control-row">
-                        <span class="count">0</span>
-                        <button class="minus"> - </button>
-                    </div>
-                `;
-                return item;
-            }
-
-            bindEvents() {
-                this.elements.buttonContainer.addEventListener('click', (e) => {
-                    const target = e.target;
-                    if (target.classList.contains('incrementbtn')) {
-                        const btn = target.closest('.product-item');
-                        this.handleIncrement(btn);
-                    } else if (target.classList.contains('minus')) {
-                        const btn = target.closest('.product-item');
-                        this.handleDecrement(btn);
-                    } else if (this.state.isEditing && target.closest('.product-item')) {
-                        this.toggleButtonState(target.closest('.product-item'));
-                    }
-                });
-                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
-                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
-                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
-                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
-                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
-                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
-                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
-                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
-            }
-
-            // ... rest of the SalesApp class methods remain unchanged ...
+            // ... rest of the SalesApp class methods ...
         }
 
         document.addEventListener('DOMContentLoaded', () => new SalesApp());
