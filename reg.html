@@ -207,7 +207,7 @@
             justify-content: center;
             font-size: 12px;
             margin: auto;
-            background-color: transparent; /* Changed to transparent */
+            background-color: transparent;
             border-radius: 15px;
         }
         .thru-door h3 {
@@ -384,7 +384,368 @@
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
             }
 
-            // ... rest of the SalesApp class methods remain unchanged ...
+            createProductItem(itemData) {
+                const item = document.createElement('div');
+                item.className = 'product-item';
+                item.dataset.item = itemData.name;
+                item.dataset.price = itemData.price;
+                item.dataset.active = itemData.active;
+                if (!itemData.active) item.classList.add('hidden');
+                item.draggable = true;
+                item.innerHTML = `
+                    <button class="incrementbtn ${itemData.type}">${itemData.name}</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus"> - </button>
+                    </div>
+                `;
+                return item;
+            }
+
+            bindEvents() {
+                this.elements.buttonContainer.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.classList.contains('incrementbtn')) {
+                        const btn = target.closest('.product-item');
+                        this.handleIncrement(btn);
+                    } else if (target.classList.contains('minus')) {
+                        const btn = target.closest('.product-item');
+                        this.handleDecrement(btn);
+                    } else if (this.state.isEditing && target.closest('.product-item')) {
+                        this.toggleButtonState(target.closest('.product-item'));
+                    }
+                });
+                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
+                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+            }
+
+            enableDragAndDrop() {
+                this.elements.buttonContainer.addEventListener('dragstart', (e) => {
+                    if (!this.state.isEditing) return;
+                    const item = e.target.closest('.product-item');
+                    if (item) {
+                        e.dataTransfer.setData('text/plain', item.dataset.item);
+                        item.style.opacity = '0.5';
+                    }
+                });
+                this.elements.buttonContainer.addEventListener('dragover', (e) => {
+                    if (!this.state.isEditing) return;
+                    e.preventDefault();
+                });
+                this.elements.buttonContainer.addEventListener('drop', (e) => {
+                    if (!this.state.isEditing) return;
+                    e.preventDefault();
+                    const draggedItem = document.querySelector(`[data-item="${e.dataTransfer.getData('text/plain')}"]`);
+                    const targetItem = e.target.closest('.product-item');
+                    if (targetItem && draggedItem != targetItem) {
+                        this.elements.buttonContainer.insertBefore(draggedItem, targetItem);
+                    }
+                    draggedItem.style.opacity = '1';
+                });
+            }
+
+            saveLayout() {
+                const items = Array.from(this.elements.buttonContainer.querySelectorAll('.product-item')).map(item => ({
+                    name: item.dataset.item,
+                    type: item.querySelector('.incrementbtn').classList[1],
+                    price: parseFloat(item.dataset.price),
+                    active: item.dataset.active === 'true'
+                }));
+                localStorage.setItem('layout', JSON.stringify(items));
+            }
+
+            updateButtonVisibility() {
+                this.elements.transactionButtons = document.querySelectorAll('.product-item');
+                this.elements.transactionButtons.forEach(btn => {
+                    if (this.state.isEditing) {
+                        btn.classList.remove('hidden');
+                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
+                    } else {
+                        if (btn.dataset.active === 'true') {
+                            btn.classList.remove('hidden');
+                            btn.style.opacity = '1';
+                        } else {
+                            btn.classList.add('hidden');
+                        }
+                    }
+                });
+            }
+
+            toggleEditMode() {
+                this.state.isEditing = !this.state.isEditing;
+                this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                if (this.state.isEditing) {
+                    this.elements.editInstructions.classList.remove('hidden');
+                    this.elements.addNewButtonBtn.classList.remove('hidden');
+                } else {
+                    this.saveLayout();
+                    this.elements.editInstructions.classList.add('hidden');
+                    this.elements.addNewButtonBtn.classList.add('hidden');
+                }
+                this.updateButtonVisibility();
+            }
+
+            toggleButtonState(btn) {
+                const currentActive = btn.dataset.active === 'true';
+                btn.dataset.active = !currentActive;
+                btn.style.opacity = !currentActive ? '1' : '0.5';
+            }
+
+            addNewButton() {
+                const type = this.elements.newButtonType.value;
+                const name = this.elements.newButtonName.value;
+                const value = parseFloat(this.elements.newButtonValue.value);
+                if (!type || !name || isNaN(value)) {
+                    this.showError('Please fill in all fields for the new button');
+                    return;
+                }
+                const itemData = { name, type, price: value, active: true };
+                const newButton = this.createProductItem(itemData);
+                this.elements.buttonContainer.appendChild(newButton);
+                this.elements.counts.set(name, newButton.querySelector('.count'));
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
+                this.showSuccess('New button added');
+                this.updateButtonVisibility();
+            }
+
+            cancelAddButton() {
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
+            }
+
+            handleIncrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const type = btn.querySelector('.incrementbtn').classList[1];
+                const current = this.state.currentItems.get(item) || { count: 0, price, type };
+                current.count++;
+                this.state.currentItems.set(item, current);
+                this.elements.counts.get(item).textContent = current.count;
+                this.updateTotals(price, 1, type);
+            }
+
+            handleDecrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const type = btn.querySelector('.incrementbtn').classList[1];
+                const current = this.state.currentItems.get(item);
+                if (current && current.count > 0) {
+                    current.count--;
+                    this.state.currentItems.set(item, current);
+                    this.elements.counts.get(item).textContent = current.count;
+                    this.updateTotals(-price, -1, type);
+                }
+            }
+
+            updateTotals(priceDelta, countDelta, type) {
+                if (type === 'cash') this.state.cashTotal += priceDelta;
+                this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta;
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+            }
+
+            loadSessionDoorCount() {
+                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
+                if (savedCount) {
+                    this.state.sessionDoorCount = parseInt(savedCount, 10);
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                }
+            }
+
+            checkSessionStatus() {
+                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
+                if (this.state.sessionStarted) {
+                    this.elements.editLayoutBtn.classList.add('hidden');
+                } else {
+                    this.elements.editLayoutBtn.classList.remove('hidden');
+                }
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
+            }
+
+            toggleSales() {
+                if (!this.state.sessionStarted) {
+                    this.startSession();
+                } else {
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.focus();
+                }
+            }
+
+            startSession() {
+                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+                    this.showError('Please fill in all required fields');
+                    return;
+                }
+                this.state.sessionStarted = true;
+                this.state.sessionId = Date.now().toString();
+                localStorage.setItem('sessionActive', true);
+                localStorage.setItem('activeSessionId', this.state.sessionId);
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.state.sessionDoorCount = 0;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+                this.elements.doorCount.textContent = '0';
+                this.state.currentItems.clear();
+                this.elements.counts.forEach(count => count.textContent = '0');
+                this.state.timeSeconds = 0;
+                this.startTimer();
+                this.showSuccess('Sales session started');
+                this.checkSessionStatus();
+            }
+
+            startTimer() {
+                this.state.timeInterval = window.setInterval(() => {
+                    this.state.timeSeconds++;
+                    this.updateTimeDisplay();
+                }, 1000);
+            }
+
+            updateTimeDisplay() {
+                this.elements.timeSeconds.textContent = this.state.timeSeconds;
+            }
+
+            stopTimer() {
+                window.clearInterval(this.state.timeInterval);
+            }
+
+            async confirmCloseSales() {
+                const pin = this.elements.pinInput.value;
+                if (pin === DEFAULT_PIN) {
+                    await this.closeSession();
+                } else {
+                    this.elements.pinError.textContent = 'Invalid PIN';
+                    this.elements.pinInput.value = '';
+                }
+            }
+
+            async closeSession() {
+                if (this.state.currentItems.size > 0) {
+                    await this.logSale();
+                }
+                this.state.sessionStarted = false;
+                localStorage.removeItem('sessionActive');
+                localStorage.removeItem('activeSessionId');
+                this.state.sessionId = null;
+                this.state.cashTotal = 0;
+                this.state.sessionDoorCount = 0;
+                this.elements.doorCount.textContent = '0';
+                localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
+                this.stopTimer();
+                this.elements.toggleSalesBtn.textContent = 'Open Sales';
+                this.elements.toggleSalesBtn.classList.remove('closebtn');
+                this.elements.toggleSalesBtn.classList.add('openbtn');
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
+                this.showSuccess('Sales session closed');
+                this.checkSessionStatus();
+            }
+
+            cancelPinModal() {
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
+            }
+
+            async logSale() {
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
+                this.elements.logSaleBtn.disabled = true;
+
+                const items = Array.from(this.state.currentItems.entries())
+                    .filter(([_, value]) => value.count > 0)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+                    .join('; ');
+
+                if (!items) {
+                    this.showError('No items to log');
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
+                    return;
+                }
+
+                const transaction = {
+                    event_date: this.elements.eventDate.value,
+                    event_venue: this.elements.eventVenue.value,
+                    event_name: this.elements.eventName.value,
+                    cashier_name: this.elements.cashierName.value,
+                    items,
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
+                    note: this.elements.noteInput.value,
+                    session_id: this.state.sessionId,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    const response = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify(transaction)
+                    });
+
+                    if (!response.ok) throw new Error('Failed to log sale: ' + response.statusText);
+
+                    channel.postMessage({ type: 'transaction', data: transaction });
+                    this.resetCurrentItems();
+                    this.elements.noteInput.value = '';
+                    this.showSuccess('Sale logged successfully');
+                } catch (error) {
+                    this.showError('Failed to log sale: ' + error.message);
+                } finally {
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
+                }
+            }
+
+            debounceLogSale() {
+                const now = Date.now();
+                if (now - this.state.lastLogTime > 1000) {
+                    this.state.lastLogTime = now;
+                    this.logSale();
+                }
+            }
+
+            resetCurrentItems() {
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                this.elements.counts.forEach(count => count.textContent = '0');
+            }
+
+            showSuccess(message) {
+                this.elements.successMessage.textContent = message;
+                this.elements.errorMessage.textContent = '';
+                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+            }
+
+            showError(message) {
+                this.elements.errorMessage.textContent = message;
+                this.elements.successMessage.textContent = '';
+                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => new SalesApp());
