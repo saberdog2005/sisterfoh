@@ -372,7 +372,7 @@
                 thruDoorDiv.classList.add('thru-door');
                 thruDoorDiv.innerHTML = `
                     <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
-                    <p style="color: yellow;">Time: <span id="timeSeconds">0</span> seconds</p>
+                    <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                 `;
                 this.elements.buttonContainer.appendChild(thruDoorDiv);
                 this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
@@ -615,7 +615,10 @@
             }
 
             updateTimeDisplay() {
-                this.elements.timeSeconds.textContent = this.state.timeSeconds;
+                const hours = Math.floor(this.state.timeSeconds / 3600);
+                const minutes = Math.floor((this.state.timeSeconds % 3600) / 60);
+                const seconds = this.state.timeSeconds % 60;
+                this.elements.timeSeconds.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
 
             stopTimer() {
@@ -701,14 +704,17 @@
                         body: JSON.stringify(transaction)
                     });
 
-                    if (!response.ok) throw new Error('Failed to log sale: ' + response.statusText);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error('Failed to log sale: ' + errorText);
+                    }
 
                     channel.postMessage({ type: 'transaction', data: transaction });
                     this.resetCurrentItems();
                     this.elements.noteInput.value = '';
                     this.showSuccess('Sale logged successfully');
                 } catch (error) {
-                    this.showError('Failed to log sale: ' + error.message);
+                    this.showError(error.message);
                 } finally {
                     this.state.isLogging = false;
                     this.elements.logSaleBtn.disabled = false;
