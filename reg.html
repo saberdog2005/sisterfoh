@@ -197,8 +197,8 @@
         #successMessage { color: #2e7d32; }
         #errorMessage { color: #d32f2f; }
         .thru-door {
+            grid-row: 2;
             grid-column: 4;
-            grid-row: 3;
             width: 150px;
             height: 150px;
             display: flex;
@@ -371,7 +371,7 @@
                         this.elements.counts.set(itemData.name, item.querySelector('.count'));
                     });
                 }
-                // Add Thru Door as a separate div at grid position (3, 4)
+                // Add Thru Door as a separate div
                 const thruDoorDiv = document.createElement('div');
                 thruDoorDiv.classList.add('thru-door');
                 thruDoorDiv.innerHTML = `
