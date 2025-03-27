@@ -668,62 +668,63 @@
                 this.elements.pinError.textContent = '';
             }
 
-            async logSale() {
-                if (!this.state.sessionStarted || this.state.isLogging) return;
-                this.state.isLogging = true;
-                this.elements.logSaleBtn.disabled = true;
+           async logSale() {
+    if (!this.state.sessionStarted || this.state.isLogging) return;
+    this.state.isLogging = true;
+    this.elements.logSaleBtn.disabled = true;
 
-                const items = Array.from(this.state.currentItems.entries())
-                    .filter(([_, value]) => value.count > 0)
-                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
-                    .join('; ');
+    const items = Array.from(this.state.currentItems.entries())
+        .filter(([_, value]) => value.count > 0)
+        .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+        .join('; ');
 
-                if (!items) {
-                    this.showError('No items to log');
-                    this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
-                    return;
-                }
+    if (!items) {
+        this.showError('No items to log');
+        this.state.isLogging = false;
+        this.elements.logSaleBtn.disabled = false;
+        return;
+    }
 
-                const transaction = {
-                    event_date: this.elements.eventDate.value,
-                    event_venue: this.elements.eventVenue.value,
-                    event_name: this.elements.eventName.value,
-                    cashier_name: this.elements.cashierName.value,
-                    items,
-                    cash_total: Number(this.state.cashTotal),
-                    door_count: Number(this.state.sessionDoorCount),
-                    note: this.elements.noteInput.value,
-                    session_id: this.state.sessionId,
-                    timestamp: new Date().toISOString()
-                };
+    const transaction = {
+        event_date: this.elements.eventDate.value,
+        event_venue: this.elements.eventVenue.value,
+        event_name: this.elements.eventName.value,
+        cashier_name: this.elements.cashierName.value,
+        items,
+        cash_total: Number(this.state.cashTotal),
+        door_count: Number(this.state.sessionDoorCount),
+        note: this.elements.noteInput.value,
+        session_id: this.state.sessionId,
+        timestamp: new Date().toISOString()
+    };
 
-                try {
-                    const response = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'apikey': API_KEY
-                        },
-                        body: JSON.stringify(transaction)
-                    });
+    try {
+        const response = await fetch(SERVER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': API_KEY,
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify(transaction)
+        });
 
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error('Failed to log sale: ' + errorText);
-                    }
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error('Failed to log sale: ' + errorText);
+        }
 
-                    channel.postMessage({ type: 'transaction', data: transaction });
-                    this.resetCurrentItems();
-                    this.elements.noteInput.value = '';
-                    this.showSuccess('Sale logged successfully');
-                } catch (error) {
-                    this.showError(error.message);
-                } finally {
-                    this.state.isLogging = false;
-                    this.elements.logSaleBtn.disabled = false;
-                }
-            }
+        channel.postMessage({ type: 'transaction', data: transaction });
+        this.resetCurrentItems();
+        this.elements.noteInput.value = '';
+        this.showSuccess('Sale logged successfully');
+    } catch (error) {
+        this.showError(error.message);
+    } finally {
+        this.state.isLogging = false;
+        this.elements.logSaleBtn.disabled = false;
+    }
+}
 
             debounceLogSale() {
                 const now = Date.now();
