@@ -53,12 +53,11 @@
         }
         .product-item {
             width: 175px;
-            height: auto; /* Changed from 175px */
+            height: auto;
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
             display: flex;
-            flex-direction: row; /* Changed from column */
             align-items: center;
             justify-content: space-between;
             cursor: move;
@@ -68,8 +67,7 @@
         }
         .incrementbtn {
             flex-grow: 1;
-            height: 30px; /* Adjust as needed */
-            margin-right: 10px;
+            height: 40px;
             padding: 0 10px;
             border: none;
             border-radius: 5px;
@@ -77,19 +75,15 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
         }
         .cash { background-color: #2e7d32; color: white; }
         .cc { background-color: #d32f2f; color: white; }
         .ticket { background-color: #1a73e8; color: white; }
         .comp { background-color: #ffa500; color: white; }
-        .control-row {
-            display: flex;
-            align-items: center;
-        }
         .count {
-            margin-right: 10px;
-            font-size: 18px;
+            margin-left: 10px;
+            font-size: 14px;
         }
         .minus {
             padding: 5px 10px;
@@ -378,6 +372,44 @@
                 this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
                 this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
+            }
+
+            createProductItem(itemData) {
+                const item = document.createElement('div');
+                item.className = 'product-item';
+                item.dataset.item = itemData.name;
+                item.dataset.price = itemData.price;
+                item.dataset.active = itemData.active;
+                if (!itemData.active) item.classList.add('hidden');
+                item.draggable = true;
+                item.innerHTML = `
+                    <button class="incrementbtn ${itemData.type}">${itemData.name} <span class="count">0</span></button>
+                    <button class="minus"> - </button>
+                `;
+                return item;
+            }
+
+            bindEvents() {
+                this.elements.buttonContainer.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.classList.contains('incrementbtn')) {
+                        const btn = target.closest('.product-item');
+                        this.handleIncrement(btn);
+                    } else if (target.classList.contains('minus')) {
+                        const btn = target.closest('.product-item');
+                        this.handleDecrement(btn);
+                    } else if (this.state.isEditing && target.closest('.product-item')) {
+                        this.toggleButtonState(target.closest('.product-item'));
+                    }
+                });
+                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
+                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
             }
 
             // ... rest of the SalesApp class methods ...
