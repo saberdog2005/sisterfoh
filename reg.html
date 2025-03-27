@@ -45,15 +45,15 @@
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(4, 175px);
+            grid-template-columns: repeat(4, 200px);
             gap: 10px;
             padding: 10px;
             flex-grow: 1;
             overflow-y: auto;
         }
         .product-item {
-            width: 175px;
-            height: 100px;
+            width: 200px;
+            height: 120px;
             background-color: #2e2e2e;
             padding: 10px;
             border-radius: 15px;
@@ -67,11 +67,11 @@
             display: none;
         }
         .incrementbtn {
-            width: 70px;
-            height: 70px;
+            width: 100px;
+            height: 100px;
             border: none;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -287,6 +287,13 @@
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+        }
 
         class SalesApp {
             constructor() {
@@ -615,10 +622,7 @@
             }
 
             updateTimeDisplay() {
-                const hours = Math.floor(this.state.timeSeconds / 3600);
-                const minutes = Math.floor((this.state.timeSeconds % 3600) / 60);
-                const seconds = this.state.timeSeconds % 60;
-                this.elements.timeSeconds.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                this.elements.timeSeconds.textContent = formatTime(this.state.timeSeconds);
             }
 
             stopTimer() {
@@ -699,7 +703,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${API_KEY}`
+                            'apikey': API_KEY
                         },
                         body: JSON.stringify(transaction)
                     });
