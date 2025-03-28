@@ -314,7 +314,6 @@
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
                     transactionButtons: [],
-                    
                     counts: new Map(),
                     eventDate: document.getElementById('eventDate'),
                     eventVenue: document.getElementById('eventVenue'),
@@ -343,6 +342,9 @@
                     doorCount: null,
                     timeSeconds: null
                 };
+                // Assign this.buttonContainer and this.counts
+                this.buttonContainer = this.elements.buttonContainer;
+                this.counts = this.elements.counts;
                 this.eventDate = document.getElementById('eventDate');
                 this.eventDate.value = new Date().toISOString().split('T')[0];
                 this.loadLayout();
@@ -388,9 +390,6 @@
                     <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                 `;
                 this.buttonContainer.appendChild(thruDoorDiv);
-                this.buttonContainer = this.elements.buttonContainer;
-                this.counts = this.elements.counts; // Also assign counts to this.counts
-    
                 this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
                 this.doorCount = thruDoorDiv.querySelector('#doorCount');
                 this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
@@ -428,14 +427,14 @@
                         this.toggleButtonState(target.closest('.product-item'));
                     }
                 });
-                this.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
-                this.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
-                this.addNewButtonBtn.addEventListener('click', () => this.addButtonModal.style.display = 'block');
-                this.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
-                this.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
-                this.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
-                this.submitNewButton.addEventListener('click', () => this.addNewButton());
-                this.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
+                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
             }
 
             enableDragAndDrop() {
@@ -492,14 +491,14 @@
 
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
-                this.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
                 if (this.state.isEditing) {
-                    this.editInstructions.classList.remove('hidden');
-                    this.addNewButtonBtn.classList.remove('hidden');
+                    this.elements.editInstructions.classList.remove('hidden');
+                    this.elements.addNewButtonBtn.classList.remove('hidden');
                 } else {
                     this.saveLayout();
-                    this.editInstructions.classList.add('hidden');
-                    this.addNewButtonBtn.classList.add('hidden');
+                    this.elements.editInstructions.classList.add('hidden');
+                    this.elements.addNewButtonBtn.classList.add('hidden');
                 }
                 this.updateButtonVisibility();
             }
@@ -511,9 +510,9 @@
             }
 
             addNewButton() {
-                const type = this.newButtonType.value;
-                const name = this.newButtonName.value;
-                const value = parseFloat(this.newButtonValue.value);
+                const type = this.elements.newButtonType.value;
+                const name = this.elements.newButtonName.value;
+                const value = parseFloat(this.elements.newButtonValue.value);
                 if (!type || !name || isNaN(value)) {
                     this.showError('Please fill in all fields for the new button');
                     return;
@@ -522,19 +521,19 @@
                 const newButton = this.createProductItem(itemData);
                 this.buttonContainer.appendChild(newButton);
                 this.counts.set(name, newButton.querySelector('.count'));
-                this.newButtonType.value = '';
-                this.newButtonName.value = '';
-                this.newButtonValue.value = '';
-                this.addButtonModal.style.display = 'none';
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
                 this.showSuccess('New button added');
                 this.updateButtonVisibility();
             }
 
             cancelAddButton() {
-                this.newButtonType.value = '';
-                this.newButtonName.value = '';
-                this.newButtonValue.value = '';
-                this.addButtonModal.style.display = 'none';
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
             }
 
             handleIncrement(btn) {
@@ -597,14 +596,14 @@
             checkSessionStatus() {
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
                 this.state.sessionId = localStorage.getItem('activeSessionId');
-                this.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
-                this.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
                 if (this.state.sessionStarted) {
-                    this.editLayoutBtn.classList.add('hidden');
+                    this.elements.editLayoutBtn.classList.add('hidden');
                 } else {
-                    this.editLayoutBtn.classList.remove('hidden');
+                    this.elements.editLayoutBtn.classList.remove('hidden');
                 }
-                const inputs = [this.eventDate, this.eventVenue, this.eventName, this.cashierName];
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
                 inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
@@ -612,13 +611,13 @@
                 if (!this.state.sessionStarted) {
                     this.startSession();
                 } else {
-                    this.pinModal.style.display = 'block';
-                    this.pinInput.focus();
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.focus();
                 }
             }
 
             startSession() {
-                if (!this.eventDate.value || !this.eventVenue.value || !this.eventName.value || !this.cashierName.value) {
+                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
                     this.showError('Please fill in all required fields');
                     return;
                 }
@@ -675,12 +674,12 @@
             }
 
             async confirmCloseSales() {
-                const pin = this.pinInput.value;
+                const pin = this.elements.pinInput.value;
                 if (pin === DEFAULT_PIN) {
                     await this.closeSession();
                 } else {
-                    this.pinError.textContent = 'Invalid PIN';
-                    this.pinInput.value = '';
+                    this.elements.pinError.textContent = 'Invalid PIN';
+                    this.elements.pinInput.value = '';
                 }
             }
 
@@ -688,66 +687,66 @@
                 if (this.currentItems.size > 0) {
                     await this.logSale();
                 }
-                this.sessionStarted = false;
+                this.state.sessionStarted = false;
                 localStorage.removeItem('sessionActive');
                 localStorage.removeItem('activeSessionId');
-                this.sessionId = null;
-                this.cashTotal = 0;
-                this.sessionDoorCount = 0;
+                this.state.sessionId = null;
+                this.state.cashTotal = 0;
+                this.state.sessionDoorCount = 0;
                 if (this.cashTotal) {
                     this.cashTotal.textContent = '0.00';
                 }
                 if (this.doorCount) {
                     this.doorCount.textContent = '0';
                 }
-                localStorage.removeItem(`sessionDoorCount_${this.sessionId}`);
+                localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
                 this.stopTimer();
                 if (this.timeSeconds) {
                     this.timeSeconds.textContent = '00:00:00';
                 }
-                this.toggleSalesBtn.textContent = 'Open Sales';
-                this.toggleSalesBtn.classList.remove('closebtn');
-                this.toggleSalesBtn.classList.add('openbtn');
-                this.pinModal.style.display = 'none';
-                this.pinInput.value = '';
-                this.pinError.textContent = '';
+                this.elements.toggleSalesBtn.textContent = 'Open Sales';
+                this.elements.toggleSalesBtn.classList.remove('closebtn');
+                this.elements.toggleSalesBtn.classList.add('openbtn');
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
             }
 
             cancelPinModal() {
-                this.pinModal.style.display = 'none';
-                this.pinInput.value = '';
-                this.pinError.textContent = '';
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
             }
 
             async logSale() {
-                if (!this.sessionStarted || this.isLogging) return;
-                this.isLogging = true;
-                this.logSaleBtn.disabled = true;
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
+                this.elements.logSaleBtn.disabled = true;
 
-                const items = Array.from(this.currentItems.entries())
+                const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
                     .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toFixed(2)}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
-                    this.isLogging = false;
-                    this.logSaleBtn.disabled = false;
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
 
                 const transaction = {
-                    eventDate: this.eventDate.value,
-                    eventVenue: this.eventVenue.value,
-                    eventName: this.eventName.value,
-                    cashierName: this.cashierName.value,
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
                     items: items,
-                    cashTotal: Number(this.cashTotal),
-                    doorCount: Number(this.sessionDoorCount),
-                    note: this.noteInput.value,
-                    sessionId: this.sessionId,
+                    cashTotal: Number(this.state.cashTotal),
+                    doorCount: Number(this.state.sessionDoorCount),
+                    note: this.elements.noteInput.value,
+                    sessionId: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
@@ -769,28 +768,28 @@
 
                     channel.postMessage({ type: 'transaction', data: transaction });
                     this.resetCurrentItems();
-                    this.noteInput.value = '';
+                    this.elements.noteInput.value = '';
                     this.showSuccess('Sale logged successfully');
                 } catch (error) {
                     this.showError(error.message);
                 } finally {
-                    this.isLogging = false;
-                    this.logSaleBtn.disabled = false;
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
                 }
             }
 
             debounceLogSale() {
                 const now = Date.now();
-                if (now - this.lastLogTime > 1000) {
-                    this.lastLogTime = now;
+                if (now - this.state.lastLogTime > 1000) {
+                    this.state.lastLogTime = now;
                     this.logSale();
                 }
             }
 
             resetCurrentItems() {
-                this.currentItems.clear();
-                this.cashTotal = 0;
-                this.doorCount = 0;
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
                 if (this.cashTotal) {
                     this.cashTotal.textContent = '0.00';
                 }
@@ -799,15 +798,15 @@
             }
 
             showSuccess(message) {
-                this.successMessage.textContent = message;
-                this.errorMessage.textContent = '';
-                setTimeout(() => this.successMessage.textContent = '', 3000);
+                this.elements.successMessage.textContent = message;
+                this.elements.errorMessage.textContent = '';
+                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
             }
 
             showError(message) {
-                this.errorMessage.textContent = message;
-                this.successMessage.textContent = '';
-                setTimeout(() => this.errorMessage.textContent = '', 3000);
+                this.elements.errorMessage.textContent = message;
+                this.elements.successMessage.textContent = '';
+                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
             }
         }
 
