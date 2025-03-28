@@ -708,15 +708,15 @@
                 }
 
                 const transaction = {
-                    event_date: this(elements.eventDate.value,
-                    event_venue: this(elements.eventVenue.value,
-                    event_name: this(elements.eventName.value,
-                    cashier_name: this(elements.cashierName.value,
+                    eventDate: this(elements.eventDate.value,
+                    eventVenue: this(elements.eventVenue.value,
+                    eventName: this(elements.eventName.value,
+                    cashierName: this(elements.cashierName.value,
                     items: items,
-                    cash_total: Number(this.state.cashTotal),
-                    door_count: Number(this.state.sessionDoorCount),
+                    cashTotal: Number(this.state.cashTotal),
+                    doorCount: Number(this.state.sessionDoorCount),
                     note: this(elements.noteInput.value,
-                    session_id: this.state.sessionId,
+                    sessionId: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
