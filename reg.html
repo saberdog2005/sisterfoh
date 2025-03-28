@@ -309,7 +309,7 @@
                     isLogging: false,
                     lastLogTime: 0,
                     timeInterval: null,
-                    lastClickTimes: new Map() // For debouncing
+                    lastClickTimes: new Map()
                 };
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
@@ -342,7 +342,6 @@
                     doorCount: null,
                     timeSeconds: null
                 };
-                // Assign this.buttonContainer and this.counts
                 this.buttonContainer = this.elements.buttonContainer;
                 this.counts = this.elements.counts;
                 this.eventDate = document.getElementById('eventDate');
@@ -503,7 +502,7 @@
                 this.updateButtonVisibility();
             }
 
-            toggleButtonState(btn) {
+            toggle続きButtonState(btn) {
                 const currentActive = btn.dataset.active === 'true';
                 btn.dataset.active = !currentActive;
                 btn.style.opacity = !currentActive ? '1' : '0.5';
@@ -541,7 +540,7 @@
                 const item = btn.dataset.item;
                 const now = Date.now();
                 const lastClick = this.state.lastClickTimes.get(item) || 0;
-                if (now - lastClick < 200) return; // Debounce: ignore clicks within 200ms
+                if (now - lastClick < 200) return;
                 this.state.lastClickTimes.set(item, now);
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
@@ -557,7 +556,7 @@
                 const item = btn.dataset.item;
                 const now = Date.now();
                 const lastClick = this.state.lastClickTimes.get(item) || 0;
-                if (now - lastClick < 200) return; // Debounce: ignore clicks within 200ms
+                if (now - lastClick < 200) return;
                 this.state.lastClickTimes.set(item, now);
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
@@ -615,37 +614,36 @@
                     this.elements.pinInput.focus();
                 }
             }
+
             startSession() {
-    if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
-        this.showError('Please fill in all required fields');
-        return;
-    }
-    this.stopTimer();
-    this.state.sessionStarted = true;
-    this.state.sessionId = Date.now().toString();
-    localStorage.setItem('sessionActive', true);
-    localStorage.setItem('activeSessionId', this.state.sessionId);
-    this.state.cashTotal = 0;
-    this.state.doorCount = 0;
-    this.state.sessionDoorCount = 0;
-    localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-    if (this.cashTotal) {
-        this.cashTotal.textContent = '0.00';
-    }
-    if (this.doorCount) {
-        this.doorCount.textContent = '0';
-    }
-    this.currentItems.clear();
-    this.counts.forEach(count => count.textContent = '0');
-    this.startTimer();
-    this.showSuccess('Sales session started');
-    this.checkSessionStatus();
-}
-
-
+                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+                    this.showError('Please fill in all required fields');
+                    return;
+                }
+                this.stopTimer();
+                this.state.sessionStarted = true;
+                this.state.sessionId = Date.now().toString();
+                localStorage.setItem('sessionActive', true);
+                localStorage.setItem('activeSessionId', this.state.sessionId);
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.state.sessionDoorCount = 0;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+                if (this.cashTotal) {
+                    this.cashTotal.textContent = '0.00';
+                }
+                if (this.doorCount) {
+                    this.doorCount.textContent = '0';
+                }
+                this.currentItems.clear();
+                this.counts.forEach(count => count.textContent = '0');
+                this.startTimer();
+                this.showSuccess('Sales session started');
+                this.checkSessionStatus();
+            }
 
             startTimer() {
-                this.updateTimer(); // Initial update
+                this.updateTimer();
                 this.timeInterval = window.setInterval(() => this.updateTimer(), 1000);
             }
 
@@ -675,16 +673,19 @@
             }
 
             async confirmCloseSales() {
-                const pin = this.elements.pinInput.value;
+                const pin = this.elements.pinInput.value.trim();
                 if (pin === DEFAULT_PIN) {
+                    console.log('PIN correct, closing session');
                     await this.closeSession();
                 } else {
+                    console.log('Invalid PIN');
                     this.elements.pinError.textContent = 'Invalid PIN';
                     this.elements.pinInput.value = '';
                 }
             }
 
             async closeSession() {
+                console.log('Starting to close session');
                 if (this.currentItems.size > 0) {
                     await this.logSale();
                 }
@@ -713,6 +714,7 @@
                 this.elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
+                console.log('Session closed');
             }
 
             cancelPinModal() {
@@ -794,7 +796,6 @@
                 if (this.cashTotal) {
                     this.cashTotal.textContent = '0.00';
                 }
-                // Do not reset doorCount display, as it's session-wide
                 this.counts.forEach(count => count.textContent = '0');
             }
 
