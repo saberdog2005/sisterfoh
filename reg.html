@@ -615,33 +615,34 @@
                     this.elements.pinInput.focus();
                 }
             }
-
             startSession() {
-                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
-                    this.showError('Please fill in all required fields');
-                    return;
-                }
-                this.stopTimer();
-                this.state.sessionStarted = true;
-                this.state.sessionId = Date.now().toString();
-                localStorage.setItem('sessionActive', true);
-                localStorage.setItem('activeSessionId', this.state.sessionId);
-                this.state.cashTotal = 0;
-                this.state.doorCount = 0;
-                this.state.sessionDoorCount = 0;
-                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                if (this.cashTotal) {
-                    this.cashTotal.textContent = '0.00';
-                }
-                if (this.doorCount) {
-                    this.doorCount.textContent = '0';
-                }
-                this.currentItems.clear();
-                this.counts.forEach(count => count.textContent = '0');
-                this.startTimer();
-                this.showSuccess('Sales session started');
-                this.checkSessionStatus();
-            }
+    if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+        this.showError('Please fill in all required fields');
+        return;
+    }
+    this.stopTimer();
+    this.state.sessionStarted = true;
+    this.state.sessionId = Date.now().toString();
+    localStorage.setItem('sessionActive', true);
+    localStorage.setItem('activeSessionId', this.state.sessionId);
+    this.state.cashTotal = 0;
+    this.state.doorCount = 0;
+    this.state.sessionDoorCount = 0;
+    localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+    if (this.cashTotal) {
+        this.cashTotal.textContent = '0.00';
+    }
+    if (this.doorCount) {
+        this.doorCount.textContent = '0';
+    }
+    this.currentItems.clear();
+    this.counts.forEach(count => count.textContent = '0');
+    this.startTimer();
+    this.showSuccess('Sales session started');
+    this.checkSessionStatus();
+}
+
+
 
             startTimer() {
                 this.updateTimer(); // Initial update
