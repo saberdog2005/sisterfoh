@@ -314,6 +314,7 @@
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
                     transactionButtons: [],
+                    
                     counts: new Map(),
                     eventDate: document.getElementById('eventDate'),
                     eventVenue: document.getElementById('eventVenue'),
@@ -387,6 +388,9 @@
                     <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                 `;
                 this.buttonContainer.appendChild(thruDoorDiv);
+                this.buttonContainer = this.elements.buttonContainer;
+                this.counts = this.elements.counts; // Also assign counts to this.counts
+    
                 this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
                 this.doorCount = thruDoorDiv.querySelector('#doorCount');
                 this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
