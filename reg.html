@@ -342,7 +342,8 @@
                     doorCount: null,
                     timeSeconds: null
                 };
-                this.elements.eventDate.value = new Date().toISOString().split('T')[0];
+                this.eventDate = document.getElementById('eventDate');
+                this.eventDate.value = new Date().toISOString().split('T')[0];
                 this.loadLayout();
                 this.updateButtonVisibility();
                 this.checkSessionStatus();
@@ -359,8 +360,8 @@
                 if (savedLayout) {
                     savedLayout.forEach(itemData => {
                         const item = this.createProductItem(itemData);
-                        this.elements.buttonContainer.appendChild(item);
-                        this.elements.counts.set(itemData.name, item.querySelector('.count'));
+                        this.buttonContainer.appendChild(item);
+                        this.counts.set(itemData.name, item.querySelector('.count'));
                     });
                 } else {
                     const defaultItems = [
@@ -374,8 +375,8 @@
                     ];
                     defaultItems.forEach(itemData => {
                         const item = this.createProductItem(itemData);
-                        this.elements.buttonContainer.appendChild(item);
-                        this.elements.counts.set(itemData.name, item.querySelector('.count'));
+                        this.buttonContainer.appendChild(item);
+                        this.counts.set(itemData.name, item.querySelector('.count'));
                     });
                 }
                 const thruDoorDiv = document.createElement('div');
@@ -385,11 +386,11 @@
                     <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
                     <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                 `;
-                this.elements.buttonContainer.appendChild(thruDoorDiv);
-                this.elements.cashTotal = thruDoorDiv.querySelector('#cashTotal');
-                this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
-                this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
-                this.elements.transactionButtons = document.querySelectorAll('.product-item');
+                this.buttonContainer.appendChild(thruDoorDiv);
+                this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
+                this.doorCount = thruDoorDiv.querySelector('#doorCount');
+                this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
+                this.transactionButtons = document.querySelectorAll('.product-item');
             }
 
             createProductItem(itemData) {
@@ -411,7 +412,7 @@
             }
 
             bindEvents() {
-                this.elements.buttonContainer.addEventListener('click', (e) => {
+                this.buttonContainer.addEventListener('click', (e) => {
                     const target = e.target;
                     if (target.classList.contains('incrementbtn')) {
                         const btn = target.closest('.product-item');
@@ -423,18 +424,18 @@
                         this.toggleButtonState(target.closest('.product-item'));
                     }
                 });
-                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
-                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
-                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
-                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
-                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
-                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
-                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
-                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+                this.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.addNewButtonBtn.addEventListener('click', () => this.addButtonModal.style.display = 'block');
+                this.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
             }
 
             enableDragAndDrop() {
-                this.elements.buttonContainer.addEventListener('dragstart', (e) => {
+                this.buttonContainer.addEventListener('dragstart', (e) => {
                     if (!this.state.isEditing) return;
                     const item = e.target.closest('.product-item');
                     if (item) {
@@ -442,24 +443,24 @@
                         item.style.opacity = '0.5';
                     }
                 });
-                this.elements.buttonContainer.addEventListener('dragover', (e) => {
+                this.buttonContainer.addEventListener('dragover', (e) => {
                     if (!this.state.isEditing) return;
                     e.preventDefault();
                 });
-                this.elements.buttonContainer.addEventListener('drop', (e) => {
+                this.buttonContainer.addEventListener('drop', (e) => {
                     if (!this.state.isEditing) return;
                     e.preventDefault();
                     const draggedItem = document.querySelector(`[data-item="${e.dataTransfer.getData('text/plain')}"]`);
                     const targetItem = e.target.closest('.product-item');
                     if (targetItem && draggedItem !== targetItem) {
-                        this.elements.buttonContainer.insertBefore(draggedItem, targetItem);
+                        this.buttonContainer.insertBefore(draggedItem, targetItem);
                     }
                     draggedItem.style.opacity = '1';
                 });
             }
 
             saveLayout() {
-                const items = Array.from(this.elements.buttonContainer.querySelectorAll('.product-item')).map(item => ({
+                const items = Array.from(this.buttonContainer.querySelectorAll('.product-item')).map(item => ({
                     name: item.dataset.item,
                     type: item.querySelector('.incrementbtn').classList[1],
                     price: parseFloat(item.dataset.price),
@@ -469,8 +470,8 @@
             }
 
             updateButtonVisibility() {
-                this.elements.transactionButtons = document.querySelectorAll('.product-item');
-                this.elements.transactionButtons.forEach(btn => {
+                this.transactionButtons = document.querySelectorAll('.product-item');
+                this.transactionButtons.forEach(btn => {
                     if (this.state.isEditing) {
                         btn.classList.remove('hidden');
                         btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
@@ -487,14 +488,14 @@
 
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
-                this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                this.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
                 if (this.state.isEditing) {
-                    this.elements.editInstructions.classList.remove('hidden');
-                    this.elements.addNewButtonBtn.classList.remove('hidden');
+                    this.editInstructions.classList.remove('hidden');
+                    this.addNewButtonBtn.classList.remove('hidden');
                 } else {
                     this.saveLayout();
-                    this.elements.editInstructions.classList.add('hidden');
-                    this.elements.addNewButtonBtn.classList.add('hidden');
+                    this.editInstructions.classList.add('hidden');
+                    this.addNewButtonBtn.classList.add('hidden');
                 }
                 this.updateButtonVisibility();
             }
@@ -506,30 +507,30 @@
             }
 
             addNewButton() {
-                const type = this.elements.newButtonType.value;
-                const name = this.elements.newButtonName.value;
-                const value = parseFloat(this(elements.newButtonValue.value);
+                const type = this.newButtonType.value;
+                const name = this.newButtonName.value;
+                const value = parseFloat(this.newButtonValue.value);
                 if (!type || !name || isNaN(value)) {
                     this.showError('Please fill in all fields for the new button');
                     return;
                 }
                 const itemData = { name, type, price: value, active: true };
                 const newButton = this.createProductItem(itemData);
-                this.elements.buttonContainer.appendChild(newButton);
-                this.elements.counts.set(name, newButton.querySelector('.count'));
-                this.elements.newButtonType.value = '';
-                this.elements.newButtonName.value = '';
-                this(elements.newButtonValue.value = '';
-                this(elements.addButtonModal.style.display = 'none';
+                this.buttonContainer.appendChild(newButton);
+                this.counts.set(name, newButton.querySelector('.count'));
+                this.newButtonType.value = '';
+                this.newButtonName.value = '';
+                this.newButtonValue.value = '';
+                this.addButtonModal.style.display = 'none';
                 this.showSuccess('New button added');
                 this.updateButtonVisibility();
             }
 
             cancelAddButton() {
-                this(elements.newButtonType.value = '';
-                this(elements.newButtonName.value = '';
-                this(elements.newButtonValue.value = '';
-                this(elements.addButtonModal.style.display = 'none';
+                this.newButtonType.value = '';
+                this.newButtonName.value = '';
+                this.newButtonValue.value = '';
+                this.addButtonModal.style.display = 'none';
             }
 
             handleIncrement(btn) {
@@ -544,7 +545,7 @@
                 const current = this.state.currentItems.get(item) || { count: 0, price, type };
                 current.count++;
                 this.state.currentItems.set(item, current);
-                this(elements.counts.get(item).textContent = current.count;
+                this.counts.get(item).textContent = current.count;
                 this.updateTotals(price, 1, type);
             }
 
@@ -561,7 +562,7 @@
                 if (current && current.count > 0) {
                     current.count--;
                     this.state.currentItems.set(item, current);
-                    this(elements.counts.get(item).textContent = current.count;
+                    this.counts.get(item).textContent = current.count;
                     this.updateTotals(-price, -1, type);
                 }
             }
@@ -570,11 +571,11 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                if (this.elements.cashTotal) {
-                    this(elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                if (this.cashTotal) {
+                    this.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 }
-                if (this.elements.doorCount) {
-                    this(elements.doorCount.textContent = this.state.sessionDoorCount;
+                if (this.doorCount) {
+                    this.doorCount.textContent = this.state.sessionDoorCount;
                 }
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
@@ -583,8 +584,8 @@
                 const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
                 if (savedCount) {
                     this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    if (this elements.doorCount) {
-                        this elements.doorCount.textContent = this.state.sessionDoorCount;
+                    if (this.doorCount) {
+                        this.doorCount.textContent = this.state.sessionDoorCount;
                     }
                 }
             }
@@ -592,14 +593,14 @@
             checkSessionStatus() {
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
                 this.state.sessionId = localStorage.getItem('activeSessionId');
-                this elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
-                this elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
+                this.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
                 if (this.state.sessionStarted) {
-                    this elements.editLayoutBtn.classList.add('hidden');
+                    this.editLayoutBtn.classList.add('hidden');
                 } else {
-                    this elements.editLayoutBtn.classList.remove('hidden');
+                    this.editLayoutBtn.classList.remove('hidden');
                 }
-                const inputs = [this elements.eventDate, this elements.eventVenue, this elements.eventName, this elements.cashierName];
+                const inputs = [this.eventDate, this.eventVenue, this.eventName, this.cashierName];
                 inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
@@ -607,13 +608,13 @@
                 if (!this.state.sessionStarted) {
                     this.startSession();
                 } else {
-                    this elements.pinModal.style.display = 'block';
-                    this elements.pinInput.focus();
+                    this.pinModal.style.display = 'block';
+                    this.pinInput.focus();
                 }
             }
 
             startSession() {
-                if (!this elements.eventDate.value || !this elements.eventVenue.value || !this elements.eventName.value || !this elements.cashierName.value) {
+                if (!this.eventDate.value || !this.eventVenue.value || !this.eventName.value || !this.cashierName.value) {
                     this.showError('Please fill in all required fields');
                     return;
                 }
@@ -626,14 +627,14 @@
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                if (this elements.cashTotal) {
-                    this elements.cashTotal.textContent = '0.00';
+                if (this.cashTotal) {
+                    this.cashTotal.textContent = '0.00';
                 }
-                if (this elements.doorCount) {
-                    this elements.doorCount.textContent = '0';
+                if (this.doorCount) {
+                    this.doorCount.textContent = '0';
                 }
-                this.state.currentItems.clear();
-                this elements.counts.forEach(count => count.textContent = '0');
+                this.currentItems.clear();
+                this.counts.forEach(count => count.textContent = '0');
                 this.startTimer();
                 this.showSuccess('Sales session started');
                 this.checkSessionStatus();
@@ -641,14 +642,14 @@
 
             startTimer() {
                 this.updateTimer(); // Initial update
-                this.state.timeInterval = window.setInterval(() => this.updateTimer(), 1000);
+                this.timeInterval = window.setInterval(() => this.updateTimer(), 1000);
             }
 
             updateTimer() {
                 const sessionActive = localStorage.getItem('sessionActive') === 'true';
                 if (!sessionActive) {
-                    if (this elements.timeSeconds) {
-                        this elements.timeSeconds.textContent = '00:00:00';
+                    if (this.timeSeconds) {
+                        this.timeSeconds.textContent = '00:00:00';
                     }
                     this.stopTimer();
                     return;
@@ -657,92 +658,92 @@
                 if (isNaN(startTime)) return;
                 const elapsedMilliseconds = Date.now() - startTime;
                 const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
-                if (this elements.timeSeconds) {
-                    this elements.timeSeconds.textContent = formatTime(elapsedSeconds);
+                if (this.timeSeconds) {
+                    this.timeSeconds.textContent = formatTime(elapsedSeconds);
                 }
             }
 
             stopTimer() {
-                if (this.state.timeInterval) {
-                    window.clearInterval(this.state.timeInterval);
-                    this.state.timeInterval = null;
+                if (this.timeInterval) {
+                    window.clearInterval(this.timeInterval);
+                    this.timeInterval = null;
                 }
             }
 
             async confirmCloseSales() {
-                const pin = this elements.pinInput.value;
+                const pin = this.pinInput.value;
                 if (pin === DEFAULT_PIN) {
                     await this.closeSession();
                 } else {
-                    this elements.pinError.textContent = 'Invalid PIN';
-                    this elements.pinInput.value = '';
+                    this.pinError.textContent = 'Invalid PIN';
+                    this.pinInput.value = '';
                 }
             }
 
             async closeSession() {
-                if (this.state.currentItems.size > 0) {
+                if (this.currentItems.size > 0) {
                     await this.logSale();
                 }
-                this.state.sessionStarted = false;
+                this.sessionStarted = false;
                 localStorage.removeItem('sessionActive');
                 localStorage.removeItem('activeSessionId');
-                this.state.sessionId = null;
-                this.state.cashTotal = 0;
-                this.state.sessionDoorCount = 0;
-                if (this elements.cashTotal) {
-                    this elements.cashTotal.textContent = '0.00';
+                this.sessionId = null;
+                this.cashTotal = 0;
+                this.sessionDoorCount = 0;
+                if (this.cashTotal) {
+                    this.cashTotal.textContent = '0.00';
                 }
-                if (this elements.doorCount) {
-                    this elements.doorCount.textContent = '0';
+                if (this.doorCount) {
+                    this.doorCount.textContent = '0';
                 }
-                localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
+                localStorage.removeItem(`sessionDoorCount_${this.sessionId}`);
                 this.stopTimer();
-                if (this elements.timeSeconds) {
-                    this elements.timeSeconds.textContent = '00:00:00';
+                if (this.timeSeconds) {
+                    this.timeSeconds.textContent = '00:00:00';
                 }
-                this elements.toggleSalesBtn.textContent = 'Open Sales';
-                this elements.toggleSalesBtn.classList.remove('closebtn');
-                this elements.toggleSalesBtn.classList.add('openbtn');
-                this elements.pinModal.style.display = 'none';
-                this elements.pinInput.value = '';
-                this elements.pinError.textContent = '';
+                this.toggleSalesBtn.textContent = 'Open Sales';
+                this.toggleSalesBtn.classList.remove('closebtn');
+                this.toggleSalesBtn.classList.add('openbtn');
+                this.pinModal.style.display = 'none';
+                this.pinInput.value = '';
+                this.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
             }
 
             cancelPinModal() {
-                this elements.pinModal.style.display = 'none';
-                this elements.pinInput.value = '';
-                this elements.pinError.textContent = '';
+                this.pinModal.style.display = 'none';
+                this.pinInput.value = '';
+                this.pinError.textContent = '';
             }
 
             async logSale() {
-                if (!this.state.sessionStarted || this.state.isLogging) return;
-                this.state.isLogging = true;
-                this elements.logSaleBtn.disabled = true;
+                if (!this.sessionStarted || this.isLogging) return;
+                this.isLogging = true;
+                this.logSaleBtn.disabled = true;
 
-                const items = Array.from(this.state.currentItems.entries())
+                const items = Array.from(this.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
                     .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toFixed(2)}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
-                    this.state.isLogging = false;
-                    this elements.logSaleBtn.disabled = false;
+                    this.isLogging = false;
+                    this.logSaleBtn.disabled = false;
                     return;
                 }
 
                 const transaction = {
-                    eventDate: this elements.eventDate.value,
-                    eventVenue: this elements.eventVenue.value,
-                    eventName: this elements.eventName.value,
-                    cashierName: this elements.cashierName.value,
+                    eventDate: this.eventDate.value,
+                    eventVenue: this.eventVenue.value,
+                    eventName: this.eventName.value,
+                    cashierName: this.cashierName.value,
                     items: items,
-                    cashTotal: Number(this.state.cashTotal),
-                    doorCount: Number(this.state.sessionDoorCount),
-                    note: this elements.noteInput.value,
-                    sessionId: this.state.sessionId,
+                    cashTotal: Number(this.cashTotal),
+                    doorCount: Number(this.sessionDoorCount),
+                    note: this.noteInput.value,
+                    sessionId: this.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
@@ -764,45 +765,45 @@
 
                     channel.postMessage({ type: 'transaction', data: transaction });
                     this.resetCurrentItems();
-                    this elements.noteInput.value = '';
+                    this.noteInput.value = '';
                     this.showSuccess('Sale logged successfully');
                 } catch (error) {
                     this.showError(error.message);
                 } finally {
-                    this.state.isLogging = false;
-                    this elements.logSaleBtn.disabled = false;
+                    this.isLogging = false;
+                    this.logSaleBtn.disabled = false;
                 }
             }
 
             debounceLogSale() {
                 const now = Date.now();
-                if (now - this.state.lastLogTime > 1000) {
-                    this.state.lastLogTime = now;
+                if (now - this.lastLogTime > 1000) {
+                    this.lastLogTime = now;
                     this.logSale();
                 }
             }
 
             resetCurrentItems() {
-                this.state.currentItems.clear();
-                this.state.cashTotal = 0;
-                this.state.doorCount = 0;
-                if (this elements.cashTotal) {
-                    this elements.cashTotal.textContent = '0.00';
+                this.currentItems.clear();
+                this.cashTotal = 0;
+                this.doorCount = 0;
+                if (this.cashTotal) {
+                    this.cashTotal.textContent = '0.00';
                 }
                 // Do not reset doorCount display, as it's session-wide
-                this elements.counts.forEach(count => count.textContent = '0');
+                this.counts.forEach(count => count.textContent = '0');
             }
 
             showSuccess(message) {
-                this elements.successMessage.textContent = message;
-                this elements.errorMessage.textContent = '';
-                setTimeout(() => this elements.successMessage.textContent = '', 3000);
+                this.successMessage.textContent = message;
+                this.errorMessage.textContent = '';
+                setTimeout(() => this.successMessage.textContent = '', 3000);
             }
 
             showError(message) {
-                this elements.errorMessage.textContent = message;
-                this elements.successMessage.textContent = '';
-                setTimeout(() => this elements.errorMessage.textContent = '', 3000);
+                this.errorMessage.textContent = message;
+                this.successMessage.textContent = '';
+                setTimeout(() => this.errorMessage.textContent = '', 3000);
             }
         }
 
