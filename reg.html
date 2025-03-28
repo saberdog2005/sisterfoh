@@ -417,7 +417,7 @@
                     } else if (target.classList.contains('minus')) {
                         const btn = target.closest('.product-item');
                         this.handleDecrement(btn);
-                    } else if (thisstate.isEditing && target.closest('.product-item')) {
+                    } else if (this.state.isEditing && target.closest('.product-item')) {
                         this.toggleButtonState(target.closest('.product-item'));
                     }
                 });
@@ -433,7 +433,7 @@
 
             enableDragAndDrop() {
                 this.elements.buttonContainer.addEventListener('dragstart', (e) => {
-                    if (!thisstate.isEditing) return;
+                    if (!this.state.isEditing) return;
                     const item = e.target.closest('.product-item');
                     if (item) {
                         e.dataTransfer.setData('text/plain', item.dataset.item);
@@ -441,15 +441,15 @@
                     }
                 });
                 this.elements.buttonContainer.addEventListener('dragover', (e) => {
-                    if (!thisstate.isEditing) return;
+                    if (!this.state.isEditing) return;
                     e.preventDefault();
                 });
                 this.elements.buttonContainer.addEventListener('drop', (e) => {
-                    if (!thisstate.isEditing) return;
+                    if (!this.state.isEditing) return;
                     e.preventDefault();
                     const draggedItem = document.querySelector(`[data-item="${e.dataTransfer.getData('text/plain')}"]`);
                     const targetItem = e.target.closest('.product-item');
-                    if (targetItem && draggedItem != targetItem) {
+                    if (targetItem && draggedItem !== targetItem) {
                         this.elements.buttonContainer.insertBefore(draggedItem, targetItem);
                     }
                     draggedItem.style.opacity = '1';
@@ -469,7 +469,7 @@
             updateButtonVisibility() {
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
                 this.elements.transactionButtons.forEach(btn => {
-                    if (thisstate.isEditing) {
+                    if (this.state.isEditing) {
                         btn.classList.remove('hidden');
                         btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
                     } else {
@@ -484,9 +484,9 @@
             }
 
             toggleEditMode() {
-                thisstate.isEditing = !thisstate.isEditing;
-                this.elements.editLayoutBtn.textContent = thisstate.isEditing ? 'Save Layout' : 'Edit Layout';
-                if (thisstate.isEditing) {
+                this.state.isEditing = !this.state.isEditing;
+                this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                if (this.state.isEditing) {
                     this.elements.editInstructions.classList.remove('hidden');
                     this.elements.addNewButtonBtn.classList.remove('hidden');
                 } else {
@@ -531,70 +531,70 @@
             }
 
             handleIncrement(btn) {
-                if (!thisstate.sessionStarted || thisstate.isEditing) return;
+                if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
-                const current = thisstate.currentItems.get(item) || { count: 0, price, type };
+                const current = this.state.currentItems.get(item) || { count: 0, price, type };
                 current.count++;
-                thisstate.currentItems.set(item, current);
+                this.state.currentItems.set(item, current);
                 this.elements.counts.get(item).textContent = current.count;
                 this.updateTotals(price, 1, type);
             }
 
             handleDecrement(btn) {
-                if (!thisstate.sessionStarted || thisstate.isEditing) return;
+                if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
-                const current = thisstate.currentItems.get(item);
+                const current = this.state.currentItems.get(item);
                 if (current && current.count > 0) {
                     current.count--;
-                    thisstate.currentItems.set(item, current);
+                    this.state.currentItems.set(item, current);
                     this.elements.counts.get(item).textContent = current.count;
                     this.updateTotals(-price, -1, type);
                 }
             }
 
             updateTotals(priceDelta, countDelta, type) {
-                if (type === 'cash') thisstate.cashTotal += priceDelta;
-                thisstate.doorCount += countDelta;
-                thisstate.sessionDoorCount += countDelta;
+                if (type === 'cash') this.state.cashTotal += priceDelta;
+                this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta;
                 if (this.elements.cashTotal) {
-                    this.elements.cashTotal.textContent = thisstate.cashTotal.toFixed(2);
+                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 }
                 if (this.elements.doorCount) {
-                    this.elements.doorCount.textContent = thisstate.sessionDoorCount;
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 }
-                localStorage.setItem(`sessionDoorCount_${thisstate.sessionId}`, thisstate.sessionDoorCount);
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
 
             loadSessionDoorCount() {
-                const savedCount = localStorage.getItem(`sessionDoorCount_${thisstate.sessionId}`);
+                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
                 if (savedCount) {
-                    thisstate.sessionDoorCount = parseInt(savedCount, 10);
+                    this.state.sessionDoorCount = parseInt(savedCount, 10);
                     if (this.elements.doorCount) {
-                        this.elements.doorCount.textContent = thisstate.sessionDoorCount;
+                        this.elements.doorCount.textContent = this.state.sessionDoorCount;
                     }
                 }
             }
 
             checkSessionStatus() {
-                thisstate.sessionStarted = localStorage.getItem('sessionActive') === 'true';
-                thisstate.sessionId = localStorage.getItem('activeSessionId');
-                this.elements.toggleSalesBtn.textContent = thisstate.sessionStarted ? 'Close Sales' : 'Open Sales';
-                this.elements.toggleSalesBtn.className = thisstate.sessionStarted ? 'closebtn' : 'openbtn';
-                if (thisstate.sessionStarted) {
+                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
+                if (this.state.sessionStarted) {
                     this.elements.editLayoutBtn.classList.add('hidden');
                 } else {
                     this.elements.editLayoutBtn.classList.remove('hidden');
                 }
                 const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
-                inputs.forEach(input => input.disabled = thisstate.sessionStarted);
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
             toggleSales() {
-                if (!thisstate.sessionStarted) {
+                if (!this.state.sessionStarted) {
                     this.startSession();
                 } else {
                     this.elements.pinModal.style.display = 'block';
@@ -607,43 +607,43 @@
                     this.showError('Please fill in all required fields');
                     return;
                 }
-                thisstate.sessionStarted = true;
-                thisstate.sessionId = Date.now().toString();
+                this.state.sessionStarted = true;
+                this.state.sessionId = Date.now().toString();
                 localStorage.setItem('sessionActive', true);
-                localStorage.setItem('activeSessionId', thisstate.sessionId);
-                thisstate.cashTotal = 0;
-                thisstate.doorCount = 0;
-                thisstate.sessionDoorCount = 0;
-                localStorage.setItem(`sessionDoorCount_${thisstate.sessionId}`, '0');
+                localStorage.setItem('activeSessionId', this.state.sessionId);
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.state.sessionDoorCount = 0;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
                 if (this.elements.cashTotal) {
                     this.elements.cashTotal.textContent = '0.00';
                 }
                 if (this.elements.doorCount) {
                     this.elements.doorCount.textContent = '0';
                 }
-                thisstate.currentItems.clear();
+                this.state.currentItems.clear();
                 this.elements.counts.forEach(count => count.textContent = '0');
-                thisstate.timeSeconds = 0;
+                this.state.timeSeconds = 0;
                 this.startTimer();
                 this.showSuccess('Sales session started');
                 this.checkSessionStatus();
             }
 
             startTimer() {
-                thisstate.timeInterval = window.setInterval(() => {
-                    thisstate.timeSeconds++;
+                this.state.timeInterval = window.setInterval(() => {
+                    this.state.timeSeconds++;
                     this.updateTimeDisplay();
                 }, 1000);
             }
 
             updateTimeDisplay() {
                 if (this.elements.timeSeconds) {
-                    this.elements.timeSeconds.textContent = formatTime(thisstate.timeSeconds);
+                    this.elements.timeSeconds.textContent = formatTime(this.state.timeSeconds);
                 }
             }
 
             stopTimer() {
-                window.clearInterval(thisstate.timeInterval);
+                window.clearInterval(this.state.timeInterval);
             }
 
             async confirmCloseSales() {
@@ -657,22 +657,22 @@
             }
 
             async closeSession() {
-                if (thisstate.currentItems.size > 0) {
+                if (this.state.currentItems.size > 0) {
                     await this.logSale();
                 }
-                thisstate.sessionStarted = false;
+                this.state.sessionStarted = false;
                 localStorage.removeItem('sessionActive');
                 localStorage.removeItem('activeSessionId');
-                thisstate.sessionId = null;
-                thisstate.cashTotal = 0;
-                thisstate.sessionDoorCount = 0;
+                this.state.sessionId = null;
+                this.state.cashTotal = 0;
+                this.state.sessionDoorCount = 0;
                 if (this.elements.cashTotal) {
                     this.elements.cashTotal.textContent = '0.00';
                 }
                 if (this.elements.doorCount) {
                     this.elements.doorCount.textContent = '0';
                 }
-                localStorage.removeItem(`sessionDoorCount_${thisstate.sessionId}`);
+                localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
                 this.stopTimer();
                 this.elements.toggleSalesBtn.textContent = 'Open Sales';
                 this.elements.toggleSalesBtn.classList.remove('closebtn');
@@ -691,18 +691,18 @@
             }
 
             async logSale() {
-                if (!thisstate.sessionStarted || thisstate.isLogging) return;
-                thisstate.isLogging = true;
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
                 this.elements.logSaleBtn.disabled = true;
 
-                const items = Array.from(thisstate.currentItems.entries())
+                const items = Array.from(this.state.currentItems.entries())
                     .filter(([_, value]) => value.count > 0)
                     .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
                     .join('; ');
 
                 if (!items) {
                     this.showError('No items to log');
-                    thisstate.isLogging = false;
+                    this.state.isLogging = false;
                     this.elements.logSaleBtn.disabled = false;
                     return;
                 }
@@ -713,10 +713,10 @@
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
                     items: items,
-                    cashTotal: Number(thisstate.cashTotal),
-                    doorCount: Number(thisstate.sessionDoorCount),
+                    cashTotal: Number(this.state.cashTotal),
+                    doorCount: Number(this.state.sessionDoorCount),
                     note: this.elements.noteInput.value,
-                    sessionId: thisstate.sessionId,
+                    sessionId: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
 
@@ -743,23 +743,23 @@
                 } catch (error) {
                     this.showError(error.message);
                 } finally {
-                    thisstate.isLogging = false;
+                    this.state.isLogging = false;
                     this.elements.logSaleBtn.disabled = false;
                 }
             }
 
             debounceLogSale() {
                 const now = Date.now();
-                if (now - thisstate.lastLogTime > 1000) {
-                    thisstate.lastLogTime = now;
+                if (now - this.state.lastLogTime > 1000) {
+                    this.state.lastLogTime = now;
                     this.logSale();
                 }
             }
 
             resetCurrentItems() {
-                thisstate.currentItems.clear();
-                thisstate.cashTotal = 0;
-                thisstate.doorCount = 0;
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
                 if (this.elements.cashTotal) {
                     this.elements.cashTotal.textContent = '0.00';
                 }
