@@ -3,183 +3,142 @@
 <head>
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
-        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co;
-        style-src 'self' 'unsafe-inline';
-        img-src 'self' data:;
-    ">
-    <title>Sales Log</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://code.jquery.com https://unpkg.com 'unsafe-inline'; object-src 'none';">
+    <title>Sister Bar Register</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px;
+            padding: 5px;
             background-color: #1e1e1e;
             color: #e0e0e0;
+            font-size: 16px;
+            height: 90vh;
             overflow: hidden;
         }
         .container {
-            width: 98.5%;
-            height: 98.5vh;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 2fr 2fr 1fr;
-            grid-template-rows: auto;
-            gap: 10px;
+            display: flex;
+            flex-direction: column;
             height: 100%;
-            transition: grid-template-columns 0.2s ease;
         }
         .header {
-            grid-column: 1 / -1;
-            text-align: center;
-            font-size: 24px;
-            display: none;
-        }
-        .graph {
-            grid-column: 1;
+            padding: 5px;
             background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        .middle-panel {
-            grid-column: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .tally-sheet {
-            flex: 0 0 300px;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .totals {
-            background-color: #2e2e2e;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .transaction-log {
-            flex: 1;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .right-panel {
-            grid-column: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .filters {
-            flex: 0 0 auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .summary {
-            flex: 1;
-            overflow-y: auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .graph-wrapper {
-            flex: 1;
-            min-height: 0;
-        }
-        #doorCountChart {
-            width: 100%;
-            height: 100%;
-        }
-        .tally-sheet table, .transaction-log table, .totals table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        .tally-sheet table, .totals table {
-            table-layout: fixed;
-        }
-        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) {
-            width: 25%;
-        }
-        .tally-sheet th, .transaction-log th {
-            background-color: #3e3e3e;
-            position: static;
-        }
-        .tally-sheet td, .transaction-log td {
-            padding: 10px;
-            text-align: left;
             border-bottom: 1px solid #444;
         }
-        th {
-            background-color: #3e3e3e;
-            color: #ffffff;
+        .header label {
+            margin: 3px;
         }
-        .scrollable-body {
-            overflow-y: visible; /* No scrolling for tally sheet */
-        }
-        .transaction-log .scrollable-body {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .summary h3 {
-            font-size: 18px;
-        }
-        .filters label, .filters select, .filters button {
-            display: block;
-            margin: 10px 0;
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
-        }
-        .filters select {
+        .header input {
+            margin-right: 15px;
+            padding: 5px;
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            max-width: 300px;
         }
-        .filters button {
-            background-color: #0288d1;
-            color: white;
+        .content-wrapper {
+            max-width: 90%;
+            margin: 0 auto;
+        }
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, 200px);
+            gap: 10px;
+            padding: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .product-item {
+            width: 200px;
+            height: 120px;
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 15px;
+            cursor: move;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .product-item.hidden {
+            display: none;
+        }
+        .incrementbtn {
+            width: 100px;
+            height: 100px;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
-        }
-        #exportBtn {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            padding: 8px;
             font-size: 16px;
-            margin-top: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .cash { background-color: #2e7d32; color: white; }
+        .cc { background-color: #d32f2f; color: white; }
+        .ticket { background-color: #1a73e8; color: white; }
+        .comp { background-color: #ffa500; color: white; }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .count {
+            font-size: 18px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .minus {
+            padding: 5px 10px;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .note-section {
+            padding: 10px;
+        }
+        #noteInput {
+            width: 90%;
+            max-width: 99.5%;
+            min-height: 25px;
+            height: 50px;
+            max-height: 120px;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            padding: 1.5px;
+            margin: 0 auto;
+        }
+        #logSaleBtn {
+            width: 100%;
+            padding: 15px;
+            background-color: #028801;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .control-section {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .control-section button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        .openbtn { background-color: #2e7d32; }
+        .closebtn { background-color: #d32f2f; }
+        .editbtn { background-color: #0288d1; }
         .modal {
             display: none;
             position: fixed;
@@ -187,848 +146,641 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgb(0,0,0,0.5);
+        }
+        .modal form {
+            width: 100%;
+            height: 100%;
         }
         .modal-content {
             background-color: #2e2e2e;
             margin: 15% auto;
-            padding: 45px;
+            padding: 40px;
             width: 300px;
             border-radius: 5px;
             text-align: center;
         }
-        .modal-content input {
+        .modal-content input, .modal-content select {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
-            font-size: 16px;
         }
         .modal-content button {
             padding: 10px 20px;
-            background-color: #2e7d32;
-            color: white;
+            margin: 5px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            color: white;
         }
-        .error {
-            color: #d32f2f;
-            margin-top: 10px;
+        #submitPinBtn { background-color: #2e7d32; }
+        #cancelPinBtn { background-color: #d32f2f; }
+        #submitNewButton { background-color: #2e7d32; }
+        #cancelNewButton { background-color: #d32f2f; }
+        #editInstructions {
+            background-color: #0288d1;
+            color: white;
+            text-align: center;
+            font-size: 8px;
         }
-        .graph.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1000;
-            background-color: #1e1e1e;
-            padding: 20px;
-            box-sizing: border-box;
+        .hidden { display: none; }
+        #successMessage, #errorMessage {
+            padding: 5px;
         }
-        .grid.fullscreen {
-            grid-template-columns: 1fr;
+        #successMessage { color: #2e7d32; }
+        #errorMessage { color: #d32f2f; }
+        .thru-door {
+            grid-row: 2;
+            grid-column: 4;
+            width: 150px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin: auto;
+            background-color: transparent;
+            border-radius: 15px;
         }
-        .middle-panel.fullscreen, .right-panel.fullscreen {
-            display: none;
+        .thru-door h3 {
+            font-size: 14px;
+            margin-bottom: 2px;
         }
-        .resize-handle {
-            height: 10px;
-            background-color: #444;
-            cursor: ns-resize;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-        .vertical-resize-handle {
-            width: 10px;
-            background-color: #444;
-            cursor: ew-resize;
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-        }
-        .cash-header { color: #2e7d32; }
-        .credit-card-header { color: #d32f2f; }
-        .comp-header { color: #ffa500; }
-        .ticket-header { color: #1a73e8; }
-        .summary h3 span { color: orange; }
-        .total-row td { color: orange; }
-        .cash-breakdown td:first-child {
-            padding-left: 20px;
+        .thru-door p {
+            color: yellow;
+            font-size: 12px;
+            margin: 0;
         }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p id="errorMsg" class="error"></p>
+    <div class="container">
+        <header class="header">
+            <label for="eventDate">Date:</label>
+            <input type="date" id="eventDate" required>
+            <label for="eventVenue">Venue:</label>
+            <input type="text" id="eventVenue" value="Sister Bar" required>
+            <label for="eventName">Event:</label>
+            <input type="text" id="eventName" placeholder="Event Name" required>
+            <label for="cashierName">Cashier:</label>
+            <input type="text" id="cashierName" placeholder="Cashier" required>
+        </header>
+        <main>
+            <div class="content-wrapper">
+                <div id="editInstructions" class="hidden">Click buttons to toggle active state. Drag to reorder. Click 'Save Layout' when done.</div>
+                <div class="button-container">
+                    <!-- Product items will be dynamically loaded here -->
+                </div>
+                <div class="note-section">
+                    <textarea id="noteInput" placeholder="Add a note..."></textarea>
+                    <button id="logSaleBtn">Log Sale</button>
+                </div>
+                <div class="control-section">
+                    <button id="toggleSalesBtn" class="openbtn">Open Sales</button>
+                    <button id="editLayoutBtn" class="editbtn">Edit Layout</button>
+                    <button id="addNewButtonBtn" class="editbtn hidden">Add New Button</button>
+                </div>
+                <footer class="footer">
+                    <div class="footer-messages">
+                        <span id="successMessage" aria-live="polite"></span>
+                        <span id="errorMessage" aria-live="polite"></span>
+                    </div>
+                </footer>
+            </div>
+        </main>
+        <div id="pinModal" class="modal">
+            <form>
+                <div class="modal-content">
+                    <h2>Enter PIN to Close Sales</h2>
+                    <input type="password" id="pinInput" placeholder="PIN" autocomplete="new-password">
+                    <button id="submitPinBtn">Submit</button>
+                    <button id="cancelPinBtn">Cancel</button>
+                    <p id="pinError" style="color: red;"></p>
+                </div>
+            </form>
+        </div>
+        <div id="addButtonModal" class="modal">
+            <form>
+                <div class="modal-content">
+                    <h3>Add New Button</h3>
+                    <select id="newButtonType">
+                        <option value="">Select Type</option>
+                        <option value="cash">CASH</option>
+                        <option value="cc">CC</option>
+                        <option value="ticket">TICKET</option>
+                        <option value="comp">COMP</option>
+                    </select>
+                    <input type="text" id="newButtonName" placeholder="Name (e.g., CASH $20)"/>
+                    <input type="number" id="newButtonValue" step="0.01" min="0" placeholder="Value"/>
+                    <button id="submitNewButton">Submit</button>
+                    <button id="cancelNewButton">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
-
-    <div class="container" id="salesLogContainer">
-        <div class="grid">
-            <h1 class="header">Sales Log</h1>
-            <div class="graph">
-                <h2>Sales Log</h2>
-                <button id="toggleGraphSize">Toggle Full Screen</button>
-                <div class="graph-wrapper">
-                    <canvas id="doorCountChart"></canvas>
-                </div>
-                <div class="resize-handle"></div>
-                <div class="vertical-resize-handle"></div>
-            </div>
-            <div class="middle-panel">
-                <div class="tally-sheet">
-                    <h2>Tally Sheet</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="payment-type-header">Payment Type</th>
-                                <th>People</th>
-                                <th>Total Amount</th>
-                                <th>Price per Person</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    <div class="scrollable-body">
-                        <table>
-                            <tbody id="summaryBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="totals">
-                    <table>
-                        <tbody id="totalsBody"></tbody>
-                    </table>
-                </div>
-                <div class="transaction-log">
-                    <h2>Transaction Log</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Items</th>
-                                <th>Cash Total</th>
-                                <th>Door Count</th>
-                                <th>Cashier</th>
-                                <th>Note</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    <div class="scrollable-body">
-                        <table>
-                            <tbody id="transactionLogBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="right-panel">
-                <div class="filters">
-                    <h2>Filters</h2>
-                    <label>Cashier Session:
-                        <select id="sessionSelect">
-                            <option value="">Select Cashier Session</option>
-                        </select>
-                    </label>
-                    <button id="applyFilters">Apply</button>
-                </div>
-                <div class="summary">
-                    <h2>Summary</h2>
-                    <div id="sessionInfo"></div>
-                    <p id="eventDateDisplay"></p>
-                    <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
-                    <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
-                    <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
-                    <button id="exportBtn">Export to PDF</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const adminUsername = "admin";
-        const adminPassword = "password123";
-        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
+        const SERVER_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co/rest/v1/transactions';
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
+        const DEFAULT_PIN = '0000';
         const channel = new BroadcastChannel('transaction_channel');
 
-        const loginModal = document.getElementById('loginModal');
-        const salesLogContainer = document.getElementById('salesLogContainer');
-        const errorMsg = document.getElementById('errorMsg');
-
-        let sessionTimeoutId;
-        let salesLogInstance;
-        let chart;
-        let selectedSessionId = null;
-
-        const typeMap = {
-            'CASH': 'Cash',
-            'Cash': 'Cash',
-            'CC': 'Credit Card',
-            'Credit Card': 'Credit Card',
-            'TICKET': 'Ticket',
-            'Ticket': 'Ticket',
-            'COMP': 'Comp',
-            'Comp': 'Comp'
-        };
-
-        function getType(key) {
-            return typeMap[key] || typeMap[key.split(' ')[0]] || key;
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
         }
 
-        function colorCodeItems(items) {
-            return items.split('; ').map(item => {
-                const [key, rest] = item.split(': ');
-                const type = getType(key);
-                const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                return `<span class="${colorClass}">${key}</span>: ${rest}`;
-            }).join('; ');
-        }
-
-        function getColorForType(type) {
-            const colors = {
-                'Cash': '#2e7d32',
-                'Credit Card': '#d32f2f',
-                'Comp': '#ffa500',
-                'Ticket': '#1a73e8',
-                'Total': '#808080'
-            };
-            return colors[type] || '#888888';
-        }
-
-        function getPaymentTypeColor(paymentType) {
-            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) {
-                return '#2e7d32'; // Cash color (green)
-            } else if (paymentType === 'Credit Card') {
-                return '#d32f2f'; // Credit Card color (red)
-            } else if (paymentType === 'Comp') {
-                return '#ffa500'; // Comp color (orange)
-            } else if (paymentType === 'Ticket') {
-                return '#1a73e8'; // Ticket color (blue)
-            } else {
-                return '#000000'; // Default to black
-            }
-        }
-
-        class SalesLog {
+        class SalesApp {
             constructor() {
-                this.transactions = [];
-                const urlParams = new URLSearchParams(window.location.search);
-                const sessionIdFromUrl = urlParams.get('sessionId');
-                const exportFlag = urlParams.get('export');
-
-                if (sessionIdFromUrl) selectedSessionId = sessionIdFromUrl;
-
-                this.updateInterval = null;
-                this.init().then(() => {
-                    this.updateLog();
-                    if (exportFlag === 'true') this.exportPDF();
-                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
-                    channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') this.updateLog();
-                        else if (event.data.type === 'new_session') {
-                            selectedSessionId = event.data.sessionId;
-                            this.updateLog();
-                        }
-                    };
-                    supabase
-                        .channel('public:transactions')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
-                            console.log('Real-time update triggered');
-                            this.updateLog();
-                        })
-                        .subscribe(status => console.log('Subscription status:', status));
-                });
-
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
-                document.getElementById('applyFilters').addEventListener('click', () => {
-                    selectedSessionId = document.getElementById('sessionSelect').value || null;
-                    this.updateLog();
-                });
-                document.getElementById('sessionSelect').addEventListener('change', (event) => {
-                    selectedSessionId = event.target.value || null;
-                    this.updateLog();
-                });
-                document.getElementById('toggleGraphSize').addEventListener('click', () => {
-                    const graph = document.querySelector('.graph');
-                    const grid = document.querySelector('.grid');
-                    const middlePanel = document.querySelector('.middle-panel');
-                    const rightPanel = document.querySelector('.right-panel');
-                    
-                    if (!graph.dataset.originalHeight) {
-                        graph.dataset.originalHeight = window.getComputedStyle(graph).height;
-                    }
-                    
-                    graph.classList.toggle('fullscreen');
-                    grid.classList.toggle('fullscreen');
-                    middlePanel.classList.toggle('fullscreen');
-                    rightPanel.classList.toggle('fullscreen');
-                    
-                    if (!graph.classList.contains('fullscreen')) {
-                        graph.style.height = graph.dataset.originalHeight;
-                    }
-                    
-                    if (chart) setTimeout(() => chart.resize(), 100);
-                });
-
-                let isResizingHorizontally = false;
-                let startX, startWidth;
-                const verticalResizeHandle = document.querySelector('.vertical-resize-handle');
-                const graph = document.querySelector('.graph');
-
-                verticalResizeHandle.addEventListener('mousedown', (e) => {
-                    isResizingHorizontally = true;
-                    startX = e.clientX;
-                    startWidth = parseInt(window.getComputedStyle(graph).width, 10);
-                    document.addEventListener('mousemove', horizontalResize);
-                    document.addEventListener('mouseup', stopHorizontalResize);
-                });
-
-                function horizontalResize(e) {
-                    if (!isResizingHorizontally) return;
-                    const dx = e.clientX - startX;
-                    const newWidth = startWidth + dx;
-                    if (newWidth > 100 && newWidth < window.innerWidth * 0.8) {
-                        graph.style.width = `${newWidth}px`;
-                        chart.resize();
-                    }
-                }
-
-                function stopHorizontalResize() {
-                    isResizingHorizontally = false;
-                    document.removeEventListener('mousemove', horizontalResize);
-                    document.removeEventListener('mouseup', stopHorizontalResize);
-                }
-
-                let isResizing = false;
-                let startY, startHeight;
-                const resizeHandle = document.querySelector('.resize-handle');
-
-                resizeHandle.addEventListener('mousedown', (e) => {
-                    isResizing = true;
-                    startY = e.clientY;
-                    startHeight = parseInt(window.getComputedStyle(graph).height, 10);
-                    document.addEventListener('mousemove', resize);
-                    document.addEventListener('mouseup', stopResize);
-                });
-
-                function resize(e) {
-                    if (!isResizing) return;
-                    const dy = e.clientY - startY;
-                    const newHeight = startHeight + dy;
-                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                        graph.style.height = `${newHeight}px`;
-                        chart.resize();
-                    }
-                }
-
-                function stopResize() {
-                    isResizing = false;
-                    document.removeEventListener('mousemove', resize);
-                    document.removeEventListener('mouseup', stopResize);
-                }
+                this.state = {
+                    sessionStarted: false,
+                    sessionId: null,
+                    currentItems: new Map(),
+                    cashTotal: 0,
+                    doorCount: 0,
+                    sessionDoorCount: 0,
+                    isEditing: false,
+                    activeButtons: new Map(),
+                    isLogging: false,
+                    lastLogTime: 0,
+                    timeSeconds: 0,
+                    timeInterval: null
+                };
+                this.elements = {
+                    buttonContainer: document.querySelector('.button-container'),
+                    transactionButtons: [],
+                    counts: new Map(),
+                    eventDate: document.getElementById('eventDate'),
+                    eventVenue: document.getElementById('eventVenue'),
+                    eventName: document.getElementById('eventName'),
+                    cashierName: document.getElementById('cashierName'),
+                    toggleSalesBtn: document.getElementById('toggleSalesBtn'),
+                    editLayoutBtn: document.getElementById('editLayoutBtn'),
+                    addNewButtonBtn: document.getElementById('addNewButtonBtn'),
+                    logSaleBtn: document.getElementById('logSaleBtn'),
+                    noteInput: document.getElementById('noteInput'),
+                    addButtonModal: document.getElementById('addButtonModal'),
+                    newButtonType: document.getElementById('newButtonType'),
+                    newButtonName: document.getElementById('newButtonName'),
+                    newButtonValue: document.getElementById('newButtonValue'),
+                    submitNewButton: document.getElementById('submitNewButton'),
+                    cancelNewButton: document.getElementById('cancelNewButton'),
+                    pinModal: document.getElementById('pinModal'),
+                    pinInput: document.getElementById('pinInput'),
+                    submitPinBtn: document.getElementById('submitPinBtn'),
+                    cancelPinBtn: document.getElementById('cancelPinBtn'),
+                    pinError: document.getElementById('pinError'),
+                    editInstructions: document.getElementById('editInstructions'),
+                    successMessage: document.getElementById('successMessage'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    cashTotal: null,
+                    doorCount: null,
+                    timeSeconds: null
+                };
+                this.elements.eventDate.value = new Date().toISOString().split('T')[0];
+                this.loadLayout();
+                this.updateButtonVisibility();
+                this.checkSessionStatus();
+                this.loadSessionDoorCount();
+                this.enableDragAndDrop();
+                this.bindEvents();
             }
 
-            async init() {
-                const { data, error } = await supabase.from('transactions').select('id').limit(1);
-                console.log('Test fetch:', data, error);
-                await this.updateLog();
+            loadLayout() {
+                const savedLayout = JSON.parse(localStorage.getItem('layout'));
+                if (savedLayout) {
+                    savedLayout.forEach(itemData => {
+                        const item = this.createProductItem(itemData);
+                        this.elements.buttonContainer.appendChild(item);
+                        this.elements.counts.set(itemData.name, item.querySelector('.count'));
+                    });
+                } else {
+                    const defaultItems = [
+                        { name: 'Credit Card', type: 'cc', price: 0, active: true },
+                        { name: 'Cash $5', type: 'cash', price: 5, active: true },
+                        { name: 'Cash $10', type: 'cash', price: 10, active: true },
+                        { name: 'Cash $15', type: 'cash', price: 15, active: true },
+                        { name: 'Cash $20', type: 'cash', price: 20, active: true },
+                        { name: 'Comp', type: 'comp', price: 0, active: true },
+                        { name: 'Ticket', type: 'ticket', price: 10, active: true }
+                    ];
+                    defaultItems.forEach(itemData => {
+                        const item = this.createProductItem(itemData);
+                        this.elements.buttonContainer.appendChild(item);
+                        this.elements.counts.set(itemData.name, item.querySelector('.count'));
+                    });
+                }
+                // Add Thru Door as a separate div
+                const thruDoorDiv = document.createElement('div');
+                thruDoorDiv.classList.add('thru-door');
+                thruDoorDiv.innerHTML = `
+                    <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal">0.00</span></h3>
+                    <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                    <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
+                `;
+                this.elements.buttonContainer.appendChild(thruDoorDiv);
+                this.elements.cashTotal = thruDoorDiv.querySelector('#cashTotal');
+                this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
+                this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
+                this.elements.transactionButtons = document.querySelectorAll('.product-item');
             }
 
-            stop() {
-                if (this.updateInterval) clearInterval(this.updateInterval);
+            createProductItem(itemData) {
+                const item = document.createElement('div');
+                item.className = 'product-item';
+                item.dataset.item = itemData.name;
+                item.dataset.price = itemData.price;
+                item.dataset.active = itemData.active;
+                if (!itemData.active) item.classList.add('hidden');
+                item.draggable = true;
+                item.innerHTML = `
+                    <button class="incrementbtn ${itemData.type}">${itemData.name}</button>
+                    <div class="control-row">
+                        <span class="count">0</span>
+                        <button class="minus"> - </button>
+                    </div>
+                `;
+                return item;
             }
 
-            async updateLog() {
-                try {
-                    const { data: allTransactions, error } = await supabase
-                        .from('transactions')
-                        .select('*')
-                        .order('sessionId', { ascending: false });
-                    if (error) throw new Error(`Error fetching transactions: ${error.message}`);
-
-                    console.log('Fetched transactions:', allTransactions);
-
-                    const allSessionIds = [...new Set(allTransactions.map(t => t.sessionId))];
-                    const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
-                        allSessionIds.map(id => {
-                            const sessionTx = allTransactions.find(t => t.sessionId === id);
-                            const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
-                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
-                        }).join('');
-
-                    if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
-                    console.log('Selected Session ID:', selectedSessionId);
-
-                    if (!selectedSessionId) {
-                        document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
-                        document.getElementById('eventDateDisplay').innerHTML = '';
-                        if (chart) {
-                            chart.data.datasets = [];
-                            chart.update();
-                        }
-                        document.getElementById('summaryBody').innerHTML = '';
-                        document.getElementById('totalsBody').innerHTML = '';
-                        document.getElementById('transactionLogBody').innerHTML = '';
-                        document.getElementById('totalDoorCount').textContent = '0';
-                        document.getElementById('totalSales').textContent = '0.00';
-                        document.getElementById('totalTransactions').textContent = '0';
-                        return;
+            bindEvents() {
+                this.elements.buttonContainer.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.classList.contains('incrementbtn')) {
+                        const btn = target.closest('.product-item');
+                        this.handleIncrement(btn);
+                    } else if (target.classList.contains('minus')) {
+                        const btn = target.closest('.product-item');
+                        this.handleDecrement(btn);
+                    } else if (this.state.isEditing && target.closest('.product-item')) {
+                        this.toggleButtonState(target.closest('.product-item'));
                     }
+                });
+                this.elements.toggleSalesBtn.addEventListener('click', () => this.toggleSales());
+                this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+                this.elements.addNewButtonBtn.addEventListener('click', () => this.elements.addButtonModal.style.display = 'block');
+                this.elements.logSaleBtn.addEventListener('click', () => this.debounceLogSale());
+                this.elements.submitPinBtn.addEventListener('click', () => this.confirmCloseSales());
+                this.elements.cancelPinBtn.addEventListener('click', () => this.cancelPinModal());
+                this.elements.submitNewButton.addEventListener('click', () => this.addNewButton());
+                this.elements.cancelNewButton.addEventListener('click', () => this.cancelAddButton());
+            }
 
-                    const transactions = allTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
-                    this.transactions = transactions;
-                    sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                    console.log('Filtered transactions:', transactions);
-
-                    const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
-                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'No Date';
-                    const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
-                    document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
-
-                    const itemSummary = {};
-                    const cashBreakdown = {};
-                    let totalDoorCount = 0;
-                    let totalSales = 0;
-
-                    transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const type = getType(key);
-                                const [countStr, priceStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10) || 0;
-                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (type === 'Cash') {
-                                    if (!cashBreakdown[key]) cashBreakdown[key] = { people: 0, total: 0, price };
-                                    cashBreakdown[key].people += count;
-                                    cashBreakdown[key].total += count * price;
-                                    if (!itemSummary['Cash']) itemSummary['Cash'] = { people: 0, total: 0 };
-                                    itemSummary['Cash'].people += count;
-                                    itemSummary['Cash'].total += count * price;
-                                } else {
-                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
-                                    itemSummary[type].people += count;
-                                    itemSummary[type].total += count * price;
-                                }
-                                totalDoorCount += count;
-                            }
-                        });
-                        totalSales += t.cashTotal || 0;
-                    });
-
-                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('totalTransactions').textContent = transactions.length;
-
-                    let summaryRows = '';
-
-                    // Add Cash total row
-                    if (itemSummary['Cash']) {
-                        const data = itemSummary['Cash'];
-                        const averagePrice = data.people > 0 ? data.total / data.people : 0;
-                        summaryRows += `
-                            <tr>
-                                <td class="cash-header">Cash</td>
-                                <td>${data.people}</td>
-                                <td>$${data.total.toFixed(2)}</td>
-                                <td>$${averagePrice.toFixed(2)}</td>
-                            </tr>
-                        `;
-
-                        // Add cash breakdown rows, sorted by dollar amount
-                        Object.keys(cashBreakdown).sort((a, b) => {
-                            const amountA = parseFloat(a.split('$')[1]);
-                            const amountB = parseFloat(b.split('$')[1]);
-                            return amountA - amountB;
-                        }).forEach(subKey => {
-                            const subData = cashBreakdown[subKey];
-                            const subAveragePrice = subData.people > 0 ? subData.total / subData.people : 0;
-                            summaryRows += `
-                                <tr class="cash-breakdown">
-                                    <td> - ${subKey}</td>
-                                    <td>${subData.people}</td>
-                                    <td>$${subData.total.toFixed(2)}</td>
-                                    <td>$${subAveragePrice.toFixed(2)}</td>
-                                </tr>
-                            `;
-                        });
+            enableDragAndDrop() {
+                this.elements.buttonContainer.addEventListener('dragstart', (e) => {
+                    if (!this.state.isEditing) return;
+                    const item = e.target.closest('.product-item');
+                    if (item) {
+                        e.dataTransfer.setData('text/plain', item.dataset.item);
+                        item.style.opacity = '0.5';
                     }
+                });
+                this.elements.buttonContainer.addEventListener('dragover', (e) => {
+                    if (!this.state.isEditing) return;
+                    e.preventDefault();
+                });
+                this.elements.buttonContainer.addEventListener('drop', (e) => {
+                    if (!this.state.isEditing) return;
+                    e.preventDefault();
+                    const draggedItem = document.querySelector(`[data-item="${e.dataTransfer.getData('text/plain')}"]`);
+                    const targetItem = e.target.closest('.product-item');
+                    if (targetItem && draggedItem !== targetItem) {
+                        this.elements.buttonContainer.insertBefore(draggedItem, targetItem);
+                    }
+                    draggedItem.style.opacity = '1';
+                });
+            }
 
-                    // Add other payment types
-                    Object.entries(itemSummary).forEach(([type, data]) => {
-                        if (type !== 'Cash') {
-                            const averagePrice = data.people > 0 ? data.total / data.people : 0;
-                            const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                            summaryRows += `
-                                <tr>
-                                    <td class="${colorClass}">${type}</td>
-                                    <td>${data.people}</td>
-                                    <td>$${data.total.toFixed(2)}</td>
-                                    <td>$${averagePrice.toFixed(2)}</td>
-                                </tr>
-                            `;
-                        }
-                    });
+            saveLayout() {
+                const items = Array.from(this.elements.buttonContainer.querySelectorAll('.product-item')).map(item => ({
+                    name: item.dataset.item,
+                    type: item.querySelector('.incrementbtn').classList[1],
+                    price: parseFloat(item.dataset.price),
+                    active: item.dataset.active === 'true'
+                }));
+                localStorage.setItem('layout', JSON.stringify(items));
+            }
 
-                    document.getElementById('summaryBody').innerHTML = summaryRows;
-
-                    const totalsRow = `
-                        <tr class="total-row">
-                            <td><strong>TOTALS</strong></td>
-                            <td><strong>${totalDoorCount}</strong></td>
-                            <td><strong>$${totalSales.toFixed(2)}</strong></td>
-                            <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
-                        </tr>
-                    `;
-                    document.getElementById('totalsBody').innerHTML = totalsRow;
-
-                    const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = transactions.map(t => `
-                        <tr>
-                            <td>${new Date(t.timestamp).toLocaleString()}</td>
-                            <td>${colorCodeItems(t.items)}</td>
-                            <td>$${t.cashTotal.toFixed(2)}</td>
-                            <td>${t.doorCount}</td>
-                            <td>${t.cashierName}</td>
-                            <td>${t.note || ''}</td>
-                        </tr>
-                    `).join('');
-                    console.log('Transaction log HTML:', transactionLogBody.innerHTML);
-
-                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-                    const cumulative = {};
-                    types.forEach(type => cumulative[type] = 0);
-                    cumulative.total = 0;
-
-                    const dataPoints = {};
-                    types.forEach(type => dataPoints[type] = []);
-                    dataPoints.total = [];
-
-                    transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const type = getType(key);
-                                if (types.includes(type)) {
-                                    const [countStr] = value.split(' @ ');
-                                    const count = parseInt(countStr, 10) || 0;
-                                    cumulative[type] += count;
-                                    cumulative.total += count;
-                                }
-                            }
-                        });
-                        const timestamp = new Date(t.timestamp);
-                        types.forEach(type => {
-                            dataPoints[type].push({ x: timestamp, y: cumulative[type] });
-                        });
-                        dataPoints.total.push({ x: timestamp, y: cumulative.total });
-                    });
-
-                    const datasets = types.map(type => ({
-                        label: type,
-                        data: dataPoints[type],
-                        borderColor: getColorForType(type),
-                        fill: false,
-                        stepped: true
-                    }));
-                    datasets.push({
-                        label: 'Total',
-                        data: dataPoints.total,
-                        borderColor: '#808080',
-                        fill: false,
-                        stepped: true
-                    });
-                    console.log('Chart datasets:', datasets);
-
-                    if (chart) {
-                        chart.data.datasets = datasets;
-                        chart.update();
+            updateButtonVisibility() {
+                this.elements.transactionButtons = document.querySelectorAll('.product-item');
+                this.elements.transactionButtons.forEach(btn => {
+                    if (this.state.isEditing) {
+                        btn.classList.remove('hidden');
+                        btn.style.opacity = btn.dataset.active === 'true' ? '1' : '0.5';
                     } else {
-                        chart = new Chart(document.getElementById('doorCountChart'), {
-                            type: 'line',
-                            data: { datasets },
-                            options: {
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: {
-                                        type: 'time',
-                                        time: { unit: 'minute' },
-                                        title: { display: true, text: 'Time', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } }
-                                    },
-                                    y: {
-                                        beginAtZero: true,
-                                        title: { display: true, text: 'Door Count', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } }
-                                    }
-                                },
-                                plugins: {
-                                    legend: { labels: { font: { size: 14 } } }
-                                }
-                            }
-                        });
+                        if (btn.dataset.active === 'true') {
+                            btn.classList.remove('hidden');
+                            btn.style.opacity = '1';
+                        } else {
+                            btn.classList.add('hidden');
+                        }
                     }
-                } catch (error) {
-                    console.error('Error updating log:', error);
+                });
+            }
+
+            toggleEditMode() {
+                this.state.isEditing = !this.state.isEditing;
+                this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+                if (this.state.isEditing) {
+                    this.elements.editInstructions.classList.remove('hidden');
+                    this.elements.addNewButtonBtn.classList.remove('hidden');
+                } else {
+                    this.saveLayout();
+                    this.elements.editInstructions.classList.add('hidden');
+                    this.elements.addNewButtonBtn.classList.add('hidden');
+                }
+                this.updateButtonVisibility();
+            }
+
+            toggleButtonState(btn) {
+                const currentActive = btn.dataset.active === 'true';
+                btn.dataset.active = !currentActive;
+                btn.style.opacity = !currentActive ? '1' : '0.5';
+            }
+
+            addNewButton() {
+                const type = this.elements.newButtonType.value;
+                const name = this.elements.newButtonName.value;
+                const value = parseFloat(this.elements.newButtonValue.value);
+                if (!type || !name || isNaN(value)) {
+                    this.showError('Please fill in all fields for the new button');
+                    return;
+                }
+                const itemData = { name, type, price: value, active: true };
+                const newButton = this.createProductItem(itemData);
+                this.elements.buttonContainer.appendChild(newButton);
+                this.elements.counts.set(name, newButton.querySelector('.count'));
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
+                this.showSuccess('New button added');
+                this.updateButtonVisibility();
+            }
+
+            cancelAddButton() {
+                this.elements.newButtonType.value = '';
+                this.elements.newButtonName.value = '';
+                this.elements.newButtonValue.value = '';
+                this.elements.addButtonModal.style.display = 'none';
+            }
+
+            handleIncrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const type = btn.querySelector('.incrementbtn').classList[1];
+                const current = this.state.currentItems.get(item) || { count: 0, price, type };
+                current.count++;
+                this.state.currentItems.set(item, current);
+                this.elements.counts.get(item).textContent = current.count;
+                this.updateTotals(price, 1, type);
+            }
+
+            handleDecrement(btn) {
+                if (!this.state.sessionStarted || this.state.isEditing) return;
+                const item = btn.dataset.item;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const type = btn.querySelector('.incrementbtn').classList[1];
+                const current = this.state.currentItems.get(item);
+                if (current && current.count > 0) {
+                    current.count--;
+                    this.state.currentItems.set(item, current);
+                    this.elements.counts.get(item).textContent = current.count;
+                    this.updateTotals(-price, -1, type);
                 }
             }
 
-            async exportPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const margin = 0.5;
-                const graphWidth = pageWidth - 2 * margin;
-                const graphHeight = graphWidth * (11.69 / 8.27) / 2;
-                const dpi = 150;
+            updateTotals(priceDelta, countDelta, type) {
+                if (type === 'cash') this.state.cashTotal += priceDelta;
+                this.state.doorCount += countDelta;
+                this.state.sessionDoorCount += countDelta;
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                }
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                }
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+            }
 
-                if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
-                    console.error('No chart data available for export.');
+            loadSessionDoorCount() {
+                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
+                if (savedCount) {
+                    this.state.sessionDoorCount = parseInt(savedCount, 10);
+                    if (this.elements.doorCount) {
+                        this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                    }
+                }
+            }
+
+            checkSessionStatus() {
+                this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
+                this.state.sessionId = localStorage.getItem('activeSessionId');
+                this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
+                this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
+                if (this.state.sessionStarted) {
+                    this.elements.editLayoutBtn.classList.add('hidden');
+                } else {
+                    this.elements.editLayoutBtn.classList.remove('hidden');
+                }
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                inputs.forEach(input => input.disabled = this.state.sessionStarted);
+            }
+
+            toggleSales() {
+                if (!this.state.sessionStarted) {
+                    this.startSession();
+                } else {
+                    this.elements.pinModal.style.display = 'block';
+                    this.elements.pinInput.focus();
+                }
+            }
+
+            startSession() {
+                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+                    this.showError('Please fill in all required fields');
+                    return;
+                }
+                this.state.sessionStarted = true;
+                this.state.sessionId = Date.now().toString();
+                localStorage.setItem('sessionActive', true);
+                localStorage.setItem('activeSessionId', this.state.sessionId);
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                this.state.sessionDoorCount = 0;
+                localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
+                }
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = '0';
+                }
+                this.state.currentItems.clear();
+                this.elements.counts.forEach(count => count.textContent = '0');
+                this.state.timeSeconds = 0;
+                this.startTimer();
+                this.showSuccess('Sales session started');
+                this.checkSessionStatus();
+            }
+
+            startTimer() {
+                this.state.timeInterval = window.setInterval(() => {
+                    this.state.timeSeconds++;
+                    this.updateTimeDisplay();
+                }, 1000);
+            }
+
+            updateTimeDisplay() {
+                if (this.elements.timeSeconds) {
+                    this.elements.timeSeconds.textContent = formatTime(this.state.timeSeconds);
+                }
+            }
+
+            stopTimer() {
+                window.clearInterval(this.state.timeInterval);
+            }
+
+            async confirmCloseSales() {
+                const pin = this.elements.pinInput.value;
+                if (pin === DEFAULT_PIN) {
+                    await this.closeSession();
+                } else {
+                    this.elements.pinError.textContent = 'Invalid PIN';
+                    this.elements.pinInput.value = '';
+                }
+            }
+
+            async closeSession() {
+                if (this.state.currentItems.size > 0) {
+                    await this.logSale();
+                }
+                this.state.sessionStarted = false;
+                localStorage.removeItem('sessionActive');
+                localStorage.removeItem('activeSessionId');
+                this.state.sessionId = null;
+                this.state.cashTotal = 0;
+                this.state.sessionDoorCount = 0;
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
+                }
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = '0';
+                }
+                localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
+                this.stopTimer();
+                this.elements.toggleSalesBtn.textContent = 'Open Sales';
+                this.elements.toggleSalesBtn.classList.remove('closebtn');
+                this.elements.toggleSalesBtn.classList.add('openbtn');
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
+                this.showSuccess('Sales session closed');
+                this.checkSessionStatus();
+            }
+
+            cancelPinModal() {
+                this.elements.pinModal.style.display = 'none';
+                this.elements.pinInput.value = '';
+                this.elements.pinError.textContent = '';
+            }
+
+            async logSale() {
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
+                this.elements.logSaleBtn.disabled = true;
+
+                const items = Array.from(this.state.currentItems.entries())
+                    .filter(([_, value]) => value.count > 0)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+                    .join('; ');
+
+                if (!items) {
+                    this.showError('No items to log');
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
                     return;
                 }
 
-                // Add title
-                doc.setFontSize(16);
-                doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
+                const transaction = {
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
+                    items: items,
+                    cashTotal: Number(this.state.cashTotal),
+                    doorCount: Number(this.state.sessionDoorCount),
+                    note: this.elements.noteInput.value,
+                    sessionId: this.state.sessionId,
+                    timestamp: new Date().toISOString()
+                };
 
-                // Add session info and event date as separate lines
-                const sessionInfo = document.getElementById('sessionInfo').innerText;
-                const eventDate = document.getElementById('eventDateDisplay').innerText;
-                doc.setFontSize(12);
-                let y = margin + 0.2; // Start below the title
-                const lineHeight = 12 / 72; // 12pt font height in inches
-                const headerLines = [sessionInfo, eventDate];
-                headerLines.forEach(line => {
-                    doc.text(line, margin, y);
-                    y += lineHeight;
-                });
-
-                // Add summary table
-                const summaryData = [
-                    ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
-                    ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
-                    ['Total Transactions', document.getElementById('totalTransactions').innerText]
-                ];
-                doc.autoTable({
-                    startY: y + 0.2, // Add a small gap after header
-                    head: [['Metric', 'Value']],
-                    body: summaryData,
-                    theme: 'grid',
-                    styles: { fontSize: 12 }
-                });
-
-                // Add tally sheet table with color coding
-                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
-                    body: tallyData,
-                    theme: 'grid',
-                    styles: { fontSize: 10 },
-                    didParseCell: (data) => {
-                        if (data.section === 'body' && data.column.index === 0) {
-                            const paymentType = data.cell.raw;
-                            const color = getPaymentTypeColor(paymentType);
-                            data.cell.styles.textColor = color;
-                        }
-                    }
-                });
-
-                // Add totals table
-                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['', 'People', 'Total Amount', 'Price per Person']],
-                    body: totalsData,
-                    theme: 'grid',
-                    styles: { fontSize: 10 }
-                });
-
-                // Add transaction log table
-                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
-                    body: transactionData,
-                    theme: 'grid',
-                    styles: { fontSize: 8 }
-                });
-
-                doc.addPage();
-
-                const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
-                const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 30 * 60 * 1000;
-                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-
-                for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
-                    const intervalStart = new Date(time);
-                    const intervalEnd = new Date(time + interval);
-                    const intervalTransactions = this.transactions.filter(t => {
-                        const txTime = new Date(t.timestamp);
-                        return txTime >= intervalStart && txTime < intervalEnd;
+                try {
+                    const response = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': API_KEY,
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify(transaction)
                     });
 
-                    if (intervalTransactions.length > 0) {
-                        const intervalSummary = {};
-                        types.forEach(type => intervalSummary[type] = 0);
-                        let intervalTotal = 0;
-
-                        intervalTransactions.forEach(t => {
-                            const items = t.items.split('; ');
-                            items.forEach(item => {
-                                const [key, value] = item.split(': ');
-                                if (key && value) {
-                                    const type = getType(key);
-                                    if (types.includes(type)) {
-                                        const [countStr] = value.split(' @ ');
-                                        const count = parseInt(countStr, 10) || 0;
-                                        intervalSummary[type] += count;
-                                        intervalTotal += count;
-                                    }
-                                }
-                            });
-                        });
-
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = graphWidth * dpi;
-                        tempCanvas.height = graphHeight * dpi;
-                        document.body.appendChild(tempCanvas);
-                        const tempCtx = tempCanvas.getContext('2d');
-                        const barChart = new Chart(tempCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: types.concat('Total'),
-                                datasets: [{
-                                    label: 'Door Count',
-                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
-                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
-                                }]
-                            },
-                            options: {
-                                animation: { duration: 0 },
-                                scales: {
-                                    y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
-                                    x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
-                                },
-                                plugins: {
-                                    legend: { labels: { font: { size: 14 } } }
-                                }
-                            }
-                        });
-                        barChart.update();
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        doc.setFontSize(16);
-                        doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
-                        doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                        document.body.removeChild(tempCanvas);
-                        barChart.destroy();
-                        doc.addPage();
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error('Failed to log sale: ' + errorText);
                     }
+
+                    channel.postMessage({ type: 'transaction', data: transaction });
+                    this.resetCurrentItems();
+                    this.elements.noteInput.value = '';
+                    this.showSuccess('Sale logged successfully');
+                } catch (error) {
+                    this.showError(error.message);
+                } finally {
+                    this.state.isLogging = false;
+                    this.elements.logSaleBtn.disabled = false;
                 }
+            }
 
-                const mainCanvas = document.createElement('canvas');
-                mainCanvas.width = graphWidth * dpi;
-                mainCanvas.height = graphHeight * dpi;
-                document.body.appendChild(mainCanvas);
-                const mainCtx = mainCanvas.getContext('2d');
-                const tempChart = new Chart(mainCtx, {
-                    type: 'line',
-                    data: chart.data,
-                    options: {
-                        animation: { duration: 0 },
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
-                        },
-                        plugins: {
-                            legend: { labels: { font: { size: 14 } } }
-                        }
-                    }
-                });
-                tempChart.update();
-                await new Promise(resolve => setTimeout(resolve, 100));
-                doc.setFontSize(16);
-                doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
-                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                document.body.removeChild(mainCanvas);
-                tempChart.destroy();
+            debounceLogSale() {
+                const now = Date.now();
+                if (now - this.state.lastLogTime > 1000) {
+                    this.state.lastLogTime = now;
+                    this.logSale();
+                }
+            }
 
-                doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
+            resetCurrentItems() {
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.state.doorCount = 0;
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
+                }
+                // Do not reset doorCount display, as it's session-wide
+                this.elements.counts.forEach(count => count.textContent = '0');
+            }
+
+            showSuccess(message) {
+                this.elements.successMessage.textContent = message;
+                this.elements.errorMessage.textContent = '';
+                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+            }
+
+            showError(message) {
+                this.elements.errorMessage.textContent = message;
+                this.elements.successMessage.textContent = '';
+                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
             }
         }
 
-        function isLoggedIn() {
-            return localStorage.getItem('isLoggedIn') === 'true';
-        }
-
-        function setLoggedIn(value) {
-            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
-        }
-
-        function logout() {
-            clearTimeout(sessionTimeoutId);
-            setLoggedIn(false);
-            if (salesLogInstance) salesLogInstance.stop();
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
-        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
-            salesLogContainer.style.display = 'block';
-            loginModal.style.display = 'none';
-            salesLogInstance = new SalesLog();
-            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
-            sessionTimeoutId = setTimeout(logout, remainingTime);
-        } else {
-            setLoggedIn(false);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username === adminUsername && password === adminPassword) {
-                setLoggedIn(true);
-                localStorage.setItem('loginTime', Date.now().toString());
-                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
-                loginModal.style.display = 'none';
-                salesLogContainer.style.display = 'block';
-                salesLogInstance = new SalesLog();
-                errorMsg.textContent = '';
-            } else {
-                errorMsg.textContent = 'Invalid username or password';
-            }
-        });
+        document.addEventListener('DOMContentLoaded', () => new SalesApp());
     </script>
 </body>
 </html>
