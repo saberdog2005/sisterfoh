@@ -92,7 +92,7 @@
             text-align: center;
         }
         .minus {
-            padding: 5px 10px; /* adjusted from 10px 15px */
+            padding: 5px 10px;
             background-color: #555;
             color: white;
             border: none;
@@ -196,7 +196,7 @@
             grid-row: 2;
             grid-column: 4;
             width: 150px;
-            height: 100px; /* adjusted */
+            height: 100px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -338,6 +338,7 @@
                     editInstructions: document.getElementById('editInstructions'),
                     successMessage: document.getElementById('successMessage'),
                     errorMessage: document.getElementById('errorMessage'),
+                    cashTotal: null,
                     doorCount: null,
                     timeSeconds: null
                 };
@@ -378,10 +379,12 @@
                 const thruDoorDiv = document.createElement('div');
                 thruDoorDiv.classList.add('thru-door');
                 thruDoorDiv.innerHTML = `
+                    <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal">0.00</span></h3>
                     <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
                     <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                 `;
                 this.elements.buttonContainer.appendChild(thruDoorDiv);
+                this.elements.cashTotal = thruDoorDiv.querySelector('#cashTotal');
                 this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
                 this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
                 this.elements.transactionButtons = document.querySelectorAll('.product-item');
@@ -557,7 +560,12 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                }
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                }
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
 
@@ -565,7 +573,9 @@
                 const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
                 if (savedCount) {
                     this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                    if (this.elements.doorCount) {
+                        this.elements.doorCount.textContent = this.state.sessionDoorCount;
+                    }
                 }
             }
 
@@ -579,7 +589,7 @@
                 } else {
                     this.elements.editLayoutBtn.classList.remove('hidden');
                 }
-                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName];
+                const inputs = [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this(elements.cashierName];
                 inputs.forEach(input => input.disabled = this.state.sessionStarted);
             }
 
@@ -587,13 +597,13 @@
                 if (!this.state.sessionStarted) {
                     this.startSession();
                 } else {
-                    this.elements.pinModal.style.display = 'block';
-                    this.elements.pinInput.focus();
+                    this(elements.pinModal.style.display = 'block';
+                    this(elements.pinInput.focus();
                 }
             }
 
             startSession() {
-                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
+                if (!this(elements.eventDate.value || !this(elements.eventVenue.value || !this(elements.eventName.value || !this(elements.cashierName.value) {
                     this.showError('Please fill in all required fields');
                     return;
                 }
@@ -605,9 +615,14 @@
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                this.elements.doorCount.textContent = '0';
+                if (this(elements.cashTotal) {
+                    this(elements.cashTotal.textContent = '0.00';
+                }
+                if (this(elements.doorCount) {
+                    this(elements.doorCount.textContent = '0';
+                }
                 this.state.currentItems.clear();
-                this.elements.counts.forEach(count => count.textContent = '0');
+                this(elements.counts.forEach(count => count.textContent = '0');
                 this.state.timeSeconds = 0;
                 this.startTimer();
                 this.showSuccess('Sales session started');
@@ -622,7 +637,9 @@
             }
 
             updateTimeDisplay() {
-                this.elements.timeSeconds.textContent = formatTime(this.state.timeSeconds);
+                if (this(elements.timeSeconds) {
+                    this(elements.timeSeconds.textContent = formatTime(this.state.timeSeconds);
+                }
             }
 
             stopTimer() {
@@ -630,12 +647,12 @@
             }
 
             async confirmCloseSales() {
-                const pin = this.elements.pinInput.value;
+                const pin = this(elements.pinInput.value;
                 if (pin === DEFAULT_PIN) {
                     await this.closeSession();
                 } else {
-                    this.elements.pinError.textContent = 'Invalid PIN';
-                    this.elements.pinInput.value = '';
+                    this(elements.pinError.textContent = 'Invalid PIN';
+                    this(elements.pinInput.value = '';
                 }
             }
 
@@ -649,82 +666,87 @@
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
-                this.elements.doorCount.textContent = '0';
+                if (this(elements.cashTotal) {
+                    this(elements.cashTotal.textContent = '0.00';
+                }
+                if (this(elements.doorCount) {
+                    this(elements.doorCount.textContent = '0';
+                }
                 localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
                 this.stopTimer();
-                this.elements.toggleSalesBtn.textContent = 'Open Sales';
-                this.elements.toggleSalesBtn.classList.remove('closebtn');
-                this.elements.toggleSalesBtn.classList.add('openbtn');
-                this.elements.pinModal.style.display = 'none';
-                this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
+                this(elements.toggleSalesBtn.textContent = 'Open Sales';
+                this(elements.toggleSalesBtn.classList.remove('closebtn');
+                this(elements.toggleSalesBtn.classList.add('openbtn');
+                this(elements.pinModal.style.display = 'none';
+                this(elements.pinInput.value = '';
+                this(elements.pinError.textContent = '';
                 this.showSuccess('Sales session closed');
                 this.checkSessionStatus();
             }
 
             cancelPinModal() {
-                this.elements.pinModal.style.display = 'none';
-                this.elements.pinInput.value = '';
-                this.elements.pinError.textContent = '';
+                this(elements.pinModal.style.display = 'none';
+                this(elements.pinInput.value = '';
+                this(elements.pinError.textContent = '';
             }
 
-           async logSale() {
-    if (!this.state.sessionStarted || this.state.isLogging) return;
-    this.state.isLogging = true;
-    this.elements.logSaleBtn.disabled = true;
+            async logSale() {
+                if (!this.state.sessionStarted || this.state.isLogging) return;
+                this.state.isLogging = true;
+                this(elements.logSaleBtn.disabled = true;
 
-    const items = Array.from(this.state.currentItems.entries())
-        .filter(([_, value]) => value.count > 0)
-        .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
-        .join('; ');
+                const items = Array.from(this.state.currentItems.entries())
+                    .filter(([_, value]) => value.count > 0)
+                    .map(([key, value]) => `${value.type.toUpperCase()} ${key}: ${value.count} @ \$${value.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)
+                    .join('; ');
 
-    if (!items) {
-        this.showError('No items to log');
-        this.state.isLogging = false;
-        this.elements.logSaleBtn.disabled = false;
-        return;
-    }
+                if (!items) {
+                    this.showError('No items to log');
+                    this.state.isLogging = false;
+                    this(elements.logSaleBtn.disabled = false;
+                    return;
+                }
 
-    const transaction = {
-        eventDate: this.elements.eventDate.value,
-        eventVenue: this.elements.eventVenue.value,
-        eventName: this.elements.eventName.value,
-        cashierName: this.elements.cashierName.value,
-        items,
-        cashTotal: Number(this.state.cashTotal),
-        doorCount: Number(this.state.sessionDoorCount),
-        note: this.elements.noteInput.value,
-        session_id: this.state.sessionId,
-        timestamp: new Date().toISOString()
-    };
+                const transaction = {
+                    event_date: this(elements.eventDate.value,
+                    event_venue: this(elements.eventVenue.value,
+                    event_name: this(elements.eventName.value,
+                    cashier_name: this(elements.cashierName.value,
+                    items: items,
+                    cash_total: Number(this.state.cashTotal),
+                    door_count: Number(this.state.sessionDoorCount),
+                    note: this(elements.noteInput.value,
+                    session_id: this.state.sessionId,
+                    timestamp: new Date().toISOString()
+                };
 
-    try {
-        const response = await fetch(SERVER_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': API_KEY,
-                'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify(transaction)
-        });
+                try {
+                    const response = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': API_KEY,
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify(transaction)
+                    });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error('Failed to log sale: ' + errorText);
-        }
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error('Failed to log sale: ' + errorText);
+                    }
 
-        channel.postMessage({ type: 'transaction', data: transaction });
-        this.resetCurrentItems();
-        this.elements.noteInput.value = '';
-        this.showSuccess('Sale logged successfully');
-    } catch (error) {
-        this.showError(error.message);
-    } finally {
-        this.state.isLogging = false;
-        this.elements.logSaleBtn.disabled = false;
-    }
-}
+                    channel.postMessage({ type: 'transaction', data: transaction });
+                    this.resetCurrentItems();
+                    this(elements.noteInput.value = '';
+                    this.showSuccess('Sale logged successfully');
+                } catch (error) {
+                    this.showError(error.message);
+                } finally {
+                    this.state.isLogging = false;
+                    this(elements.logSaleBtn.disabled = false;
+                }
+            }
 
             debounceLogSale() {
                 const now = Date.now();
@@ -738,20 +760,23 @@
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
-                this.elements.doorCount.textContent = this.state.sessionDoorCount;
-                this.elements.counts.forEach(count => count.textContent = '0');
+                if (this(elements.cashTotal) {
+                    this(elements.cashTotal.textContent = '0.00';
+                }
+                // Do not reset doorCount display, as it's session-wide
+                this(elements.counts.forEach(count => count.textContent = '0');
             }
 
             showSuccess(message) {
-                this.elements.successMessage.textContent = message;
-                this.elements.errorMessage.textContent = '';
-                setTimeout(() => this.elements.successMessage.textContent = '', 3000);
+                this(elements.successMessage.textContent = message;
+                this(elements.errorMessage.textContent = '';
+                setTimeout(() => this(elements.successMessage.textContent = '', 3000);
             }
 
             showError(message) {
-                this.elements.errorMessage.textContent = message;
-                this.elements.successMessage.textContent = '';
-                setTimeout(() => this.elements.errorMessage.textContent = '', 3000);
+                this(elements.errorMessage.textContent = message;
+                this(elements.successMessage.textContent = '';
+                setTimeout(() => this(elements.errorMessage.textContent = '', 3000);
             }
         }
 
