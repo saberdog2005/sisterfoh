@@ -393,9 +393,9 @@
                         <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                     `;
                     this.buttonContainer.appendChild(thruDoorDiv);
-                    this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
-                    this.doorCount = thruDoorDiv.querySelector('#doorCount');
-                    this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
+                    this.elements.cashTotal = thruDoorDiv.querySelector('#cashTotal');
+                    this.elements.doorCount = thruDoorDiv.querySelector('#doorCount');
+                    this.elements.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
                     this.transactionButtons = document.querySelectorAll('.product-item');
                 } catch (error) {
                     console.error('Error in loadLayout:', error);
@@ -581,11 +581,11 @@
                 if (type === 'cash') this.state.cashTotal += priceDelta;
                 this.state.doorCount += countDelta;
                 this.state.sessionDoorCount += countDelta;
-                if (this.cashTotal) {
-                    this.cashTotal.textContent = this.state.cashTotal.toFixed(2);
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = this.state.cashTotal.toFixed(2);
                 }
-                if (this.doorCount) {
-                    this.doorCount.textContent = this.state.sessionDoorCount;
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 }
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
             }
@@ -594,8 +594,8 @@
                 const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
                 if (savedCount) {
                     this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    if (this.doorCount) {
-                        this.doorCount.textContent = this.state.sessionDoorCount;
+                    if (this.elements.doorCount) {
+                        this.elements.doorCount.textContent = this.state.sessionDoorCount;
                     }
                 }
             }
@@ -614,6 +614,7 @@
             }
 
             toggleSales() {
+                console.log('Session started:', this.state.sessionStarted);
                 if (!this.state.sessionStarted) {
                     this.startSession();
                 } else {
@@ -636,13 +637,13 @@
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, '0');
-                if (this.cashTotal) {
-                    this.cashTotal.textContent = '0.00';
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
                 }
-                if (this.doorCount) {
-                    this.doorCount.textContent = '0';
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = '0';
                 }
-                this.currentItems.clear();
+                this.state.currentItems.clear();
                 this.counts.forEach(count => count.textContent = '0');
                 this.startTimer();
                 this.showSuccess('Sales session started');
@@ -657,8 +658,8 @@
             updateTimer() {
                 const sessionActive = localStorage.getItem('sessionActive') === 'true';
                 if (!sessionActive) {
-                    if (this.timeSeconds) {
-                        this.timeSeconds.textContent = '00:00:00';
+                    if (this.elements.timeSeconds) {
+                        this.elements.timeSeconds.textContent = '00:00:00';
                     }
                     this.stopTimer();
                     return;
@@ -667,8 +668,8 @@
                 if (isNaN(startTime)) return;
                 const elapsedMilliseconds = Date.now() - startTime;
                 const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
-                if (this.timeSeconds) {
-                    this.timeSeconds.textContent = formatTime(elapsedSeconds);
+                if (this.elements.timeSeconds) {
+                    this.elements.timeSeconds.textContent = formatTime(elapsedSeconds);
                 }
             }
 
@@ -693,7 +694,7 @@
 
             async closeSession() {
                 console.log('Starting to close session');
-                if (this.currentItems.size > 0) {
+                if (this.state.currentItems.size > 0) {
                     await this.logSale();
                 }
                 this.state.sessionStarted = false;
@@ -702,16 +703,16 @@
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
-                if (this.cashTotal) {
-                    this.cashTotal.textContent = '0.00';
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
                 }
-                if (this.doorCount) {
-                    this.doorCount.textContent = '0';
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = '0';
                 }
                 localStorage.removeItem(`sessionDoorCount_${this.state.sessionId}`);
                 this.stopTimer();
-                if (this.timeSeconds) {
-                    this.timeSeconds.textContent = '00:00:00';
+                if (this.elements.timeSeconds) {
+                    this.elements.timeSeconds.textContent = '00:00:00';
                 }
                 this.elements.toggleSalesBtn.textContent = 'Open Sales';
                 this.elements.toggleSalesBtn.classList.remove('closebtn');
@@ -800,8 +801,11 @@
                 this.state.currentItems.clear();
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
-                if (this.cashTotal) {
-                    this.cashTotal.textContent = '0.00';
+                if (this.elements.cashTotal) {
+                    this.elements.cashTotal.textContent = '0.00';
+                }
+                if (this.elements.doorCount) {
+                    this.elements.doorCount.textContent = '0';
                 }
                 this.counts.forEach(count => count.textContent = '0');
             }
