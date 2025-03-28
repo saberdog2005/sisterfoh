@@ -296,70 +296,69 @@
         }
 
         class SalesApp {
-          constructor() {
-    this.state = {
-        sessionStarted: false,
-        sessionId: null,
-        currentItems: new Map(),
-        cashTotal: 0,
-        doorCount: 0,
-        sessionDoorCount: 0,
-        isEditing: false,
-        activeButtons: new Map(),
-        isLogging: false,
-        lastLogTime: 0,
-        timeInterval: null,
-        lastClickTimes: new Map()
-    };
-    this.elements = {
-        buttonContainer: document.querySelector('.button-container'),
-        transactionButtons: [],
-        counts: new Map(),
-        eventDate: document.getElementById('eventDate'),
-        eventVenue: document.getElementById('eventVenue'),
-        eventName: document.getElementById('eventName'),
-        cashierName: document.getElementById('cashierName'),
-        toggleSalesBtn: document.getElementById('toggleSalesBtn'),
-        editLayoutBtn: document.getElementById('editLayoutBtn'),
-        addNewButtonBtn: document.getElementById('addNewButtonBtn'),
-        logSaleBtn: document.getElementById('logSaleBtn'),
-        noteInput: document.getElementById('noteInput'),
-        addButtonModal: document.getElementById('addButtonModal'),
-        newButtonType: document.getElementById('newButtonType'),
-        newButtonName: document.getElementById('newButtonName'),
-        newButtonValue: document.getElementById('newButtonValue'),
-        submitNewButton: document.getElementById('submitNewButton'),
-        cancelNewButton: document.getElementById('cancelNewButton'),
-        pinModal: document.getElementById('pinModal'),
-        pinInput: document.getElementById('pinInput'),
-        submitPinBtn: document.getElementById('submitPinBtn'),
-        cancelPinBtn: document.getElementById('cancelPinBtn'),
-        pinError: document.getElementById('pinError'),
-        editInstructions: document.getElementById('editInstructions'),
-        successMessage: document.getElementById('successMessage'),
-        errorMessage: document.getElementById('errorMessage'),
-        cashTotal: null,
-        doorCount: null,
-        timeSeconds: null
-    };
-    this.buttonContainer = this.elements.buttonContainer;
-    this.counts = this.elements.counts;
-    this.eventDate = document.getElementById('eventDate');
-    this.eventDate.value = new Date().toISOString().split('T')[0];
-    
-    // Call checkSessionStatus first
-    this.checkSessionStatus();
-    
-    this.loadLayout();
-    this.updateButtonVisibility();
-    this.loadSessionDoorCount();
-    this.enableDragAndDrop();
-    this.bindEvents();
-    if (this.state.sessionStarted) {
-        this.startTimer();
-    }
-}
-           
+            constructor() {
+                this.state = {
+                    sessionStarted: false,
+                    sessionId: null,
+                    currentItems: new Map(),
+                    cashTotal: 0,
+                    doorCount: 0,
+                    sessionDoorCount: 0,
+                    isEditing: false,
+                    activeButtons: new Map(),
+                    isLogging: false,
+                    lastLogTime: 0,
+                    timeInterval: null,
+                    lastClickTimes: new Map()
+                };
+                this.elements = {
+                    buttonContainer: document.querySelector('.button-container'),
+                    transactionButtons: [],
+                    counts: new Map(),
+                    eventDate: document.getElementById('eventDate'),
+                    eventVenue: document.getElementById('eventVenue'),
+                    eventName: document.getElementById('eventName'),
+                    cashierName: document.getElementById('cashierName'),
+                    toggleSalesBtn: document.getElementById('toggleSalesBtn'),
+                    editLayoutBtn: document.getElementById('editLayoutBtn'),
+                    addNewButtonBtn: document.getElementById('addNewButtonBtn'),
+                    logSaleBtn: document.getElementById('logSaleBtn'),
+                    noteInput: document.getElementById('noteInput'),
+                    addButtonModal: document.getElementById('addButtonModal'),
+                    newButtonType: document.getElementById('newButtonType'),
+                    newButtonName: document.getElementById('newButtonName'),
+                    newButtonValue: document.getElementById('newButtonValue'),
+                    submitNewButton: document.getElementById('submitNewButton'),
+                    cancelNewButton: document.getElementById('cancelNewButton'),
+                    pinModal: document.getElementById('pinModal'),
+                    pinInput: document.getElementById('pinInput'),
+                    submitPinBtn: document.getElementById('submitPinBtn'),
+                    cancelPinBtn: document.getElementById('cancelPinBtn'),
+                    pinError: document.getElementById('pinError'),
+                    editInstructions: document.getElementById('editInstructions'),
+                    successMessage: document.getElementById('successMessage'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    cashTotal: null,
+                    doorCount: null,
+                    timeSeconds: null
+                };
+                this.buttonContainer = this.elements.buttonContainer;
+                this.counts = this.elements.counts;
+                this.eventDate = document.getElementById('eventDate');
+                this.eventDate.value = new Date().toISOString().split('T')[0];
+                
+                // Call checkSessionStatus first
+                this.checkSessionStatus();
+                
+                this.loadLayout();
+                this.updateButtonVisibility();
+                this.loadSessionDoorCount();
+                this.enableDragAndDrop();
+                this.bindEvents();
+                if (this.state.sessionStarted) {
+                    this.startTimer();
+                }
+            }
 
             loadLayout() {
                 try {
@@ -367,7 +366,7 @@
                     if (savedLayout) {
                         savedLayout.forEach(itemData => {
                             const item = this.createProductItem(itemData);
-                            this.buttonContainer.appendChild(item); // Correct method: appendChild, not appendChildItem
+                            this.buttonContainer.appendChild(item);
                             this.counts.set(itemData.name, item.querySelector('.count'));
                         });
                     } else {
@@ -382,7 +381,7 @@
                         ];
                         defaultItems.forEach(itemData => {
                             const item = this.createProductItem(itemData);
-                            this.buttonContainer.appendChild(item); // Correct method
+                            this.buttonContainer.appendChild(item);
                             this.counts.set(itemData.name, item.querySelector('.count'));
                         });
                     }
@@ -393,7 +392,7 @@
                         <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
                         <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                     `;
-                    this.buttonContainer.appendChild(thruDoorDiv); // Correct method
+                    this.buttonContainer.appendChild(thruDoorDiv);
                     this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
                     this.doorCount = thruDoorDiv.querySelector('#doorCount');
                     this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
