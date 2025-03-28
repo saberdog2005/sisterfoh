@@ -346,10 +346,16 @@
                 this.counts = this.elements.counts;
                 this.eventDate = document.getElementById('eventDate');
                 this.eventDate.value = new Date().toISOString().split('T')[0];
-                
-                // Call checkSessionStatus first
+
+                // Load eventName and cashierName from localStorage if session is active
+                if (localStorage.getItem('sessionActive') === 'true') {
+                    const savedEventName = localStorage.getItem('eventName');
+                    const savedCashierName = localStorage.getItem('cashierName');
+                    if (savedEventName) this.elements.eventName.value = savedEventName;
+                    if (savedCashierName) this.elements.cashierName.value = savedCashierName;
+                }
+
                 this.checkSessionStatus();
-                
                 this.loadLayout();
                 this.updateButtonVisibility();
                 this.loadSessionDoorCount();
@@ -633,6 +639,8 @@
                 this.state.sessionId = Date.now().toString();
                 localStorage.setItem('sessionActive', true);
                 localStorage.setItem('activeSessionId', this.state.sessionId);
+                localStorage.setItem('eventName', this.elements.eventName.value);
+                localStorage.setItem('cashierName', this.elements.cashierName.value);
                 this.state.cashTotal = 0;
                 this.state.doorCount = 0;
                 this.state.sessionDoorCount = 0;
@@ -700,6 +708,10 @@
                 this.state.sessionStarted = false;
                 localStorage.removeItem('sessionActive');
                 localStorage.removeItem('activeSessionId');
+                localStorage.removeItem('eventName');
+                localStorage.removeItem('cashierName');
+                this.elements.eventName.value = '';
+                this.elements.cashierName.value = '';
                 this.state.sessionId = null;
                 this.state.cashTotal = 0;
                 this.state.sessionDoorCount = 0;
