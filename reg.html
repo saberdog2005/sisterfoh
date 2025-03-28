@@ -309,7 +309,8 @@
                     isLogging: false,
                     lastLogTime: 0,
                     timeSeconds: 0,
-                    timeInterval: null
+                    timeInterval: null,
+                    lastClickTimes: new Map() // For debouncing
                 };
                 this.elements = {
                     buttonContainer: document.querySelector('.button-container'),
@@ -375,7 +376,6 @@
                         this.elements.counts.set(itemData.name, item.querySelector('.count'));
                     });
                 }
-                // Add Thru Door as a separate div
                 const thruDoorDiv = document.createElement('div');
                 thruDoorDiv.classList.add('thru-door');
                 thruDoorDiv.innerHTML = `
@@ -532,6 +532,10 @@
             handleIncrement(btn) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
+                const now = Date.now();
+                const lastClick = this.state.lastClickTimes.get(item) || 0;
+                if (now - lastClick < 200) return; // Debounce: ignore clicks within 200ms
+                this.state.lastClickTimes.set(item, now);
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
                 const current = this.state.currentItems.get(item) || { count: 0, price, type };
@@ -544,6 +548,10 @@
             handleDecrement(btn) {
                 if (!this.state.sessionStarted || this.state.isEditing) return;
                 const item = btn.dataset.item;
+                const now = Date.now();
+                const lastClick = this.state.lastClickTimes.get(item) || 0;
+                if (now - lastClick < 200) return; // Debounce: ignore clicks within 200ms
+                this.state.lastClickTimes.set(item, now);
                 const price = parseFloat(btn.dataset.price) || 0;
                 const type = btn.querySelector('.incrementbtn').classList[1];
                 const current = this.state.currentItems.get(item);
@@ -762,7 +770,6 @@
                 if (this.elements.cashTotal) {
                     this.elements.cashTotal.textContent = '0.00';
                 }
-                // Do not reset doorCount display, as it's session-wide
                 this.elements.counts.forEach(count => count.textContent = '0');
             }
 
