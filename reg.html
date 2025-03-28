@@ -347,18 +347,22 @@
                 this.eventDate = document.getElementById('eventDate');
                 this.eventDate.value = new Date().toISOString().split('T')[0];
 
-                // Load eventName and cashierName from localStorage if session is active
+                // Load session data if session is active
                 if (localStorage.getItem('sessionActive') === 'true') {
+                    this.state.sessionId = localStorage.getItem('activeSessionId');
                     const savedEventName = localStorage.getItem('eventName');
                     const savedCashierName = localStorage.getItem('cashierName');
                     if (savedEventName) this.elements.eventName.value = savedEventName;
                     if (savedCashierName) this.elements.cashierName.value = savedCashierName;
+                    const savedDoorCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
+                    if (savedDoorCount) {
+                        this.state.sessionDoorCount = parseInt(savedDoorCount, 10);
+                    }
                 }
 
                 this.checkSessionStatus();
                 this.loadLayout();
                 this.updateButtonVisibility();
-                this.loadSessionDoorCount();
                 this.enableDragAndDrop();
                 this.bindEvents();
                 if (this.state.sessionStarted) {
@@ -395,7 +399,7 @@
                     thruDoorDiv.classList.add('thru-door');
                     thruDoorDiv.innerHTML = `
                         <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal">0.00</span></h3>
-                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">${this.state.sessionDoorCount}</span></h3>
                         <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
                     `;
                     this.buttonContainer.appendChild(thruDoorDiv);
@@ -594,16 +598,6 @@
                     this.elements.doorCount.textContent = this.state.sessionDoorCount;
                 }
                 localStorage.setItem(`sessionDoorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
-            }
-
-            loadSessionDoorCount() {
-                const savedCount = localStorage.getItem(`sessionDoorCount_${this.state.sessionId}`);
-                if (savedCount) {
-                    this.state.sessionDoorCount = parseInt(savedCount, 10);
-                    if (this.elements.doorCount) {
-                        this.elements.doorCount.textContent = this.state.sessionDoorCount;
-                    }
-                }
             }
 
             checkSessionStatus() {
@@ -817,7 +811,7 @@
                     this.elements.cashTotal.textContent = '0.00';
                 }
                 if (this.elements.doorCount) {
-                    this.elements.doorCount.textContent = '0';
+                    this.elements.doorCount.textContent = this.state.sessionDoorCount.toString();
                 }
                 this.counts.forEach(count => count.textContent = '0');
             }
