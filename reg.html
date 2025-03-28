@@ -358,41 +358,46 @@
             }
 
             loadLayout() {
-                const savedLayout = JSON.parse(localStorage.getItem('layout'));
-                if (savedLayout) {
-                    savedLayout.forEach(itemData => {
-                        const item = this.createProductItem(itemData);
-                        this.buttonContainer.appendChild(item);
-                        this.counts.set(itemData.name, item.querySelector('.count'));
-                    });
-                } else {
-                    const defaultItems = [
-                        { name: 'Credit Card', type: 'cc', price: 0, active: true },
-                        { name: 'Cash $5', type: 'cash', price: 5, active: true },
-                        { name: 'Cash $10', type: 'cash', price: 10, active: true },
-                        { name: 'Cash $15', type: 'cash', price: 15, active: true },
-                        { name: 'Cash $20', type: 'cash', price: 20, active: true },
-                        { name: 'Comp', type: 'comp', price: 0, active: true },
-                        { name: 'Ticket', type: 'ticket', price: 10, active: true }
-                    ];
-                    defaultItems.forEach(itemData => {
-                        const item = this.createProductItem(itemData);
-                        this.buttonContainer.appendChild(item);
-                        this.counts.set(itemData.name, item.querySelector('.count'));
-                    });
+                try {
+                    const savedLayout = JSON.parse(localStorage.getItem('layout'));
+                    if (savedLayout) {
+                        savedLayout.forEach(itemData => {
+                            const item = this.createProductItem(itemData);
+                            this.buttonContainer.appendChild(item); // Correct method: appendChild, not appendChildItem
+                            this.counts.set(itemData.name, item.querySelector('.count'));
+                        });
+                    } else {
+                        const defaultItems = [
+                            { name: 'Credit Card', type: 'cc', price: 0, active: true },
+                            { name: 'Cash $5', type: 'cash', price: 5, active: true },
+                            { name: 'Cash $10', type: 'cash', price: 10, active: true },
+                            { name: 'Cash $15', type: 'cash', price: 15, active: true },
+                            { name: 'Cash $20', type: 'cash', price: 20, active: true },
+                            { name: 'Comp', type: 'comp', price: 0, active: true },
+                            { name: 'Ticket', type: 'ticket', price: 10, active: true }
+                        ];
+                        defaultItems.forEach(itemData => {
+                            const item = this.createProductItem(itemData);
+                            this.buttonContainer.appendChild(item); // Correct method
+                            this.counts.set(itemData.name, item.querySelector('.count'));
+                        });
+                    }
+                    const thruDoorDiv = document.createElement('div');
+                    thruDoorDiv.classList.add('thru-door');
+                    thruDoorDiv.innerHTML = `
+                        <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal">0.00</span></h3>
+                        <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
+                        <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
+                    `;
+                    this.buttonContainer.appendChild(thruDoorDiv); // Correct method
+                    this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
+                    this.doorCount = thruDoorDiv.querySelector('#doorCount');
+                    this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
+                    this.transactionButtons = document.querySelectorAll('.product-item');
+                } catch (error) {
+                    console.error('Error in loadLayout:', error);
+                    this.showError('Failed to load layout. Please refresh the page.');
                 }
-                const thruDoorDiv = document.createElement('div');
-                thruDoorDiv.classList.add('thru-door');
-                thruDoorDiv.innerHTML = `
-                    <h3><span style="color: pink;">Cash Total:</span> $<span id="cashTotal">0.00</span></h3>
-                    <h3><span style="color: pink;">Thru Door:</span> <span id="doorCount">0</span></h3>
-                    <p style="color: yellow;">Time: <span id="timeSeconds">00:00:00</span></p>
-                `;
-                this.buttonContainer.appendChild(thruDoorDiv);
-                this.cashTotal = thruDoorDiv.querySelector('#cashTotal');
-                this.doorCount = thruDoorDiv.querySelector('#doorCount');
-                this.timeSeconds = thruDoorDiv.querySelector('#timeSeconds');
-                this.transactionButtons = document.querySelectorAll('.product-item');
             }
 
             createProductItem(itemData) {
@@ -502,7 +507,7 @@
                 this.updateButtonVisibility();
             }
 
-            toggle続きButtonState(btn) {
+            toggleButtonState(btn) {
                 const currentActive = btn.dataset.active === 'true';
                 btn.dataset.active = !currentActive;
                 btn.style.opacity = !currentActive ? '1' : '0.5';
@@ -594,7 +599,6 @@
 
             checkSessionStatus() {
                 this.state.sessionStarted = localStorage.getItem('sessionActive') === 'true';
-                this.state.sessionId = localStorage.getItem('activeSessionId');
                 this.elements.toggleSalesBtn.textContent = this.state.sessionStarted ? 'Close Sales' : 'Open Sales';
                 this.elements.toggleSalesBtn.className = this.state.sessionStarted ? 'closebtn' : 'openbtn';
                 if (this.state.sessionStarted) {
