@@ -15,6 +15,7 @@
             flex-direction: column;
             justify-content: space-between;
             min-height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
         }
         .game-container {
             display: flex;
@@ -23,6 +24,7 @@
             gap: 20px;
             position: relative;
             width: 100%;
+            height: calc(100vh - 60px); /* Adjust height to fit viewport */
         }
         #waterOverlay {
             position: absolute;
@@ -36,7 +38,7 @@
         }
         #gameGrid {
             width: 100%;
-            height: 600px;
+            height: 100%; /* Fill the container */
             font-size: 12px;
             white-space: pre;
             background: transparent;
@@ -57,13 +59,13 @@
             font-size: 20px;
             z-index: 3;
         }
-        #joystickArea {
-            width: 10vw;
-            height: 10vw;
-            background: #ccc;
-            align-self: center;
-            margin-top: 10px;
-            margin-bottom: 10px;
+        .highlight {
+            animation: highlight 0.5s ease;
+        }
+        @keyframes highlight {
+            0% { color: limegreen; }
+            50% { color: yellow; }
+            100% { color: limegreen; }
         }
         .controls {
             padding: 10px;
@@ -126,24 +128,28 @@
         .star { color: white; }
         h1, h2 {
             color: white;
+            margin: 0;
+            padding: 10px;
+            text-align: center;
         }
         @media (max-width: 600px) {
             .controls {
                 display: none;
             }
+            h1 { font-size: 24px; }
+            h2 { font-size: 18px; }
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">Surf's Up</h1>
-    <h2 style="text-align: center;">A Video Game by SABERDOG LLC</h2>
+    <h1>Surf's Up</h1>
+    <h2>A Video Game by SABERDOG LLC</h2>
     <div class="game-container">
         <div id="waterOverlay"></div>
         <div id="gameGrid"></div>
         <div id="scoreDisplay">
             Score: <span id="current-score">0</span>
         </div>
-        <div id="joystickArea"></div>
     </div>
     <div id="gameOverModal">
         <h2>Game Over</h2>
@@ -203,8 +209,7 @@
         // Control variables for analog input
         let horizontalInput = 0;
         let verticalInput = 0;
-        let centerX, centerY;
-        let halfWidth, halfHeight;
+        let touchStartX, touchStartY;
 
         // Beach heights with smoothing
         let beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
@@ -439,6 +444,7 @@
                 const VCOL_lobster = Math.floor(lobster.VCOL);
                 if (R_lobster === surferRow && VCOL_lobster === surferVCOL) {
                     score += 300;
+                    highlightScore();
                     return false;
                 }
                 return true;
@@ -448,6 +454,7 @@
                 const VCOL_fish = Math.floor(f.VCOL);
                 if (R_fish === surferRow && VCOL_fish === surferVCOL) {
                     score += 50;
+                    highlightScore();
                     return false;
                 }
                 return true;
@@ -457,6 +464,7 @@
                 const VCOL_octopus = Math.floor(octopus.VCOL);
                 if (R_octopus === surferRow && VCOL_octopus === surferVCOL) {
                     score += 10000;
+                    highlightScore();
                     return false;
                 }
                 return true;
@@ -466,6 +474,12 @@
             const speed = Math.sqrt(surferVx * surferVx + surferVy * surferVy);
             const angle = Math.min(Math.max(surferVx * 0.1, -10), 10);
             document.getElementById('gameGrid').style.transform = `rotate(${angle}deg)`;
+        }
+
+        function highlightScore() {
+            const scoreElement = document.getElementById('current-score');
+            scoreElement.classList.add('highlight');
+            setTimeout(() => scoreElement.classList.remove('highlight'), 500);
         }
 
         function calculateCrestVirtualCol(wave, R) {
@@ -824,32 +838,26 @@
             link.click();
         }
 
-        // Joystick controls
-        const joystickArea = document.getElementById('joystickArea');
-        joystickArea.addEventListener('touchstart', (e) => {
+        // Touch controls on the entire screen
+        document.body.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            const joystickRect = joystickArea.getBoundingClientRect();
-            centerX = joystickRect.left + joystickRect.width / 2;
-            centerY = joystickRect.top + joystickRect.height / 2;
-            halfWidth = joystickRect.width / 2;
-            halfHeight = joystickRect.height / 2;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
         });
 
-        joystickArea.addEventListener('touchmove', (e) => {
+        document.body.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            let touchX = touch.clientX;
-            let touchY = touch.clientY;
-            let dx = touchX - centerX;
-            let dy = touchY - centerY;
-            dx = Math.max(-halfWidth, Math.min(dx, halfWidth));
-            dy = Math.max(-halfHeight, Math.min(dy, halfHeight));
-            horizontalInput = dx / halfWidth;
-            verticalInput = dy / halfHeight;
+            let dx = touch.clientX - touchStartX;
+            let dy = touch.clientY - touchStartY;
+            horizontalInput = dx / (window.innerWidth / 2);
+            verticalInput = dy / (window.innerHeight / 2);
+            horizontalInput = Math.max(-1, Math.min(horizontalInput, 1));
+            verticalInput = Math.max(-1, Math.min(verticalInput, 1));
         });
 
-        joystickArea.addEventListener('touchend', (e) => {
+        document.body.addEventListener('touchend', (e) => {
             e.preventDefault();
             horizontalInput = 0;
             verticalInput = 0;
