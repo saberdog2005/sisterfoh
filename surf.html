@@ -7,7 +7,7 @@
     <style>
         body {
             margin: 0;
-            padding: 0; /* Removed padding for edge-to-edge display */
+            padding: 0;
             font-family: monospace;
             transition: background-color 1s ease;
         }
@@ -17,16 +17,16 @@
             align-items: center;
             gap: 20px;
             position: relative;
-            width: 100%; /* Ensure full width */
+            width: 100%;
         }
         #gameGrid {
-            width: 100%; /* Full width for edge-to-edge */
+            width: 100%;
             height: 600px;
             font-size: 12px;
             white-space: pre;
             background: transparent;
             overflow: hidden;
-            transition: transform 0.1s ease; /* Smooth tilt effect */
+            transition: transform 0.1s ease;
         }
         #gameGrid div {
             height: 12px;
@@ -34,12 +34,18 @@
         }
         #waterOverlay {
             position: absolute;
-            top: 60px; /* 5 rows * 12px = 60px */
+            top: 60px;
             left: 0;
             width: 100%;
             height: calc(100% - 60px);
-            background-color: rgba(0, 0, 139, 0.6); /* Increased to 60% opacity */
-            pointer-events: none; /* Allows interaction with grid */
+            background-color: rgba(0, 0, 139, 0.6);
+            pointer-events: none;
+        }
+        #joystickArea {
+            width: 100%;
+            height: 100px;
+            background: #ccc;
+            position: relative;
         }
         .controls {
             padding: 10px;
@@ -94,9 +100,8 @@
         .moon { color: white; }
         .star { color: white; }
         h1, h2 {
-            color: white; /* Title and subtitle set to white */
+            color: white;
         }
-        /* Hide controls on mobile devices */
         @media (max-width: 600px) {
             .controls {
                 display: none;
@@ -113,6 +118,7 @@
         <div id="scoreDisplay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: limegreen; font-size: 20px;">
             Score: <span id="current-score">0</span>
         </div>
+        <div id="joystickArea"></div>
         <div class="controls">
             <button id="leftButton">Left</button>
             <button id="rightButton">Right</button>
@@ -138,6 +144,8 @@
         const ACCELERATION = 20; // columns per second squared
         const WAVE_ACCELERATION = 30; // Higher acceleration on waves
         const PLAYER_SPEED = 10; // rows per second
+        const GRAVITY = 50; // rows per second squared
+        const JUMP_VELOCITY = 10; // rows per second
         const TOLERANCE = 3; // columns
         const DT = 0.1; // seconds per frame
         const UMBRELLA_ROW = ROWS - 2;
@@ -165,6 +173,7 @@
         let surferX = VIRTUAL_WIDTH / 2;
         let surferY = ROWS - 1;
         let surferVx = 0;
+        let surferVy = 0;
         let attachedWave = null;
         let score = 0;
         let wavesRidden = 0;
@@ -179,25 +188,31 @@
         let upPressed = false;
         let downPressed = false;
 
-        // Touch gesture variables
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
+        // Joystick variables
+        let centerX, centerY;
+        const threshold = 20;
 
         // Beach heights
         const beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
 
-        // Background objects
-        const backgroundObjects = Array.from({length: 20}, () => {
-            const type = Math.random() < 0.5 ? 'umbrella' : 'person';
+        // Background objects with additional layers
+        const backgroundObjects = Array.from({length: 30}, () => {
+            const type = ['umbrella', 'person', 'palm', 'rock'][Math.floor(Math.random() * 4)];
             const vcol = Math.random() * VIRTUAL_WIDTH;
-            const layer = Math.floor(Math.random() * 3); // 0 to 2
+            const layer = Math.floor(Math.random() * 4); // 0 to 3
             return { type, vcol, layer };
         });
-        const layer_speeds = [0.2, 0.5, 0.8];
+        const layer_speeds = [0.2, 0.4, 0.6, 0.8];
 
-        // Add new wave every WAVE_INTERVAL ms
+        // Clouds for wave parallax in sky
+        const clouds = Array.from({length: 10}, () => ({ vcol: Math.random() * VIRTUAL_WIDTH, layer: Math.floor(Math.random() * 3) }));
+        const cloud_speeds = [0.1, 0.2, 0.3];
+
+        // Mountains for additional depth
+        const mountains = Array.from({length: 5}, () => ({ vcol: Math.random() * VIRTUAL_WIDTH, layer: 0 }));
+        const mountain_speeds = [0.05];
+
+        // Wave generation
         setInterval(() => {
             const shape = ['sine', 'square', 'triangle'][Math.floor(Math.random() * 3)];
             const A = Math.random() * 10 + 5;
@@ -209,13 +224,13 @@
             activeWaves.push({ A, K, PHI, V: WAVE_SPEED, row: 5, color, VCOL_center, shape });
         }, WAVE_INTERVAL);
 
-        // Create sharks periodically
+        // Shark generation
         setInterval(createShark, 25000);
 
-        // Create boats periodically
+        // Boat generation
         setInterval(createBoat, 50000);
 
-        // Spawn lobsters every 5 seconds
+        // Lobster generation
         setInterval(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
@@ -223,7 +238,7 @@
             lobsters.push({ row, VCOL, lifespan });
         }, 5000);
 
-        // Spawn fish every 3 seconds
+        // Fish generation
         setInterval(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
@@ -260,11 +275,11 @@
         function updateGame() {
             t += DT;
             gameTime += DT;
+
             // Update waves
-            activeWaves.forEach(wave => {
-                wave.row += wave.V * DT;
-            });
+            activeWaves.forEach(wave => wave.row += wave.V * DT);
             activeWaves = activeWaves.filter(wave => wave.row < ROWS);
+
             // Update sharks
             sharks.forEach(shark => {
                 const dx = surferX - shark.VCOL;
@@ -280,18 +295,15 @@
                 shark.lifespan -= DT;
             });
             sharks = sharks.filter(shark => shark.lifespan > 0);
+
             // Update boats
             boats.forEach(boat => {
                 boat.VCOL += boat.speed * DT;
-                if (boat.VCOL < 0 || boat.VCOL >= VIRTUAL_WIDTH) {
-                    boat.speed = -boat.speed;
-                }
+                if (boat.VCOL < 0 || boat.VCOL >= VIRTUAL_WIDTH) boat.speed = -boat.speed;
                 boat.waveTimer -= DT;
                 if (boat.waveTimer <= 0) {
                     let A = Math.random() * 3 + 2;
-                    if (boat.type === 'ship') {
-                        A *= 10;
-                    }
+                    if (boat.type === 'ship') A *= 10;
                     const K = Math.random() * 0.3 + 0.2;
                     const PHI = Math.random() * 2 * Math.PI;
                     const color = WAVE_COLORS[colorIndex % WAVE_COLORS.length];
@@ -303,72 +315,78 @@
                 boat.lifespan -= DT;
             });
             boats = boats.filter(boat => boat.lifespan > 0);
+
             // Update lobsters and fish
-            lobsters.forEach(lobster => {
-                lobster.lifespan -= DT;
-            });
+            lobsters.forEach(lobster => lobster.lifespan -= DT);
             lobsters = lobsters.filter(lobster => lobster.lifespan > 0);
-            fish.forEach(f => {
-                f.lifespan -= DT;
-            });
+            fish.forEach(f => f.lifespan -= DT);
             fish = fish.filter(f => f.lifespan > 0);
-            // Handle input with dynamic acceleration
-            if (attachedWave) {
-                if (leftPressed) surferVx -= WAVE_ACCELERATION * DT;
-                if (rightPressed) surferVx += WAVE_ACCELERATION * DT;
-            } else {
+
+            // Handle player movement
+            if (!attachedWave) {
                 if (leftPressed) surferVx -= ACCELERATION * DT;
                 if (rightPressed) surferVx += ACCELERATION * DT;
-            }
-            surferX += surferVx * DT;
-            surferVx *= 0.9; // damping
-            surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-            if (!attachedWave) {
-                if (upPressed) surferY -= PLAYER_SPEED * DT;
-                if (downPressed) surferY += PLAYER_SPEED * DT;
-                surferY = Math.max(0, Math.min(ROWS - 1, surferY));
+                if (upPressed) surferVy -= PLAYER_SPEED * DT;
+                if (downPressed) surferVy += PLAYER_SPEED * DT;
+                surferVy += GRAVITY * DT;
+                surferY += surferVy * DT;
+                surferX += surferVx * DT;
+                surferVx *= 0.9; // Damping
+                surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
+                if (surferY > ROWS - 1) {
+                    surferY = ROWS - 1;
+                    surferVy = 0;
+                }
             } else {
-                if (upPressed || downPressed) {
+                surferY = attachedWave.row;
+                if (leftPressed) surferVx -= WAVE_ACCELERATION * DT;
+                if (rightPressed) surferVx += WAVE_ACCELERATION * DT;
+                surferX += surferVx * DT;
+                surferVx *= 0.9; // Damping
+                surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
+                if (upPressed) {
                     attachedWave = null;
-                } else {
-                    surferY = attachedWave.row;
+                    surferVy = -JUMP_VELOCITY; // Jump off wave
                 }
             }
-            // Attach logic
+
+            // Stop inertia when controls are released
+            if (!leftPressed && !rightPressed) surferVx = 0;
+
+            // Wave attachment
             if (!attachedWave) {
                 for (let wave of activeWaves) {
                     const C = calculateCrestVirtualCol(wave, wave.row);
                     const distance = Math.min(Math.abs(surferX - C), VIRTUAL_WIDTH - Math.abs(surferX - C));
                     if (Math.abs(surferY - wave.row) < 1 && distance < TOLERANCE) {
                         attachedWave = wave;
+                        surferVy = 0;
                         break;
                     }
                 }
             } else {
                 const C = calculateCrestVirtualCol(attachedWave, attachedWave.row);
                 const distance = Math.min(Math.abs(surferX - C), VIRTUAL_WIDTH - Math.abs(surferX - C));
-                if (distance > TOLERANCE) {
-                    attachedWave = null;
-                }
+                if (distance > TOLERANCE) attachedWave = null;
             }
-            // Score logic
+
+            // Update score
             if (attachedWave && attachedWave !== previousAttachedWave) {
                 wavesRidden++;
                 score += 100 * wavesRidden;
             }
-            if (attachedWave) {
-                score += 1;
-            }
+            if (attachedWave) score += 1;
             previousAttachedWave = attachedWave;
             document.getElementById('current-score').textContent = score;
-            // Collision with sharks
+
+            // Shark collision
             const surferRow = Math.floor(surferY);
             const surferVCOL = Math.floor(surferX);
-            const hitShark = sharks.some(shark => Math.floor(shark.row) === surferRow && Math.floor(shark.VCOL) === surferVCOL);
-            if (hitShark) {
+            if (sharks.some(shark => Math.floor(shark.row) === surferRow && Math.floor(shark.VCOL) === surferVCOL)) {
                 gameOver();
             }
-            // Collect lobsters and fish
+
+            // Collectibles
             lobsters = lobsters.filter(lobster => {
                 const R_lobster = Math.floor(lobster.row);
                 const VCOL_lobster = Math.floor(lobster.VCOL);
@@ -387,25 +405,19 @@
                 }
                 return true;
             });
-            // Dynamic camera angle based on speed
-            const angle = Math.min(Math.max(surferVx * 0.1, -10), 10); // Limit tilt to ±10 degrees
+
+            // Camera tilt
+            const angle = Math.min(Math.max(surferVx * 0.1, -10), 10);
             document.getElementById('gameGrid').style.transform = `rotate(${angle}deg)`;
         }
 
         function calculateCrestVirtualCol(wave, R) {
             let func;
             switch (wave.shape) {
-                case 'sine':
-                    func = Math.sin;
-                    break;
-                case 'square':
-                    func = x => Math.sign(Math.sin(x));
-                    break;
-                case 'triangle':
-                    func = x => 2 * Math.abs(x / (2 * Math.PI) - Math.floor(x / (2 * Math.PI) + 0.5)) - 1;
-                    break;
-                default:
-                    func = Math.sin;
+                case 'sine': func = Math.sin; break;
+                case 'square': func = x => Math.sign(Math.sin(x)); break;
+                case 'triangle': func = x => 2 * Math.abs(x / (2 * Math.PI) - Math.floor(x / (2 * Math.PI) + 0.5)) - 1; break;
+                default: func = Math.sin;
             }
             return (wave.VCOL_center + wave.A * func(wave.K * R + wave.PHI) + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
         }
@@ -417,9 +429,9 @@
         }
 
         function hexToRgb(hex) {
-            const r = parseInt(hex.slice(1,3), 16);
-            const g = parseInt(hex.slice(3,5), 16);
-            const b = parseInt(hex.slice(5,7), 16);
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
             return { r, g, b };
         }
 
@@ -433,29 +445,25 @@
 
         function getBackgroundColor(timeOfDay) {
             const keyPoints = [
-                { t: 0.0, color: '#000000' }, // black (night)
-                { t: 0.1, color: '#FF0000' }, // red (sunrise)
-                { t: 0.2, color: '#FFFF00' }, // yellow (transition)
-                { t: 0.3, color: '#0000FF' }, // blue (day)
-                { t: 0.7, color: '#0000FF' }, // blue (day)
-                { t: 0.8, color: '#FFFF00' }, // yellow (transition)
-                { t: 0.9, color: '#FF0000' }, // red (sunset)
-                { t: 1.0, color: '#000000' }  // black (night)
+                { t: 0.0, color: '#000000' }, { t: 0.1, color: '#FF0000' }, { t: 0.2, color: '#FFFF00' },
+                { t: 0.3, color: '#0000FF' }, { t: 0.7, color: '#0000FF' }, { t: 0.8, color: '#FFFF00' },
+                { t: 0.9, color: '#FF0000' }, { t: 1.0, color: '#000000' }
             ];
             for (let i = 0; i < keyPoints.length - 1; i++) {
-                if (timeOfDay >= keyPoints[i].t && timeOfDay <= keyPoints[i+1].t) {
+                if (timeOfDay >= keyPoints[i].t && timeOfDay <= keyPoints[i + 1].t) {
                     const t0 = keyPoints[i].t;
-                    const t1 = keyPoints[i+1].t;
+                    const t1 = keyPoints[i + 1].t;
                     const c0 = hexToRgb(keyPoints[i].color);
-                    const c1 = hexToRgb(keyPoints[i+1].color);
+                    const c1 = hexToRgb(keyPoints[i + 1].color);
                     const ratio = (timeOfDay - t0) / (t1 - t0);
-                    const r = interpolate(c0.r, c1.r, ratio);
-                    const g = interpolate(c0.g, c1.g, ratio);
-                    const b = interpolate(c0.b, c1.b, ratio);
-                    return rgbToHex(r, g, b);
+                    return rgbToHex(
+                        interpolate(c0.r, c1.r, ratio),
+                        interpolate(c0.g, c1.g, ratio),
+                        interpolate(c0.b, c1.b, ratio)
+                    );
                 }
             }
-            return '#000000'; // default to black
+            return '#000000';
         }
 
         function drawGrid() {
@@ -463,39 +471,52 @@
             const startVCOL = (Math.floor(surferX) - center_i + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
             let grid = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => ({char: ' ', color: 'black'})));
 
-            // Set background color based on timeOfDay
-            const dayCycle = 120; // 2 minutes
+            // Background color based on time
+            const dayCycle = 120;
             const timeOfDay = (gameTime % dayCycle) / dayCycle;
             document.body.style.backgroundColor = getBackgroundColor(timeOfDay);
 
-            // Render sky (rows 0-4)
-            let skyColor;
-            if (timeOfDay < 0.25) {
-                skyColor = '#87CEEB'; // morning
-            } else if (timeOfDay < 0.5) {
-                skyColor = '#1E90FF'; // day
-            } else if (timeOfDay < 0.75) {
-                skyColor = '#FFA500'; // evening
-            } else {
-                skyColor = '#00008B'; // night
-            }
+            // Sky (rows 0-4)
+            let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#1E90FF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
             for (let R = 0; R < 5; R++) {
                 for (let i = 0; i < COLS; i++) {
                     grid[R][i].char = '.';
                     grid[R][i].color = skyColor;
                 }
             }
+
+            // Mountains
+            mountains.forEach(mountain => {
+                const s = mountain_speeds[mountain.layer];
+                let render_vcol = (mountain.vcol - s * surferX) % VIRTUAL_WIDTH;
+                if (render_vcol < 0) render_vcol += VIRTUAL_WIDTH;
+                const i = ((Math.floor(render_vcol) - startVCOL) % COLS + COLS) % COLS;
+                if (i >= 0 && i < COLS) {
+                    grid[4][i].char = '^';
+                    grid[4][i].color = 'gray';
+                }
+            });
+
+            // Clouds (wave parallax in sky)
+            clouds.forEach(cloud => {
+                const s = cloud_speeds[cloud.layer];
+                let render_vcol = (cloud.vcol - s * surferX) % VIRTUAL_WIDTH;
+                if (render_vcol < 0) render_vcol += VIRTUAL_WIDTH;
+                const i = ((Math.floor(render_vcol) - startVCOL) % COLS + COLS) % COLS;
+                if (i >= 0 && i < COLS) {
+                    const R = Math.floor(Math.random() * 5);
+                    grid[R][i].char = '☁';
+                    grid[R][i].color = 'white';
+                }
+            });
+
             // Sun or moon
             const celestialRow = 2;
             const celestialCol = Math.floor((timeOfDay * COLS) % COLS);
-            if (timeOfDay < 0.5) {
-                grid[celestialRow][celestialCol].char = '☀';
-                grid[celestialRow][celestialCol].color = 'yellow';
-            } else {
-                grid[celestialRow][celestialCol].char = '🌙';
-                grid[celestialRow][celestialCol].color = 'white';
-            }
-            // Stars at night
+            grid[celestialRow][celestialCol].char = timeOfDay < 0.5 ? '☀' : '🌙';
+            grid[celestialRow][celestialCol].color = timeOfDay < 0.5 ? 'yellow' : 'white';
+
+            // Stars
             if (timeOfDay >= 0.5 && timeOfDay < 0.75) {
                 for (let R = 0; R < 5; R++) {
                     for (let i = 0; i < COLS; i++) {
@@ -507,39 +528,42 @@
                 }
             }
 
-            // Render beach
+            // Beach with amber color
             for (let i = 0; i < COLS; i++) {
                 const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
                 const h = beachHeights[VCOL];
                 for (let k = 0; k < h; k++) {
                     const R = ROWS - h + k;
-                    const color = sandColors[0]; // solid color
                     grid[R][i].char = '.';
-                    grid[R][i].color = color;
+                    grid[R][i].color = '#FFBF00'; // Amber
                 }
             }
 
-            // Render background objects with parallax
+            // Background objects
             backgroundObjects.forEach(obj => {
                 const s = layer_speeds[obj.layer];
                 let render_vcol = (obj.vcol - s * surferX) % VIRTUAL_WIDTH;
                 if (render_vcol < 0) render_vcol += VIRTUAL_WIDTH;
                 const i = ((Math.floor(render_vcol) - startVCOL) % COLS + COLS) % COLS;
-                if (i >= 0 && i < COLS) {
+                if (i >= 0 && i < COLS && beachHeights[Math.floor(obj.vcol)] >= 2) {
                     const R = ROWS - 2;
-                    if (beachHeights[Math.floor(obj.vcol)] >= 2) {
-                        if (obj.type === 'umbrella') {
-                            grid[R][i].char = '⛱';
-                            grid[R][i].color = '#FF4500';
-                        } else {
-                            grid[R][i].char = '🏖';
-                            grid[R][i].color = '#8B4513';
-                        }
+                    if (obj.type === 'umbrella') {
+                        grid[R][i].char = '⛱';
+                        grid[R][i].color = '#FF4500';
+                    } else if (obj.type === 'person') {
+                        grid[R][i].char = '🏖';
+                        grid[R][i].color = '#8B4513';
+                    } else if (obj.type === 'palm') {
+                        grid[R][i].char = '🌴';
+                        grid[R][i].color = 'green';
+                    } else if (obj.type === 'rock') {
+                        grid[R][i].char = '🪨';
+                        grid[R][i].color = 'gray';
                     }
                 }
             });
 
-            // Render waves
+            // Waves
             activeWaves.forEach(wave => {
                 const R_wave = Math.floor(wave.row);
                 if (R_wave >= 5 && R_wave < ROWS) {
@@ -559,12 +583,11 @@
                 }
             });
 
-            // Render sharks
+            // Sharks
             sharks.forEach(shark => {
                 const R_shark = Math.floor(shark.row);
                 if (R_shark >= 5 && R_shark < ROWS) {
-                    const VCOL_shark = Math.floor(shark.VCOL);
-                    const i_shark = ((VCOL_shark - startVCOL) % COLS + COLS) % COLS;
+                    const i_shark = ((Math.floor(shark.VCOL) - startVCOL) % COLS + COLS) % COLS;
                     if (i_shark >= 0 && i_shark < COLS) {
                         grid[R_shark][i_shark].char = '🦈';
                         grid[R_shark][i_shark].color = '#FF0000';
@@ -572,30 +595,23 @@
                 }
             });
 
-            // Render boats and ships
+            // Boats and ships
             boats.forEach(boat => {
                 const R_boat = Math.floor(boat.row);
                 if (R_boat >= 5 && R_boat < ROWS) {
-                    const VCOL_boat = Math.floor(boat.VCOL);
-                    const i_boat = ((VCOL_boat - startVCOL) % COLS + COLS) % COLS;
+                    const i_boat = ((Math.floor(boat.VCOL) - startVCOL) % COLS + COLS) % COLS;
                     if (i_boat >= 0 && i_boat < COLS) {
-                        if (boat.type === 'ship') {
-                            grid[R_boat][i_boat].char = '🚢';
-                            grid[R_boat][i_boat].color = '#808080';
-                        } else {
-                            grid[R_boat][i_boat].char = '⛵';
-                            grid[R_boat][i_boat].color = '#8B4513';
-                        }
+                        grid[R_boat][i_boat].char = boat.type === 'ship' ? '🚢' : '⛵';
+                        grid[R_boat][i_boat].color = boat.type === 'ship' ? '#808080' : '#8B4513';
                     }
                 }
             });
 
-            // Render lobsters
+            // Lobsters
             lobsters.forEach(lobster => {
                 const R_lobster = Math.floor(lobster.row);
                 if (R_lobster >= 5 && R_lobster < ROWS) {
-                    const VCOL_lobster = Math.floor(lobster.VCOL);
-                    const i_lobster = ((VCOL_lobster - startVCOL) % COLS + COLS) % COLS;
+                    const i_lobster = ((Math.floor(lobster.VCOL) - startVCOL) % COLS + COLS) % COLS;
                     if (i_lobster >= 0 && i_lobster < COLS) {
                         grid[R_lobster][i_lobster].char = '🦞';
                         grid[R_lobster][i_lobster].color = '#FFA500';
@@ -603,12 +619,11 @@
                 }
             });
 
-            // Render fish
+            // Fish
             fish.forEach(f => {
                 const R_fish = Math.floor(f.row);
                 if (R_fish >= 5 && R_fish < ROWS) {
-                    const VCOL_fish = Math.floor(f.VCOL);
-                    const i_fish = ((VCOL_fish - startVCOL) % COLS + COLS) % COLS;
+                    const i_fish = ((Math.floor(f.VCOL) - startVCOL) % COLS + COLS) % COLS;
                     if (i_fish >= 0 && i_fish < COLS) {
                         grid[R_fish][i_fish].char = '🐟';
                         grid[R_fish][i_fish].color = '#FFFF00';
@@ -616,7 +631,7 @@
                 }
             });
 
-            // Render surfer
+            // Surfer
             const surferR = Math.floor(surferY);
             if (surferR >= 0 && surferR < ROWS) {
                 grid[surferR][center_i].char = '🏄';
@@ -624,7 +639,7 @@
                 grid[surferR][center_i].className = 'surfer';
             }
 
-            // Convert grid to HTML
+            // Render grid
             let html = '';
             grid.forEach(row => {
                 html += '<div>';
@@ -641,11 +656,7 @@
             document.getElementById('gameOverModal').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
             updateHighScores(score);
-            if (score > highScores[9]) {
-                document.getElementById('highScoreMessage').style.display = 'block';
-            } else {
-                document.getElementById('highScoreMessage').style.display = 'none';
-            }
+            document.getElementById('highScoreMessage').style.display = score > highScores[9] ? 'block' : 'none';
         }
 
         function resetGame() {
@@ -660,6 +671,7 @@
             surferX = VIRTUAL_WIDTH / 2;
             surferY = ROWS - 1;
             surferVx = 0;
+            surferVy = 0;
             attachedWave = null;
             score = 0;
             wavesRidden = 0;
@@ -680,11 +692,10 @@
         }
 
         function displayHighScores() {
-            const highScoresList = document.getElementById('high-scores');
-            highScoresList.innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
+            document.getElementById('high-scores').innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
         }
 
-        // Event listeners for keyboard
+        // Keyboard controls
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') leftPressed = true;
             if (e.key === 'ArrowRight') rightPressed = true;
@@ -697,43 +708,37 @@
             if (e.key === 'ArrowUp') upPressed = false;
             if (e.key === 'ArrowDown') downPressed = false;
         });
+
+        // Joystick controls
+        const joystickArea = document.getElementById('joystickArea');
+        joystickArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            centerX = touch.clientX;
+            centerY = touch.clientY;
+        });
+
+        joystickArea.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const dx = touch.clientX - centerX;
+            const dy = touch.clientY - centerY;
+
+            leftPressed = dx < -threshold;
+            rightPressed = dx > threshold;
+            upPressed = dy < -threshold;
+            downPressed = dy > threshold;
+        });
+
+        joystickArea.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            leftPressed = false;
+            rightPressed = false;
+            upPressed = false;
+            downPressed = false;
+        });
+
         document.getElementById('resetButton').addEventListener('click', resetGame);
-
-        // Gesture controls for mobile
-        document.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            touchEndX = e.touches[0].clientX;
-            touchEndY = e.touches[0].clientY;
-        });
-
-        document.addEventListener('touchend', (e) => {
-            const dx = touchEndX - touchStartX;
-            const dy = touchEndY - touchStartY;
-            const absDx = Math.abs(dx);
-            const absDy = Math.abs(dy);
-
-            if (absDx > absDy && absDx > 30) {
-                if (dx > 0) {
-                    rightPressed = true;
-                    leftPressed = false;
-                } else {
-                    leftPressed = true;
-                    rightPressed = false;
-                }
-            } else if (absDy > absDx && absDy > 30) {
-                if (dy > 0) {
-                    downPressed = true;
-                    upPressed = false;
-                } else {
-                    upPressed = true;
-                    downPressed = false;
-                }
-            }
-        });
     </script>
 </body>
 </html>
