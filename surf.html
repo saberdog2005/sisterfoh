@@ -118,8 +118,14 @@
             color: white;
             border: 1px solid #777;
         }
-        #high-scores li {
-            color: white;
+        #high-scores {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #high-scores th, #high-scores td {
+            color: yellow;
+            padding: 5px;
+            border: 1px solid white;
         }
         .wave-color-0 { color: #ADD8E6; }
         .wave-color-1 { color: #87CEEB; }
@@ -177,7 +183,12 @@
         <p>Waves caught: <span id="wavesCaught">0</span></p>
         <p id="highScoreMessage" style="display:none">HIGH SCORE!</p>
         <h4>High Scores</h4>
-        <ol id="high-scores"></ol>
+        <table id="high-scores">
+            <tr>
+                <th>SCORE</th>
+                <th>WAVES CAUGHT</th>
+            </tr>
+        </table>
         <button id="resetButton">Play Again</button>
         <button id="screenshotButton">Take Screenshot</button>
     </div>
@@ -224,7 +235,7 @@
         let wavesRidden = 0;
         let previousAttachedWave = null;
         let colorIndex = 0;
-        let highScores = JSON.parse(localStorage.getItem('highScores')) || Array(10).fill(0);
+        let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
         let gameLoop;
 
         // Control variables for analog input
@@ -407,7 +418,7 @@
             const current = getWaterCurrent(surferY);
             if (!attachedWave) {
                 surferVx += (horizontalInput * ACCELERATION + current.vx) * DT;
-                surferVy -= (verticalInput * PLAYER_SPEED + current.vy) * DT; // Reversed vertical control
+                surferVy += (verticalInput * PLAYER_SPEED + current.vy) * DT; // Inverted back to original
                 surferX += surferVx * DT;
                 surferY += surferVy * DT;
                 surferVx *= 0.9; // Damping
@@ -790,7 +801,8 @@
             document.getElementById('finalScore').textContent = score;
             document.getElementById('wavesCaught').textContent = wavesRidden;
             updateHighScores(score);
-            document.getElementById('highScoreMessage').style.display = score > highScores[9] ? 'block' : 'none';
+            displayHighScores();
+            document.getElementById('highScoreMessage').style.display = highScores.some(hs => hs.score === score) ? 'block' : 'none';
         }
 
         function resetGame() {
@@ -819,15 +831,20 @@
         }
 
         function updateHighScores(newScore) {
-            highScores.push(newScore);
-            highScores.sort((a, b) => b - a);
+            highScores.push({ score: newScore, wavesCaught: wavesRidden });
+            highScores.sort((a, b) => b.score - a.score);
             highScores = highScores.slice(0, 10);
             localStorage.setItem('highScores', JSON.stringify(highScores));
-            displayHighScores();
         }
 
         function displayHighScores() {
-            document.getElementById('high-scores').innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
+            const highScoresTable = document.getElementById('high-scores');
+            highScoresTable.innerHTML = '<tr><th>SCORE</th><th>WAVES CAUGHT</th></tr>';
+            highScores.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${entry.score}</td><td>${entry.wavesCaught}</td>`;
+                highScoresTable.appendChild(row);
+            });
         }
 
         function takeScreenshot() {
