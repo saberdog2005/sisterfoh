@@ -7,7 +7,7 @@
     <style>
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0; /* Removed padding for edge-to-edge display */
             font-family: monospace;
             transition: background-color 1s ease;
         }
@@ -17,9 +17,10 @@
             align-items: center;
             gap: 20px;
             position: relative;
+            width: 100%; /* Ensure full width */
         }
         #gameGrid {
-            width: 100%;
+            width: 100%; /* Full width for edge-to-edge */
             height: 600px;
             font-size: 12px;
             white-space: pre;
@@ -37,7 +38,7 @@
             left: 0;
             width: 100%;
             height: calc(100% - 60px);
-            background-color: rgba(0, 0, 139, 0.3); /* Dark blue at 30% opacity */
+            background-color: rgba(0, 0, 139, 0.6); /* Increased to 60% opacity */
             pointer-events: none; /* Allows interaction with grid */
         }
         .controls {
@@ -92,6 +93,15 @@
         .sun { color: yellow; }
         .moon { color: white; }
         .star { color: white; }
+        h1, h2 {
+            color: white; /* Title and subtitle set to white */
+        }
+        /* Hide controls on mobile devices */
+        @media (max-width: 600px) {
+            .controls {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -100,7 +110,7 @@
     <div class="game-container">
         <div id="gameGrid"></div>
         <div id="waterOverlay"></div>
-        <div id="scoreDisplay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: green; font-size: 20px;">
+        <div id="scoreDisplay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: limegreen; font-size: 20px;">
             Score: <span id="current-score">0</span>
         </div>
         <div class="controls">
@@ -126,6 +136,7 @@
         const WAVE_INTERVAL = 1000; // ms
         const WAVE_SPEED = 3; // rows per second
         const ACCELERATION = 20; // columns per second squared
+        const WAVE_ACCELERATION = 30; // Higher acceleration on waves
         const PLAYER_SPEED = 10; // rows per second
         const TOLERANCE = 3; // columns
         const DT = 0.1; // seconds per frame
@@ -162,11 +173,17 @@
         let highScores = JSON.parse(localStorage.getItem('highScores')) || Array(10).fill(0);
         let gameLoop;
 
-        // Keyboard flags
+        // Control flags
         let leftPressed = false;
         let rightPressed = false;
         let upPressed = false;
         let downPressed = false;
+
+        // Touch gesture variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
 
         // Beach heights
         const beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
@@ -295,9 +312,14 @@
                 f.lifespan -= DT;
             });
             fish = fish.filter(f => f.lifespan > 0);
-            // Handle input
-            if (leftPressed) surferVx -= ACCELERATION * DT;
-            if (rightPressed) surferVx += ACCELERATION * DT;
+            // Handle input with dynamic acceleration
+            if (attachedWave) {
+                if (leftPressed) surferVx -= WAVE_ACCELERATION * DT;
+                if (rightPressed) surferVx += WAVE_ACCELERATION * DT;
+            } else {
+                if (leftPressed) surferVx -= ACCELERATION * DT;
+                if (rightPressed) surferVx += ACCELERATION * DT;
+            }
             surferX += surferVx * DT;
             surferVx *= 0.9; // damping
             surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
@@ -662,7 +684,7 @@
             highScoresList.innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
         }
 
-        // Event listeners
+        // Event listeners for keyboard
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') leftPressed = true;
             if (e.key === 'ArrowRight') rightPressed = true;
@@ -677,38 +699,40 @@
         });
         document.getElementById('resetButton').addEventListener('click', resetGame);
 
-        // Touch controls
-        document.getElementById('leftButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            leftPressed = true;
+        // Gesture controls for mobile
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         });
-        document.getElementById('leftButton').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            leftPressed = false;
+
+        document.addEventListener('touchmove', (e) => {
+            touchEndX = e.touches[0].clientX;
+            touchEndY = e.touches[0].clientY;
         });
-        document.getElementById('rightButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            rightPressed = true;
-        });
-        document.getElementById('rightButton').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            rightPressed = false;
-        });
-        document.getElementById('upButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            upPressed = true;
-        });
-        document.getElementById('upButton').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            upPressed = false;
-        });
-        document.getElementById('downButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            downPressed = true;
-        });
-        document.getElementById('downButton').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            downPressed = false;
+
+        document.addEventListener('touchend', (e) => {
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            if (absDx > absDy && absDx > 30) {
+                if (dx > 0) {
+                    rightPressed = true;
+                    leftPressed = false;
+                } else {
+                    leftPressed = true;
+                    rightPressed = false;
+                }
+            } else if (absDy > absDx && absDy > 30) {
+                if (dy > 0) {
+                    downPressed = true;
+                    upPressed = false;
+                } else {
+                    upPressed = true;
+                    downPressed = false;
+                }
+            }
         });
     </script>
 </body>
