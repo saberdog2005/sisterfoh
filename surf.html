@@ -24,7 +24,7 @@
             gap: 20px;
             position: relative;
             width: 100%;
-                max-height: 700px; /* Ensure max height */
+            max-height: 700px; /* Ensure max height */
         }
         #waterOverlay {
             position: absolute;
@@ -45,6 +45,10 @@
             overflow: hidden;
             transition: transform 0.1s ease;
             z-index: 2;
+            user-select: none; /* Prevent text selection on desktop */
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
         }
         #gameGrid div {
             height: 12px;
@@ -166,11 +170,11 @@
     </style>
 </head>
 <body>
-       <div class="game-container">
+    <div class="game-container">
         <div id="waterOverlay"></div>
         <div id="gameGrid"></div>
         <div id="scoreDisplay">
-            Score: <span id="current-score">0</span>
+            Score: <span id="current-score">0</span> Waves: <span id="waves-counter">0</span>
         </div>
         <div id="joystick"></div>
     </div>
@@ -182,6 +186,7 @@
         <h4>High Scores</h4>
         <table id="high-scores">
             <tr>
+                <th>NAME</th>
                 <th>SCORE</th>
                 <th>WAVES CAUGHT</th>
             </tr>
@@ -189,9 +194,7 @@
         <button id="resetButton">Play Again</button>
         <button id="screenshotButton">Take Screenshot</button>
     </div>
-    
     <h2><b>Surf's Up</b> - A Video Game by SABERDOG LLC</h2>
-
     <script>
         // Constants
         const ROWS = 50;
@@ -418,12 +421,12 @@
             const current = getWaterCurrent(surferY);
             if (!attachedWave) {
                 surferVx += (horizontalInput * ACCELERATION + current.vx) * DT;
-                surferVy += (verticalInput * PLAYER_SPEED + current.vy) * DT; // Inverted back to original
+                surferVy += (verticalInput * PLAYER_SPEED + current.vy) * DT;
                 surferX += surferVx * DT;
                 surferY += surferVy * DT;
                 surferVx *= 0.9; // Damping
                 surferVy *= 0.9; // Damping
-                surferY = Math.max(5, Math.min(ROWS - 1, surferY));
+                surferY = Math.max(5, Math.min(ROWS - 6, surferY)); // Prevent going on beach (assuming beach is last 5 rows)
             } else {
                 surferY = attachedWave.row;
                 const waveCrest = calculateCrestVirtualCol(attachedWave, attachedWave.row);
@@ -452,14 +455,15 @@
                 }
             });
 
-            // Update score
+            // Update score and waves counter
             if (attachedWave && attachedWave !== previousAttachedWave) {
                 wavesRidden++;
                 score += 100 * wavesRidden;
             }
-            if (attachedWave) score += 1;
+            if (attachedWave) score += 5; // 5 points per frame when on a wave
             previousAttachedWave = attachedWave;
             document.getElementById('current-score').textContent = score;
+            document.getElementById('waves-counter').textContent = wavesRidden;
 
             // Collision detection
             const surferRow = Math.floor(surferY);
@@ -545,31 +549,11 @@
         }
 
         function getBackgroundColor(timeOfDay) {
-            const keyPoints = [
-                { t: 0.0, color: '#000000' }, // Black for night
-                { t: 0.1, color: '#800000' }, // Dark red
-                { t: 0.2, color: '#FF0000' }, // Red
-                { t: 0.3, color: '#FFA500' }, // Orange for day
-                { t: 0.7, color: '#FFA500' }, // Orange for day
-                { t: 0.8, color: '#FF0000' }, // Red
-                { t: 0.9, color: '#800000' }, // Dark red
-                { t: 1.0, color: '#000000' }  // Black for night
-            ];
-            for (let i = 0; i < keyPoints.length - 1; i++) {
-                if (timeOfDay >= keyPoints[i].t && timeOfDay <= keyPoints[i + 1].t) {
-                    const t0 = keyPoints[i].t;
-                    const t1 = keyPoints[i + 1].t;
-                    const c0 = hexToRgb(keyPoints[i].color);
-                    const c1 = hexToRgb(keyPoints[i + 1].color);
-                    const ratio = (timeOfDay - t0) / (t1 - t0);
-                    return rgbToHex(
-                        interpolate(c0.r, c1.r, ratio),
-                        interpolate(c0.g, c1.g, ratio),
-                        interpolate(c0.b, c1.b, ratio)
-                    );
-                }
+            if (timeOfDay < 0.5) {
+                return '#87CEEB'; // Light blue for day (sun)
+            } else {
+                return '#000000'; // Black for night (moon)
             }
-            return '#000000';
         }
 
         function drawGrid() {
@@ -599,7 +583,7 @@
                     const R = ROWS - h + k;
                     grid[R][i].char = '.';
                     grid[R][i].color = 'black';
-                    grid[R][i].backgroundColor = '#FFA500'; // Orange beach
+                    grid[R][i].backgroundColor = 'rgba(218, 165, 32, 0.2)'; // Goldenrod with 20% opacity
                 }
             }
 
@@ -661,10 +645,10 @@
                 }
             }
 
-            // Depth layer with rotation
+            // Depth layer with rotation (shallow layers have more rotation)
             for (let R = 5; R < ROWS; R++) {
                 const depth = (R - 5) / (ROWS - 5);
-                const rotationOffset = angle * (1 - depth) * 0.5;
+                const rotationOffset = angle * depth * 0.5; // Shallow layers (lower depth) have more rotation
                 for (let i = 0; i < COLS; i++) {
                     const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
                     const baseColor = hexToRgb('#00008B');
@@ -680,7 +664,7 @@
             // Debris layer with rotation
             for (let R = 5; R < ROWS; R++) {
                 const depth = (R - 5) / (ROWS - 5);
-                const rotationOffset = angle * (1 - depth) * 0.3;
+                const rotationOffset = angle * depth * 0.3;
                 for (let i = 0; i < COLS; i++) {
                     if (Math.random() < 0.02 && grid[R][i].char === ' ') {
                         const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
@@ -831,7 +815,8 @@
         }
 
         function updateHighScores(newScore) {
-            highScores.push({ score: newScore, wavesCaught: wavesRidden });
+            const name = prompt("Enter your name for the high score:", "Player");
+            highScores.push({ name: name || "Anonymous", score: newScore, wavesCaught: wavesRidden });
             highScores.sort((a, b) => b.score - a.score);
             highScores = highScores.slice(0, 10);
             localStorage.setItem('highScores', JSON.stringify(highScores));
@@ -839,10 +824,10 @@
 
         function displayHighScores() {
             const highScoresTable = document.getElementById('high-scores');
-            highScoresTable.innerHTML = '<tr><th>SCORE</th><th>WAVES CAUGHT</th></tr>';
+            highScoresTable.innerHTML = '<tr><th>NAME</th><th>SCORE</th><th>WAVES CAUGHT</th></tr>';
             highScores.forEach(entry => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${entry.score}</td><td>${entry.wavesCaught}</td>`;
+                row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td><td>${entry.wavesCaught}</td>`;
                 highScoresTable.appendChild(row);
             });
         }
