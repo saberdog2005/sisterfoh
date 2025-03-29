@@ -167,7 +167,7 @@
         const VIRTUAL_WIDTH = 200;
         const WAVE_INTERVAL = 1000; // ms
         const WAVE_SPEED = 3; // rows per second
-        const ACCELERATION = 20; // columns per second squared
+        const ACCELERATION = 40; // Increased for faster response
         const WAVE_ACCELERATION = 30; // Higher acceleration on waves
         const PLAYER_SPEED = 10; // rows per second
         const TOLERANCE = 3; // columns
@@ -309,7 +309,6 @@
         }
 
         function getWaterCurrent(row) {
-            // Simulate water currents based on depth
             const depth = (row - 5) / (ROWS - 5);
             const currentVx = Math.sin(t + depth * Math.PI) * 5; // Horizontal current
             const currentVy = Math.cos(t + depth * Math.PI) * 2; // Vertical current
@@ -386,25 +385,23 @@
             const current = getWaterCurrent(surferY);
             if (!attachedWave) {
                 surferVx += (horizontalInput * ACCELERATION + current.vx) * DT;
-                surferVy += (verticalInput * PLAYER_SPEED + current.vy) * DT;
+                surferVy -= (verticalInput * PLAYER_SPEED + current.vy) * DT; // Reversed vertical control
                 surferX += surferVx * DT;
                 surferY += surferVy * DT;
                 surferVx *= 0.9; // Damping
                 surferVy *= 0.9; // Damping
-                // Constrain player within water (rows 5 to ROWS - 1)
                 surferY = Math.max(5, Math.min(ROWS - 1, surferY));
             } else {
-                // Trailing vector when riding a wave
                 surferY = attachedWave.row;
                 const waveCrest = calculateCrestVirtualCol(attachedWave, attachedWave.row);
                 const dx = waveCrest - surferX;
-                surferVx += (horizontalInput * WAVE_ACCELERATION + dx * 0.5) * DT; // Follow wave crest
-                surferVy = WAVE_SPEED; // Match wave's downward speed
+                surferVx += (horizontalInput * WAVE_ACCELERATION + dx * 0.5) * DT;
+                surferVy = WAVE_SPEED;
                 surferX += surferVx * DT;
-                surferVx *= 0.9; // Damping
+                surferVx *= 0.9;
                 if (verticalInput < -0.5) {
                     attachedWave = null;
-                    surferVy = -PLAYER_SPEED; // Jump off wave
+                    surferVy = -PLAYER_SPEED;
                 }
             }
             surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
@@ -598,11 +595,13 @@
                 }
             });
 
-            // Sun or moon
-            const celestialRow = 2;
+            // Sun or moon on an arc
             const celestialCol = Math.floor((timeOfDay * COLS) % COLS);
-            grid[celestialRow][celestialCol].char = timeOfDay < 0.5 ? '☀' : '🌙';
-            grid[celestialRow][celestialCol].color = timeOfDay < 0.5 ? 'yellow' : 'white';
+            const celestialRow = Math.floor(2 - 2 * Math.sin(timeOfDay * Math.PI)); // Arc movement
+            if (celestialRow >= 0 && celestialRow < 5) {
+                grid[celestialRow][celestialCol].char = timeOfDay < 0.5 ? '☀' : '🌙';
+                grid[celestialRow][celestialCol].color = timeOfDay < 0.5 ? 'yellow' : 'white';
+            }
 
             // Stars
             if (timeOfDay >= 0.5 && timeOfDay < 0.75) {
@@ -618,13 +617,13 @@
 
             // Water layers with rotation based on camera angle
             const speed = Math.sqrt(surferVx * surferVx + surferVy * surferVy);
-            const angle = Math.min(Math.max(surferVx * 0.1, -10), 10) * (speed / 20); // More pronounced at high speed
+            const angle = Math.min(Math.max(surferVx * 0.1, -10), 10) * (speed / 20);
 
             // Base water layer
             for (let R = 5; R < ROWS; R++) {
                 for (let i = 0; i < COLS; i++) {
                     if (grid[R][i].backgroundColor === '') {
-                        grid[R][i].backgroundColor = '#00008B'; // Deep blue base
+                        grid[R][i].backgroundColor = '#00008B';
                     }
                 }
             }
@@ -632,7 +631,7 @@
             // Depth layer with rotation
             for (let R = 5; R < ROWS; R++) {
                 const depth = (R - 5) / (ROWS - 5);
-                const rotationOffset = angle * (1 - depth) * 0.5; // Shallower layers rotate more
+                const rotationOffset = angle * (1 - depth) * 0.5;
                 for (let i = 0; i < COLS; i++) {
                     const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
                     const baseColor = hexToRgb('#00008B');
@@ -653,7 +652,7 @@
                     if (Math.random() < 0.02 && grid[R][i].char === ' ') {
                         const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
                         grid[R][i].char = '.';
-                        grid[R][i].color = '#808080'; // Gray debris
+                        grid[R][i].color = '#808080';
                     }
                 }
             }
@@ -674,7 +673,7 @@
                             grid[R_wave][i_wave].char = char;
                             grid[R_wave][i_wave].color = wave.color;
                             if (Math.random() < 0.1 && R_wave > 5) {
-                                grid[R_wave - 1][i_wave].char = '*'; // Reflection
+                                grid[R_wave - 1][i_wave].char = '*';
                                 grid[R_wave - 1][i_wave].color = 'white';
                             }
                         }
@@ -737,7 +736,7 @@
                     const i_octopus = ((Math.floor(octopus.VCOL) - startVCOL) % COLS + COLS) % COLS;
                     if (i_octopus >= 0 && i_octopus < COLS) {
                         grid[R_octopus][i_octopus].char = '🐙';
-                        grid[R_octopus][i_octopus].color = '#800080'; // Purple
+                        grid[R_octopus][i_octopus].color = '#800080';
                     }
                 }
             });
@@ -810,13 +809,12 @@
 
         function takeScreenshot() {
             const canvas = document.createElement('canvas');
-            canvas.width = COLS * 12; // Approximate pixel width
-            canvas.height = ROWS * 12; // Approximate pixel height
+            canvas.width = COLS * 12;
+            canvas.height = ROWS * 12;
             const ctx = canvas.getContext('2d');
             ctx.font = '12px monospace';
             ctx.textBaseline = 'top';
 
-            // Draw the grid onto the canvas
             const gridElement = document.getElementById('gameGrid');
             const rows = gridElement.getElementsByTagName('div');
             for (let r = 0; r < rows.length; r++) {
@@ -831,7 +829,6 @@
                 }
             }
 
-            // Download the screenshot
             const link = document.createElement('a');
             link.download = 'surfs_up_screenshot.png';
             link.href = canvas.toDataURL('image/png');
