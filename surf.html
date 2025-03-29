@@ -20,19 +20,6 @@
             position: relative;
             width: 100%;
         }
-        #gameGrid {
-            width: 100%;
-            height: 600px;
-            font-size: 12px;
-            white-space: pre;
-            background: transparent;
-            overflow: hidden;
-            transition: transform 0.1s ease;
-        }
-        #gameGrid div {
-            height: 12px;
-            line-height: 12px;
-        }
         #waterOverlay {
             position: absolute;
             top: 60px;
@@ -41,15 +28,40 @@
             height: calc(100% - 60px);
             background-color: rgb(0, 0, 139, 0.6);
             pointer-events: none;
+            z-index: 1;
+        }
+        #gameGrid {
+            width: 100%;
+            height: 600px;
+            font-size: 12px;
+            white-space: pre;
+            background: transparent;
+            overflow: hidden;
+            transition: transform 0.1s ease;
+            z-index: 2;
+        }
+        #gameGrid div {
+            height: 12px;
+            line-height: 12px;
+        }
+        #scoreDisplay {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: limegreen;
+            font-size: 20px;
+            z-index: 3;
         }
         #joystickArea {
             position: absolute;
             bottom: 0;
-            left: 50%; /* Center horizontally */
-            transform: translate(-50%, 0);
+            left: 50%;
+            transform: translateX(-50%);
             width: 10vw;
             height: 10vw;
             background: #ccc;
+            z-index: 3;
         }
         .controls {
             padding: 10px;
@@ -84,7 +96,7 @@
         .wave-color-2 { color: #00BFFF; }
         .wave-color-3 { color: #1E90FF; }
         .wave-color-4 { color: #0000CD; }
-        .sand-color-0 { color: #FFBF00; } /* Amber color for beach */
+        .sand-color-0 { color: #FFFF00; } /* Yellow color for beach */
         .sand-color-1 { color: #DEB887; }
         .sand-color-2 { color: #CD853F; }
         .sand-color-3 { color: #A0522D; }
@@ -117,9 +129,9 @@
     <h1 style="text-align: center;">Surf's Up</h1>
     <h2 style="text-align: center;">A Video Game by SABERDOG LLC</h2>
     <div class="game-container">
-        <div id="gameGrid"></div>
         <div id="waterOverlay"></div>
-        <div id="scoreDisplay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: limegreen; font-size: 20px;">
+        <div id="gameGrid"></div>
+        <div id="scoreDisplay">
             Score: <span id="current-score">0</span>
         </div>
         <div id="joystickArea"></div>
@@ -148,7 +160,7 @@
         const DT = 0.1; // seconds per frame
         const UMBRELLA_ROW = ROWS - 2;
         const WAVE_COLORS = ['#ADD8E6', '#87CEEB', '#00BFFF', '#1E90FF', '#0000CD'];
-        const sandColors = ['#FFBF00', '#DEB887', '#CD853F', '#A0522D', '#8B4513'];
+        const sandColors = ['#FFFF00', '#DEB887', '#CD853F', '#A0522D', '#8B4513'];
         const SHARK_MIN_ROW = 5;
         const SHARK_MAX_ROW = 45;
         const SHARK_SPEED_MIN = 10;
@@ -207,7 +219,7 @@
         const mountain_speeds = [0.05];
 
         // Wave generation
-        setTimeout(() => {
+        setInterval(() => {
             const shape = ['sine', 'square', 'triangle'][Math.floor(Math.random() * 3)];
             const A = Math.random() * 10 + 5;
             const K = Math.random() * 0.3 + 0.2;
@@ -219,13 +231,13 @@
         }, WAVE_INTERVAL);
 
         // Shark generation
-        setTimeout(createShark, 25000);
+        setInterval(createShark, 25000);
 
         // Boat generation
-        setTimeout(createBoat, 50000);
+        setInterval(createBoat, 50000);
 
         // Lobster generation
-        setTimeout(() => {
+        setInterval(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
             const lifespan = 10 + Math.random() * 5;
@@ -233,7 +245,7 @@
         }, 5000);
 
         // Fish generation
-        setTimeout(() => {
+        setInterval(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
             const lifespan = 10 + Math.random() * 5;
@@ -241,7 +253,7 @@
         }, 3000);
 
         // Start game loop
-        gameLoop = setTimeout(() => {
+        gameLoop = setInterval(() => {
             updateGame();
             drawGrid();
         }, DT * 1000);
@@ -442,15 +454,15 @@
         function drawGrid() {
             const center_i = Math.floor(COLS / 2);
             const startVCOL = (Math.floor(surferX) - center_i + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-            let grid = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => ({char: ' ', color: 'black'})));
+            let grid = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => ({char: ' ', color: 'transparent', backgroundColor: ''})));
 
             // Background color based on time
             const dayCycle = 120;
             const timeOfDay = (gameTime % dayCycle) / dayCycle;
-            document.body.style.background = getBackgroundColor(timeOfDay);
+            document.body.style.backgroundColor = getBackgroundColor(timeOfDay);
 
             // Render sky (rows 0-4)
-            let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#1E90FF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
+            let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#BFEFFF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
             for (let R = 0; R < 5; R++) {
                 for (let i = 0; i < COLS; i++) {
                     grid[R][i].char = '.';
@@ -458,7 +470,19 @@
                 }
             }
 
-            // Mountains
+            // Render beach with yellow background
+            for (let i = 0; i < COLS; i++) {
+                const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
+                const h = beachHeights[VCOL];
+                for (let k = 0; k < h; k++) {
+                    const R = ROWS - h + k;
+                    grid[R][i].char = '.';
+                    grid[R][i].color = 'black';
+                    grid[R][i].backgroundColor = '#FFFF00';
+                }
+            }
+
+            // Render mountains
             mountains.forEach(mountain => {
                 const s = mountain_speeds[mountain.layer];
                 let render_vcol = (mountain.vcol - s * surferX) % VIRTUAL_WIDTH;
@@ -470,7 +494,7 @@
                 }
             });
 
-            // Clouds (wave parallax in sky)
+            // Render clouds
             clouds.forEach(cloud => {
                 const s = cloud_speeds[cloud.layer];
                 let render_vcol = (cloud.vcol - s * surferX) % VIRTUAL_WIDTH;
@@ -501,82 +525,7 @@
                 }
             }
 
-            // Beach with amber color
-            for (let i = 0; i < COLS; i++) {
-                const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
-                const h = beachHeights[VCOL];
-                for (let k = 0; k < h; k++) {
-                    const R = ROWS - h + k;
-                    grid[R][i].char = '.';
-                    grid[R][i].color = sandColors[0]; // Amber
-                }
-            }
-
-            // Water base layer
-            for (let R = 5; R < ROWS; R++) {
-                for (let i = 0; i < COLS; i++) {
-                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
-                    const h = beachHeights[VCOL];
-                    if (R < ROWS - h) {
-                        grid[R][i].char = '.';
-                        grid[R][i].color = 'blue'; // Basic water color
-                    }
-                }
-            }
-
-            // Water depth layer
-            for (let R = 5; R < ROWS; R++) {
-                for (let i = 0; i < COLS; i++) {
-                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
-                    const h = beachHeights[VCOL];
-                    if (R < ROWS - h) {
-                        // Calculate depth-based color modification
-                        const depth = R - 5; // depth from top of water
-                        const maxDepth = ROWS - h - 5;
-                        const shade = Math.min(1, depth / maxDepth);
-                        const r = Math.floor(0 * shade);
-                        const g = Math.floor(0 * shade);
-                        const b = Math.floor(139 * shade);
-                        grid[R][i].color = `rgb(${r}, ${g}, ${b})`;
-                    }
-                }
-            }
-
-            // Water aquatic layer (fish and lobsters)
-            fish.forEach(f => {
-                const R_fish = Math.floor(f.row);
-                if (R_fish >= 5 && R_fish < ROWS) {
-                    const i_fish = ((Math.floor(f.VCOL) - startVCOL) % COLS + COLS) % COLS;
-                    if (i_fish >= 0 && i_fish < COLS) {
-                        grid[R_fish][i_fish].char = '🐟';
-                        grid[R_fish][i_fish].color = '#FFFF00';
-                    }
-                }
-            });
-            lobsters.forEach(lobster => {
-                const R_lobster = Math.floor(lobster.row);
-                if (R_lobster >= 5 && R_lobster < ROWS) {
-                    const i_lobster = ((Math.floor(lobster.VCOL) - startVCOL) % COLS + COLS) % COLS;
-                    if (i_lobster >= 0 && i_lobster < COLS) {
-                        grid[R_lobster][i_lobster].char = '🦞';
-                        grid[R_lobster][i_lobster].color = '#FFA500';
-                    }
-                }
-            });
-
-            // Water debris layer
-            for (let R = 5; R < ROWS; R++) {
-                for (let i = 0; i < COLS; i++) {
-                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
-                    const h = beachHeights[VCOL];
-                    if (R < ROWS - h && Math.random() < 0.001) { // Low probability for debris
-                        grid[R][i].char = '*';
-                        grid[R][i].color = 'gray';
-                    }
-                }
-            }
-
-            // Wave layer
+            // Render waves
             activeWaves.forEach(wave => {
                 const R_wave = Math.floor(wave.row);
                 if (R_wave >= 5 && R_wave < ROWS) {
@@ -596,19 +545,7 @@
                 }
             });
 
-            // Water surface layer (light reflections)
-            for (let R = 5; R < ROWS; R++) {
-                for (let i = 0; i < COLS; i++) {
-                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
-                    const h = beachHeights[VCOL];
-                    if (R < ROWS - h && Math.random() < 0.01) { // Random light reflections
-                        grid[R][i].char = '*';
-                        grid[R][i].color = 'white';
-                    }
-                }
-            }
-
-            // Sharks
+            // Render sharks
             sharks.forEach(shark => {
                 const R_shark = Math.floor(shark.row);
                 if (R_shark >= 5 && R_shark < ROWS) {
@@ -620,7 +557,7 @@
                 }
             });
 
-            // Boats and ships
+            // Render boats
             boats.forEach(boat => {
                 const R_boat = Math.floor(boat.row);
                 if (R_boat >= 5 && R_boat < ROWS) {
@@ -632,7 +569,31 @@
                 }
             });
 
-            // Surfer
+            // Render lobsters
+            lobsters.forEach(lobster => {
+                const R_lobster = Math.floor(lobster.row);
+                if (R_lobster >= 5 && R_lobster < ROWS) {
+                    const i_lobster = ((Math.floor(lobster.VCOL) - startVCOL) % COLS + COLS) % COLS;
+                    if (i_lobster >= 0 && i_lobster < COLS) {
+                        grid[R_lobster][i_lobster].char = '🦞';
+                        grid[R_lobster][i_lobster].color = '#FFA500';
+                    }
+                }
+            });
+
+            // Render fish
+            fish.forEach(f => {
+                const R_fish = Math.floor(f.row);
+                if (R_fish >= 5 && R_fish < ROWS) {
+                    const i_fish = ((Math.floor(f.VCOL) - startVCOL) % COLS + COLS) % COLS;
+                    if (i_fish >= 0 && i_fish < COLS) {
+                        grid[R_fish][i_fish].char = '🐟';
+                        grid[R_fish][i_fish].color = '#FFFF00';
+                    }
+                }
+            });
+
+            // Render surfer
             const surferR = Math.floor(surferY);
             if (surferR >= 0 && surferR < ROWS) {
                 grid[surferR][center_i].char = '🏄';
@@ -640,12 +601,13 @@
                 grid[surferR][center_i].className = 'surfer';
             }
 
-            // Render grid
+            // Convert grid to HTML
             let html = '';
             grid.forEach(row => {
                 html += '<div>';
                 row.forEach(cell => {
-                    html += `<span class="${cell.className || ''}" style="color: ${cell.color}">${cell.char}</span>`;
+                    const style = `color: ${cell.color}; background-color: ${cell.backgroundColor || 'transparent'}`;
+                    html += `<span class="${cell.className || ''}" style="${style}">${cell.char}</span>`;
                 });
                 html += '</div>';
             });
@@ -653,7 +615,7 @@
         }
 
         function gameOver() {
-            clearTimeout(gameLoop);
+            clearInterval(gameLoop);
             document.getElementById('gameOverModal').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
             updateHighScores(score);
@@ -678,7 +640,7 @@
             wavesRidden = 0;
             previousAttachedWave = null;
             colorIndex = 0;
-            gameLoop = setTimeout(() => {
+            gameLoop = setInterval(() => {
                 updateGame();
                 drawGrid();
             }, DT * 1000);
@@ -695,11 +657,6 @@
         function displayHighScores() {
             document.getElementById('high-scores').innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
         }
-
-        // Keyboard controls
-        document.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        });
 
         // Joystick controls
         const joystickArea = document.getElementById('joystickArea');
