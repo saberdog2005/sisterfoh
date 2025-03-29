@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-      <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
+    <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surf's Up</title>
@@ -45,7 +45,8 @@
         #joystickArea {
             position: absolute;
             bottom: 0;
-            right: 0;
+            left: 50%; /* Center horizontally */
+            transform: translate(-50%, 0);
             width: 10vw;
             height: 10vw;
             background: #ccc;
@@ -362,7 +363,7 @@
             lobsters = lobsters.filter(lobster => {
                 const R_lobster = Math.floor(lobster.row);
                 const VCOL_lobster = Math.floor(lobster.VCOL);
-                if (R_lobster === surferRow && VCOL_lobster === surferVCOL) {
+                if (R_lobster == surferRow && VCOL_lobster == surferVCOL) {
                     score += 300;
                     return false;
                 }
@@ -371,7 +372,7 @@
             fish = fish.filter(f => {
                 const R_fish = Math.floor(f.row);
                 const VCOL_fish = Math.floor(f.VCOL);
-                if (R_fish === surferRow && VCOL_fish === surferVCOL) {
+                if (R_fish == surferRow && VCOL_fish == surferVCOL) {
                     score += 50;
                     return false;
                 }
@@ -448,7 +449,7 @@
             const timeOfDay = (gameTime % dayCycle) / dayCycle;
             document.body.style.background = getBackgroundColor(timeOfDay);
 
-            // Sky (rows 0-4)
+            // Render sky (rows 0-4)
             let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#1E90FF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
             for (let R = 0; R < 5; R++) {
                 for (let i = 0; i < COLS; i++) {
@@ -511,31 +512,71 @@
                 }
             }
 
-            // Background objects
-            backgroundObjects.forEach(obj => {
-                const s = layer_speeds[obj.layer];
-                let render_vcol = (obj.vcol - s * surferX) % VIRTUAL_WIDTH;
-                if (render_vcol < 0) render_vcol += VIRTUAL_WIDTH;
-                const i = ((Math.floor(render_vcol) - startVCOL) % COLS + COLS) % COLS;
-                if (i >= 0 && i < COLS && beachHeights[Math.floor(obj.vcol)] >= 2) {
-                    const R = ROWS - 2;
-                    if (obj.type === 'umbrella') {
-                        grid[R][i].char = '⛱';
-                        grid[R][i].color = '#FF4500';
-                    } else if (obj.type === 'person') {
-                        grid[R][i].char = '🏖';
-                        grid[R][i].color = '#8B4513';
-                    } else if (obj.type === 'palm') {
-                        grid[R][i].char = '🌴';
-                        grid[R][i].color = 'green';
-                    } else if (obj.type === 'rock') {
-                        grid[R][i].char = '🪨';
-                        grid[R][i].color = 'gray';
+            // Water base layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
+                    const h = beachHeights[VCOL];
+                    if (R < ROWS - h) {
+                        grid[R][i].char = '.';
+                        grid[R][i].color = 'blue'; // Basic water color
+                    }
+                }
+            }
+
+            // Water depth layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
+                    const h = beachHeights[VCOL];
+                    if (R < ROWS - h) {
+                        // Calculate depth-based color modification
+                        const depth = R - 5; // depth from top of water
+                        const maxDepth = ROWS - h - 5;
+                        const shade = Math.min(1, depth / maxDepth);
+                        const r = Math.floor(0 * shade);
+                        const g = Math.floor(0 * shade);
+                        const b = Math.floor(139 * shade);
+                        grid[R][i].color = `rgb(${r}, ${g}, ${b})`;
+                    }
+                }
+            }
+
+            // Water aquatic layer (fish and lobsters)
+            fish.forEach(f => {
+                const R_fish = Math.floor(f.row);
+                if (R_fish >= 5 && R_fish < ROWS) {
+                    const i_fish = ((Math.floor(f.VCOL) - startVCOL) % COLS + COLS) % COLS;
+                    if (i_fish >= 0 && i_fish < COLS) {
+                        grid[R_fish][i_fish].char = '🐟';
+                        grid[R_fish][i_fish].color = '#FFFF00';
+                    }
+                }
+            });
+            lobsters.forEach(lobster => {
+                const R_lobster = Math.floor(lobster.row);
+                if (R_lobster >= 5 && R_lobster < ROWS) {
+                    const i_lobster = ((Math.floor(lobster.VCOL) - startVCOL) % COLS + COLS) % COLS;
+                    if (i_lobster >= 0 && i_lobster < COLS) {
+                        grid[R_lobster][i_lobster].char = '🦞';
+                        grid[R_lobster][i_lobster].color = '#FFA500';
                     }
                 }
             });
 
-            // Waves
+            // Water debris layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
+                    const h = beachHeights[VCOL];
+                    if (R < ROWS - h && Math.random() < 0.001) { // Low probability for debris
+                        grid[R][i].char = '*';
+                        grid[R][i].color = 'gray';
+                    }
+                }
+            }
+
+            // Wave layer
             activeWaves.forEach(wave => {
                 const R_wave = Math.floor(wave.row);
                 if (R_wave >= 5 && R_wave < ROWS) {
@@ -554,6 +595,18 @@
                     }
                 }
             });
+
+            // Water surface layer (light reflections)
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
+                    const h = beachHeights[VCOL];
+                    if (R < ROWS - h && Math.random() < 0.01) { // Random light reflections
+                        grid[R][i].char = '*';
+                        grid[R][i].color = 'white';
+                    }
+                }
+            }
 
             // Sharks
             sharks.forEach(shark => {
@@ -575,30 +628,6 @@
                     if (i_boat >= 0 && i_boat < COLS) {
                         grid[R_boat][i_boat].char = boat.type === 'ship' ? '🚢' : '⛵';
                         grid[R_boat][i_boat].color = boat.type === 'ship' ? '#808080' : '#8B4513';
-                    }
-                }
-            });
-
-            // Lobsters
-            lobsters.forEach(lobster => {
-                const R_lobster = Math.floor(lobster.row);
-                if (R_lobster >= 5 && R_lobster < ROWS) {
-                    const i_lobster = ((Math.floor(lobster.VCOL) - startVCOL) % COLS + COLS) % COLS;
-                    if (i_lobster >= 0 && i_lobster < COLS) {
-                        grid[R_lobster][i_lobster].char = '🦞';
-                        grid[R_lobster][i_lobster].color = '#FFA500';
-                    }
-                }
-            });
-
-            // Fish
-            fish.forEach(f => {
-                const R_fish = Math.floor(f.row);
-                if (R_fish >= 5 && R_fish < ROWS) {
-                    const i_fish = ((Math.floor(f.VCOL) - startVCOL) % COLS + COLS) % COLS;
-                    if (i_fish >= 0 && i_fish < COLS) {
-                        grid[R_fish][i_fish].char = '🐟';
-                        grid[R_fish][i_fish].color = '#FFFF00';
                     }
                 }
             });
@@ -677,7 +706,7 @@
         joystickArea.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            const joystickRect = joystickArea.getBoundingRect();
+            const joystickRect = joystickArea.getBoundingClientRect();
             centerX = joystickRect.left + joystickRect.width / 2;
             centerY = joystickRect.top + joystickRect.height / 2;
             halfWidth = joystickRect.width / 2;
