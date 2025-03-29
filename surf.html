@@ -11,6 +11,10 @@
             padding: 0;
             font-family: monospace;
             transition: background-color 1s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100vh;
         }
         .game-container {
             display: flex;
@@ -26,7 +30,7 @@
             left: 0;
             width: 100%;
             height: calc(100% - 60px);
-            background-color: rgb(0, 0, 139, 0.6);
+            background-color: rgba(0, 0, 139, 0.6);
             pointer-events: none;
             z-index: 1;
         }
@@ -59,6 +63,7 @@
             background: #ccc;
             align-self: center;
             margin-top: 10px;
+            margin-bottom: 10px;
         }
         .controls {
             padding: 10px;
@@ -87,13 +92,20 @@
             padding: 20px;
             border: 1px solid black;
             z-index: 1000;
+            text-align: center;
+        }
+        #resetButton, #screenshotButton {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
         }
         .wave-color-0 { color: #ADD8E6; }
         .wave-color-1 { color: #87CEEB; }
         .wave-color-2 { color: #00BFFF; }
         .wave-color-3 { color: #1E90FF; }
         .wave-color-4 { color: #0000CD; }
-        .sand-color-0 { color: #FFFF00; }
+        .sand-color-0 { color: #FFA500; } /* Orange beach */
         .sand-color-1 { color: #DEB887; }
         .sand-color-2 { color: #CD853F; }
         .sand-color-3 { color: #A0522D; }
@@ -136,10 +148,11 @@
     <div id="gameOverModal">
         <h2>Game Over</h2>
         <p>Your score: <span id="finalScore"></span></p>
-        <p id="highScoreMessage" style="display:none">HIGH SCORE.</p>
+        <p id="highScoreMessage" style="display:none">HIGH SCORE!</p>
         <h4>High Scores</h4>
         <ol id="high-scores"></ol>
         <button id="resetButton">Play Again</button>
+        <button id="screenshotButton">Take Screenshot</button>
     </div>
     <script>
         // Constants
@@ -150,14 +163,11 @@
         const WAVE_SPEED = 3; // rows per second
         const ACCELERATION = 20; // columns per second squared
         const WAVE_ACCELERATION = 30; // Higher acceleration on waves
-        const PLAYER_SPEED = 60; // Increased for vertical movement
-        const GRAVITY = 50; // rows per second squared
-        const JUMP_VELOCITY = 10; // rows per second
+        const PLAYER_SPEED = 10; // rows per second
         const TOLERANCE = 3; // columns
         const DT = 0.1; // seconds per frame
         const UMBRELLA_ROW = ROWS - 2;
         const WAVE_COLORS = ['#ADD8E6', '#87CEEB', '#00BFFF', '#1E90FF', '#0000CD'];
-        const sandColors = ['#FFFF00', '#DEB887', '#CD853F', '#A0522D', '#8B4513'];
         const SHARK_MIN_ROW = 5;
         const SHARK_MAX_ROW = 45;
         const SHARK_SPEED_MIN = 10;
@@ -293,6 +303,14 @@
             octopuses.push({ row, VCOL, speed, lifespan });
         }
 
+        function getWaterCurrent(row) {
+            // Simulate water currents based on depth
+            const depth = (row - 5) / (ROWS - 5);
+            const currentVx = Math.sin(t + depth * Math.PI) * 5; // Horizontal current
+            const currentVy = Math.cos(t + depth * Math.PI) * 2; // Vertical current
+            return { vx: currentVx, vy: currentVy };
+        }
+
         function updateGame() {
             t += DT;
             gameTime += DT;
@@ -312,7 +330,7 @@
                     shark.row += (dy / distance) * speed * DT;
                 }
                 shark.VCOL = (shark.VCOL + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-                shark.row = Math.max(0, Math.min(ROWS - 1, shark.row));
+                shark.row = Math.max(5, Math.min(ROWS - 1, shark.row));
                 shark.lifespan -= DT;
             });
             sharks = sharks.filter(shark => shark.lifespan > 0);
@@ -330,7 +348,7 @@
                     const color = WAVE_COLORS[colorIndex % WAVE_COLORS.length];
                     colorIndex++;
                     const VCOL_center = boat.VCOL;
-                    activeWaves.push({ A, K, PHI, V: WAVE_SPEED, row: boat.row, color, VCOL_center });
+                    activeWaves.push({ A, K, PHI, V: WAVE_SPEED, row: boat.row, color, VCOL_center, shape: 'sine' });
                     boat.waveTimer = Math.random() * (BOAT_WAVE_INTERVAL_MAX - BOAT_WAVE_INTERVAL_MIN) + BOAT_WAVE_INTERVAL_MIN;
                 }
                 boat.lifespan -= DT;
@@ -354,32 +372,50 @@
                     octopus.row += (dy / distance) * speed * DT;
                 }
                 octopus.VCOL = (octopus.VCOL + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-                octopus.row = Math.max(0, Math.min(ROWS - 1, octopus.row));
+                octopus.row = Math.max(5, Math.min(ROWS - 1, octopus.row));
                 octopus.lifespan -= DT;
             });
             octopuses = octopuses.filter(octopus => octopus.lifespan > 0);
 
-            // Handle player movement
+            // Handle player movement with water currents
+            const current = getWaterCurrent(surferY);
             if (!attachedWave) {
-                surferVx += horizontalInput * ACCELERATION * DT;
-                surferVy += verticalInput * PLAYER_SPEED * DT + GRAVITY * DT;
-                surferY += surferVy * DT;
+                surferVx += (horizontalInput * ACCELERATION + current.vx) * DT;
+                surferVy += (verticalInput * PLAYER_SPEED + current.vy) * DT;
                 surferX += surferVx * DT;
+                surferY += surferVy * DT;
                 surferVx *= 0.9; // Damping
-                if (surferY > ROWS - 1) {
-                    surferY = ROWS - 1;
-                    surferVy = 0;
-                }
+                surferVy *= 0.9; // Damping
+                // Constrain player within water (rows 5 to ROWS - 1)
+                surferY = Math.max(5, Math.min(ROWS - 1, surferY));
             } else {
+                // Trailing vector when riding a wave
                 surferY = attachedWave.row;
-                surferVx += horizontalInput * WAVE_ACCELERATION * DT;
+                const waveCrest = calculateCrestVirtualCol(attachedWave, attachedWave.row);
+                const dx = waveCrest - surferX;
+                surferVx += (horizontalInput * WAVE_ACCELERATION + dx * 0.5) * DT; // Follow wave crest
+                surferVy = WAVE_SPEED; // Match wave's downward speed
                 surferX += surferVx * DT;
                 surferVx *= 0.9; // Damping
                 if (verticalInput < -0.5) {
                     attachedWave = null;
-                    surferVy = -JUMP_VELOCITY;
+                    surferVy = -PLAYER_SPEED; // Jump off wave
                 }
             }
+            surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
+
+            // Check for wave attachment
+            attachedWave = null;
+            activeWaves.forEach(wave => {
+                const R_wave = Math.floor(wave.row);
+                if (Math.abs(surferY - R_wave) < 1) {
+                    const crestVCOL = calculateCrestVirtualCol(wave, R_wave);
+                    const dist = Math.min(Math.abs(surferX - crestVCOL), VIRTUAL_WIDTH - Math.abs(surferX - crestVCOL));
+                    if (dist < TOLERANCE) {
+                        attachedWave = wave;
+                    }
+                }
+            });
 
             // Update score
             if (attachedWave && attachedWave !== previousAttachedWave) {
@@ -401,7 +437,7 @@
             lobsters = lobsters.filter(lobster => {
                 const R_lobster = Math.floor(lobster.row);
                 const VCOL_lobster = Math.floor(lobster.VCOL);
-                if (R_lobster == surferRow && VCOL_lobster == surferVCOL) {
+                if (R_lobster === surferRow && VCOL_lobster === surferVCOL) {
                     score += 300;
                     return false;
                 }
@@ -410,7 +446,7 @@
             fish = fish.filter(f => {
                 const R_fish = Math.floor(f.row);
                 const VCOL_fish = Math.floor(f.VCOL);
-                if (R_fish == surferRow && VCOL_fish == surferVCOL) {
+                if (R_fish === surferRow && VCOL_fish === surferVCOL) {
                     score += 50;
                     return false;
                 }
@@ -419,14 +455,15 @@
             octopuses = octopuses.filter(octopus => {
                 const R_octopus = Math.floor(octopus.row);
                 const VCOL_octopus = Math.floor(octopus.VCOL);
-                if (R_octopus == surferRow && VCOL_octopus == surferVCOL) {
+                if (R_octopus === surferRow && VCOL_octopus === surferVCOL) {
                     score += 10000;
                     return false;
                 }
                 return true;
             });
 
-            // Camera tilt
+            // Camera tilt based on speed
+            const speed = Math.sqrt(surferVx * surferVx + surferVy * surferVy);
             const angle = Math.min(Math.max(surferVx * 0.1, -10), 10);
             document.getElementById('gameGrid').style.transform = `rotate(${angle}deg)`;
         }
@@ -518,7 +555,7 @@
                     const R = ROWS - h + k;
                     grid[R][i].char = '.';
                     grid[R][i].color = 'black';
-                    grid[R][i].backgroundColor = '#FFFF00'; // Yellow beach
+                    grid[R][i].backgroundColor = '#FFA500'; // Orange beach
                 }
             }
 
@@ -565,8 +602,11 @@
                 }
             }
 
-            // Water layers (5 layers)
-            // 1. Base water layer
+            // Water layers with rotation based on camera angle
+            const speed = Math.sqrt(surferVx * surferVx + surferVy * surferVy);
+            const angle = Math.min(Math.max(surferVx * 0.1, -10), 10) * (speed / 20); // More pronounced at high speed
+
+            // Base water layer
             for (let R = 5; R < ROWS; R++) {
                 for (let i = 0; i < COLS; i++) {
                     if (grid[R][i].backgroundColor === '') {
@@ -575,10 +615,12 @@
                 }
             }
 
-            // 2. Depth layer
+            // Depth layer with rotation
             for (let R = 5; R < ROWS; R++) {
+                const depth = (R - 5) / (ROWS - 5);
+                const rotationOffset = angle * (1 - depth) * 0.5; // Shallower layers rotate more
                 for (let i = 0; i < COLS; i++) {
-                    const depth = (R - 5) / (ROWS - 5);
+                    const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
                     const baseColor = hexToRgb('#00008B');
                     const shallowColor = hexToRgb('#00CED1');
                     grid[R][i].backgroundColor = rgbToHex(
@@ -589,18 +631,20 @@
                 }
             }
 
-            // 3. Aquatic layer (fish and lobsters handled below)
-            // 4. Debris layer
+            // Debris layer with rotation
             for (let R = 5; R < ROWS; R++) {
+                const depth = (R - 5) / (ROWS - 5);
+                const rotationOffset = angle * (1 - depth) * 0.3;
                 for (let i = 0; i < COLS; i++) {
                     if (Math.random() < 0.02 && grid[R][i].char === ' ') {
+                        const rotatedI = Math.floor((i + rotationOffset + COLS) % COLS);
                         grid[R][i].char = '.';
                         grid[R][i].color = '#808080'; // Gray debris
                     }
                 }
             }
 
-            // 5. Surface layer (waves and reflections)
+            // Surface layer (waves and reflections)
             activeWaves.forEach(wave => {
                 const R_wave = Math.floor(wave.row);
                 if (R_wave >= 5 && R_wave < ROWS) {
@@ -615,7 +659,7 @@
                         if (i_wave >= 0 && i_wave < COLS) {
                             grid[R_wave][i_wave].char = char;
                             grid[R_wave][i_wave].color = wave.color;
-                            if (Math.random() < 0.1) {
+                            if (Math.random() < 0.1 && R_wave > 5) {
                                 grid[R_wave - 1][i_wave].char = '*'; // Reflection
                                 grid[R_wave - 1][i_wave].color = 'white';
                             }
@@ -686,7 +730,7 @@
 
             // Render surfer
             const surferR = Math.floor(surferY);
-            if (surferR >= 0 && surferR < ROWS) {
+            if (surferR >= 5 && surferR < ROWS) {
                 grid[surferR][center_i].char = '🏄';
                 grid[surferR][center_i].color = 'red';
                 grid[surferR][center_i].className = 'surfer';
@@ -750,6 +794,36 @@
             document.getElementById('high-scores').innerHTML = highScores.map(score => `<li>${score}</li>`).join('');
         }
 
+        function takeScreenshot() {
+            const canvas = document.createElement('canvas');
+            canvas.width = COLS * 12; // Approximate pixel width
+            canvas.height = ROWS * 12; // Approximate pixel height
+            const ctx = canvas.getContext('2d');
+            ctx.font = '12px monospace';
+            ctx.textBaseline = 'top';
+
+            // Draw the grid onto the canvas
+            const gridElement = document.getElementById('gameGrid');
+            const rows = gridElement.getElementsByTagName('div');
+            for (let r = 0; r < rows.length; r++) {
+                const spans = rows[r].getElementsByTagName('span');
+                for (let c = 0; c < spans.length; c++) {
+                    const span = spans[c];
+                    const style = window.getComputedStyle(span);
+                    ctx.fillStyle = style.backgroundColor === 'transparent' ? '#000000' : style.backgroundColor;
+                    ctx.fillRect(c * 12, r * 12, 12, 12);
+                    ctx.fillStyle = style.color;
+                    ctx.fillText(span.textContent, c * 12, r * 12);
+                }
+            }
+
+            // Download the screenshot
+            const link = document.createElement('a');
+            link.download = 'surfs_up_screenshot.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
         // Joystick controls
         const joystickArea = document.getElementById('joystickArea');
         joystickArea.addEventListener('touchstart', (e) => {
@@ -782,6 +856,7 @@
         });
 
         document.getElementById('resetButton').addEventListener('click', resetGame);
+        document.getElementById('screenshotButton').addEventListener('click', takeScreenshot);
     </script>
 </body>
 </html>
