@@ -25,6 +25,7 @@
             position: relative;
             width: 100%;
             height: calc(100vh - 60px); /* Adjust height to fit viewport */
+            max-height: 700px; /* Ensure max height */
         }
         #waterOverlay {
             position: absolute;
@@ -59,6 +60,17 @@
             font-size: 20px;
             z-index: 3;
         }
+        #joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #ccc;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+        }
         .highlight {
             animation: highlight 0.5s ease;
         }
@@ -90,7 +102,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: #333;
+            color: white;
             padding: 20px;
             border: 1px solid black;
             z-index: 1000;
@@ -101,6 +114,12 @@
             padding: 10px 20px;
             margin: 10px;
             cursor: pointer;
+            background: #555;
+            color: white;
+            border: 1px solid #777;
+        }
+        #high-scores li {
+            color: white;
         }
         .wave-color-0 { color: #ADD8E6; }
         .wave-color-1 { color: #87CEEB; }
@@ -150,10 +169,12 @@
         <div id="scoreDisplay">
             Score: <span id="current-score">0</span>
         </div>
+        <div id="joystick"></div>
     </div>
     <div id="gameOverModal">
         <h2>Game Over</h2>
         <p>Your score: <span id="finalScore"></span></p>
+        <p>Waves caught: <span id="wavesCaught">0</span></p>
         <p id="highScoreMessage" style="display:none">HIGH SCORE!</p>
         <h4>High Scores</h4>
         <ol id="high-scores"></ol>
@@ -210,6 +231,7 @@
         let horizontalInput = 0;
         let verticalInput = 0;
         let touchStartX, touchStartY;
+        let activeTouchId = null;
 
         // Beach heights with smoothing
         let beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
@@ -766,6 +788,7 @@
             clearInterval(gameLoop);
             document.getElementById('gameOverModal').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
+            document.getElementById('wavesCaught').textContent = wavesRidden;
             updateHighScores(score);
             document.getElementById('highScoreMessage').style.display = score > highScores[9] ? 'block' : 'none';
         }
@@ -835,29 +858,49 @@
             link.click();
         }
 
-        // Touch controls on the entire screen
-        document.body.addEventListener('touchstart', (e) => {
+        // Joystick control
+        const joystick = document.getElementById('joystick');
+        joystick.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.touches[0];
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
+            if (activeTouchId === null && e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                activeTouchId = touch.identifier;
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+            }
         });
 
-        document.body.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            let dx = touch.clientX - touchStartX;
-            let dy = touch.clientY - touchStartY;
-            horizontalInput = dx / (window.innerWidth / 2);
-            verticalInput = dy / (window.innerHeight / 2);
-            horizontalInput = Math.max(-1, Math.min(horizontalInput, 1));
-            verticalInput = Math.max(-1, Math.min(verticalInput, 1));
+        document.addEventListener('touchmove', (e) => {
+            if (activeTouchId !== null) {
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === activeTouchId) {
+                        let dx = touch.clientX - touchStartX;
+                        let dy = touch.clientY - touchStartY;
+                        const maxDistance = 50;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance > maxDistance) {
+                            dx = (dx / distance) * maxDistance;
+                            dy = (dy / distance) * maxDistance;
+                        }
+                        joystick.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                        horizontalInput = dx / maxDistance;
+                        verticalInput = dy / maxDistance;
+                        break;
+                    }
+                }
+            }
         });
 
-        document.body.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            horizontalInput = 0;
-            verticalInput = 0;
+        document.addEventListener('touchend', (e) => {
+            for (let touch of e.changedTouches) {
+                if (touch.identifier === activeTouchId) {
+                    activeTouchId = null;
+                    joystick.style.transform = 'translate(-50%, -50%)';
+                    horizontalInput = 0;
+                    verticalInput = 0;
+                    break;
+                }
+            }
         });
 
         document.getElementById('resetButton').addEventListener('click', resetGame);
