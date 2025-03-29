@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-       <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Surf's Up</title>
@@ -40,14 +38,16 @@
             left: 0;
             width: 100%;
             height: calc(100% - 60px);
-            background-color: rgba(0, 0, 139, 0.6);
+            background-color: rgb(0, 0, 139, 0.6);
             pointer-events: none;
         }
         #joystickArea {
-            width: 100%;
-            height: 100px;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 10vw;
+            height: 10vw;
             background: #ccc;
-            position: relative;
         }
         .controls {
             padding: 10px;
@@ -82,7 +82,7 @@
         .wave-color-2 { color: #00BFFF; }
         .wave-color-3 { color: #1E90FF; }
         .wave-color-4 { color: #0000CD; }
-        .sand-color-0 { color: #EDC9AF; }
+        .sand-color-0 { color: #FFBF00; } /* Amber color for beach */
         .sand-color-1 { color: #DEB887; }
         .sand-color-2 { color: #CD853F; }
         .sand-color-3 { color: #A0522D; }
@@ -120,11 +120,12 @@
         <div id="scoreDisplay" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: limegreen; font-size: 20px;">
             Score: <span id="current-score">0</span>
         </div>
+        <div id="joystickArea"></div>
     </div>
     <div id="gameOverModal">
         <h2>Game Over</h2>
         <p>Your score: <span id="finalScore"></span></p>
-        <p id="highScoreMessage" style="display:none">HIGH SCORE!</p>
+        <p id="highScoreMessage" style="display:none">HIGH SCORE.</p>
         <h4>High Scores</h4>
         <ol id="high-scores"></ol>
         <button id="resetButton">Play Again</button>
@@ -145,7 +146,7 @@
         const DT = 0.1; // seconds per frame
         const UMBRELLA_ROW = ROWS - 2;
         const WAVE_COLORS = ['#ADD8E6', '#87CEEB', '#00BFFF', '#1E90FF', '#0000CD'];
-        const sandColors = ['#EDC9AF', '#DEB887', '#CD853F', '#A0522D', '#8B4513'];
+        const sandColors = ['#FFBF00', '#DEB887', '#CD853F', '#A0522D', '#8B4513'];
         const SHARK_MIN_ROW = 5;
         const SHARK_MAX_ROW = 45;
         const SHARK_SPEED_MIN = 10;
@@ -177,15 +178,11 @@
         let highScores = JSON.parse(localStorage.getItem('highScores')) || Array(10).fill(0);
         let gameLoop;
 
-        // Control flags
-        let leftPressed = false;
-        let rightPressed = false;
-        let upPressed = false;
-        let downPressed = false;
-
-        // Joystick variables
+        // Control variables for analog input
+        let horizontalInput = 0;
+        let verticalInput = 0;
         let centerX, centerY;
-        const threshold = 20;
+        let halfWidth, halfHeight;
 
         // Beach heights
         const beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
@@ -200,15 +197,15 @@
         const layer_speeds = [0.2, 0.4, 0.6, 0.8];
 
         // Clouds for wave parallax in sky
-        const clouds = Array.from({length: 10}, () => ({ vcol: Math.random() * VIRTUAL_WIDTH, layer: Math.floor(Math.random() * 3) }));
-        const cloud_speeds = [0.1, 0.2, 0.3];
+        const clouds = Array.from({length: 5}, () => ({ vcol: Math.random() * VIRTUAL_WIDTH, layer: Math.floor(Math.random() * 3) }));
+        const cloud_speeds = [0.05, 0.1, 0.15];
 
         // Mountains for additional depth
         const mountains = Array.from({length: 5}, () => ({ vcol: Math.random() * VIRTUAL_WIDTH, layer: 0 }));
         const mountain_speeds = [0.05];
 
         // Wave generation
-        setInterval(() => {
+        setTimeout(() => {
             const shape = ['sine', 'square', 'triangle'][Math.floor(Math.random() * 3)];
             const A = Math.random() * 10 + 5;
             const K = Math.random() * 0.3 + 0.2;
@@ -220,13 +217,13 @@
         }, WAVE_INTERVAL);
 
         // Shark generation
-        setInterval(createShark, 25000);
+        setTimeout(createShark, 25000);
 
         // Boat generation
-        setInterval(createBoat, 50000);
+        setTimeout(createBoat, 50000);
 
         // Lobster generation
-        setInterval(() => {
+        setTimeout(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
             const lifespan = 10 + Math.random() * 5;
@@ -234,7 +231,7 @@
         }, 5000);
 
         // Fish generation
-        setInterval(() => {
+        setTimeout(() => {
             const row = Math.floor(Math.random() * (ROWS - 6 - 5)) + 5;
             const VCOL = Math.random() * VIRTUAL_WIDTH;
             const lifespan = 10 + Math.random() * 5;
@@ -242,7 +239,7 @@
         }, 3000);
 
         // Start game loop
-        gameLoop = setInterval(() => {
+        gameLoop = setTimeout(() => {
             updateGame();
             drawGrid();
         }, DT * 1000);
@@ -319,50 +316,29 @@
 
             // Handle player movement
             if (!attachedWave) {
-                if (leftPressed) surferVx -= ACCELERATION * DT;
-                if (rightPressed) surferVx += ACCELERATION * DT;
-                if (upPressed) surferVy -= PLAYER_SPEED * DT;
-                if (downPressed) surferVy += PLAYER_SPEED * DT;
-                surferVy += GRAVITY * DT;
+                // Analog control for horizontal movement
+                surferVx += horizontalInput * ACCELERATION * DT;
+                // Analog control for vertical movement
+                surferVy += verticalInput * PLAYER_SPEED * DT + GRAVITY * DT;
                 surferY += surferVy * DT;
                 surferX += surferVx * DT;
                 surferVx *= 0.9; // Damping
-                surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
                 if (surferY > ROWS - 1) {
                     surferY = ROWS - 1;
                     surferVy = 0;
                 }
             } else {
+                // Attached to wave
                 surferY = attachedWave.row;
-                if (leftPressed) surferVx -= WAVE_ACCELERATION * DT;
-                if (rightPressed) surferVx += WAVE_ACCELERATION * DT;
+                // Analog control for horizontal movement
+                surferVx += horizontalInput * WAVE_ACCELERATION * DT;
                 surferX += surferVx * DT;
                 surferVx *= 0.9; // Damping
-                surferX = (surferX + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-                if (upPressed) {
+                // Detach from wave if up input is detected
+                if (verticalInput < -0.5) {
                     attachedWave = null;
-                    surferVy = -JUMP_VELOCITY; // Jump off wave
+                    surferVy = -JUMP_VELOCITY;
                 }
-            }
-
-            // Stop inertia when controls are released
-            if (!leftPressed && !rightPressed) surferVx = 0;
-
-            // Wave attachment
-            if (!attachedWave) {
-                for (let wave of activeWaves) {
-                    const C = calculateCrestVirtualCol(wave, wave.row);
-                    const distance = Math.min(Math.abs(surferX - C), VIRTUAL_WIDTH - Math.abs(surferX - C));
-                    if (Math.abs(surferY - wave.row) < 1 && distance < TOLERANCE) {
-                        attachedWave = wave;
-                        surferVy = 0;
-                        break;
-                    }
-                }
-            } else {
-                const C = calculateCrestVirtualCol(attachedWave, attachedWave.row);
-                const distance = Math.min(Math.abs(surferX - C), VIRTUAL_WIDTH - Math.abs(surferX - C));
-                if (distance > TOLERANCE) attachedWave = null;
             }
 
             // Update score
@@ -469,7 +445,7 @@
             // Background color based on time
             const dayCycle = 120;
             const timeOfDay = (gameTime % dayCycle) / dayCycle;
-            document.body.style.backgroundColor = getBackgroundColor(timeOfDay);
+            document.body.style.background = getBackgroundColor(timeOfDay);
 
             // Sky (rows 0-4)
             let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#1E90FF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
@@ -530,7 +506,7 @@
                 for (let k = 0; k < h; k++) {
                     const R = ROWS - h + k;
                     grid[R][i].char = '.';
-                    grid[R][i].color = '#FFBF00'; // Amber
+                    grid[R][i].color = sandColors[0]; // Amber
                 }
             }
 
@@ -647,7 +623,7 @@
         }
 
         function gameOver() {
-            clearInterval(gameLoop);
+            clearTimeout(gameLoop);
             document.getElementById('gameOverModal').style.display = 'block';
             document.getElementById('finalScore').textContent = score;
             updateHighScores(score);
@@ -672,7 +648,7 @@
             wavesRidden = 0;
             previousAttachedWave = null;
             colorIndex = 0;
-            gameLoop = setInterval(() => {
+            gameLoop = setTimeout(() => {
                 updateGame();
                 drawGrid();
             }, DT * 1000);
@@ -691,17 +667,8 @@
         }
 
         // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') leftPressed = true;
-            if (e.key === 'ArrowRight') rightPressed = true;
-            if (e.key === 'ArrowUp') upPressed = true;
-            if (e.key === 'ArrowDown') downPressed = true;
-        });
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft') leftPressed = false;
-            if (e.key === 'ArrowRight') rightPressed = false;
-            if (e.key === 'ArrowUp') upPressed = false;
-            if (e.key === 'ArrowDown') downPressed = false;
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
         });
 
         // Joystick controls
@@ -709,28 +676,31 @@
         joystickArea.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            centerX = touch.clientX;
-            centerY = touch.clientY;
+            const joystickRect = joystickArea.getBoundingRect();
+            centerX = joystickRect.left + joystickRect.width / 2;
+            centerY = joystickRect.top + joystickRect.height / 2;
+            halfWidth = joystickRect.width / 2;
+            halfHeight = joystickRect.height / 2;
         });
 
         joystickArea.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            const dx = touch.clientX - centerX;
-            const dy = touch.clientY - centerY;
-
-            leftPressed = dx < -threshold;
-            rightPressed = dx > threshold;
-            upPressed = dy < -threshold;
-            downPressed = dy > threshold;
+            let touchX = touch.clientX;
+            let touchY = touch.clientY;
+            let dx = touchX - centerX;
+            let dy = touchY - centerY;
+            // Clamp within bounds
+            dx = Math.max(-halfWidth, Math.min(dx, halfWidth));
+            dy = Math.max(-halfHeight, Math.min(dy, halfHeight));
+            horizontalInput = dx / halfWidth;
+            verticalInput = dy / halfHeight;
         });
 
         joystickArea.addEventListener('touchend', (e) => {
             e.preventDefault();
-            leftPressed = false;
-            rightPressed = false;
-            upPressed = false;
-            downPressed = false;
+            horizontalInput = 0;
+            verticalInput = 0;
         });
 
         document.getElementById('resetButton').addEventListener('click', resetGame);
