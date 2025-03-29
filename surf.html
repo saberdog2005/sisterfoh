@@ -54,14 +54,11 @@
             z-index: 3;
         }
         #joystickArea {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
             width: 10vw;
             height: 10vw;
             background: #ccc;
-            z-index: 3;
+            align-self: center;
+            margin-top: 10px;
         }
         .controls {
             padding: 10px;
@@ -96,7 +93,7 @@
         .wave-color-2 { color: #00BFFF; }
         .wave-color-3 { color: #1E90FF; }
         .wave-color-4 { color: #0000CD; }
-        .sand-color-0 { color: #FFFF00; } /* Yellow color for beach */
+        .sand-color-0 { color: #FFFF00; }
         .sand-color-1 { color: #DEB887; }
         .sand-color-2 { color: #CD853F; }
         .sand-color-3 { color: #A0522D; }
@@ -153,7 +150,7 @@
         const WAVE_SPEED = 3; // rows per second
         const ACCELERATION = 20; // columns per second squared
         const WAVE_ACCELERATION = 30; // Higher acceleration on waves
-        const PLAYER_SPEED = 10; // rows per second
+        const PLAYER_SPEED = 60; // Increased for vertical movement
         const GRAVITY = 50; // rows per second squared
         const JUMP_VELOCITY = 10; // rows per second
         const TOLERANCE = 3; // columns
@@ -180,6 +177,7 @@
         let boats = [];
         let lobsters = [];
         let fish = [];
+        let octopuses = [];
         let surferX = VIRTUAL_WIDTH / 2;
         let surferY = ROWS - 1;
         let surferVx = 0;
@@ -198,8 +196,14 @@
         let centerX, centerY;
         let halfWidth, halfHeight;
 
-        // Beach heights
-        const beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
+        // Beach heights with smoothing
+        let beachHeights = Array.from({length: VIRTUAL_WIDTH}, () => Math.floor(Math.random() * 5) + 1);
+        const smoothedHeights = beachHeights.map((h, i) => {
+            const prev = beachHeights[(i - 1 + VIRTUAL_WIDTH) % VIRTUAL_WIDTH];
+            const next = beachHeights[(i + 1) % VIRTUAL_WIDTH];
+            return Math.floor((prev + h + next) / 3);
+        });
+        beachHeights = smoothedHeights;
 
         // Background objects with additional layers
         const backgroundObjects = Array.from({length: 30}, () => {
@@ -252,6 +256,9 @@
             fish.push({ row, VCOL, lifespan });
         }, 3000);
 
+        // Octopus generation (rare, every 60 seconds)
+        setInterval(createOctopus, 60000);
+
         // Start game loop
         gameLoop = setInterval(() => {
             updateGame();
@@ -276,6 +283,14 @@
             const waveTimer = Math.random() * (BOAT_WAVE_INTERVAL_MAX - BOAT_WAVE_INTERVAL_MIN) + BOAT_WAVE_INTERVAL_MIN;
             const lifespan = 10 + Math.random() * 5;
             boats.push({ row, VCOL, speed, waveTimer, type, lifespan });
+        }
+
+        function createOctopus() {
+            const row = Math.floor(Math.random() * (SHARK_MAX_ROW - SHARK_MIN_ROW + 1)) + SHARK_MIN_ROW;
+            const VCOL = Math.random() * VIRTUAL_WIDTH;
+            const speed = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * (SHARK_SPEED_MAX - SHARK_SPEED_MIN) + SHARK_SPEED_MIN);
+            const lifespan = 10 + Math.random() * 5;
+            octopuses.push({ row, VCOL, speed, lifespan });
         }
 
         function updateGame() {
@@ -328,11 +343,25 @@
             fish.forEach(f => f.lifespan -= DT);
             fish = fish.filter(f => f.lifespan > 0);
 
+            // Update octopuses
+            octopuses.forEach(octopus => {
+                const dx = surferX - octopus.VCOL;
+                const dy = surferY - octopus.row;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > 0) {
+                    const speed = 3;
+                    octopus.VCOL += (dx / distance) * speed * DT;
+                    octopus.row += (dy / distance) * speed * DT;
+                }
+                octopus.VCOL = (octopus.VCOL + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
+                octopus.row = Math.max(0, Math.min(ROWS - 1, octopus.row));
+                octopus.lifespan -= DT;
+            });
+            octopuses = octopuses.filter(octopus => octopus.lifespan > 0);
+
             // Handle player movement
             if (!attachedWave) {
-                // Analog control for horizontal movement
                 surferVx += horizontalInput * ACCELERATION * DT;
-                // Analog control for vertical movement
                 surferVy += verticalInput * PLAYER_SPEED * DT + GRAVITY * DT;
                 surferY += surferVy * DT;
                 surferX += surferVx * DT;
@@ -342,13 +371,10 @@
                     surferVy = 0;
                 }
             } else {
-                // Attached to wave
                 surferY = attachedWave.row;
-                // Analog control for horizontal movement
                 surferVx += horizontalInput * WAVE_ACCELERATION * DT;
                 surferX += surferVx * DT;
                 surferVx *= 0.9; // Damping
-                // Detach from wave if up input is detected
                 if (verticalInput < -0.5) {
                     attachedWave = null;
                     surferVy = -JUMP_VELOCITY;
@@ -364,7 +390,7 @@
             previousAttachedWave = attachedWave;
             document.getElementById('current-score').textContent = score;
 
-            // Shark collision
+            // Collision detection
             const surferRow = Math.floor(surferY);
             const surferVCOL = Math.floor(surferX);
             if (sharks.some(shark => Math.floor(shark.row) === surferRow && Math.floor(shark.VCOL) === surferVCOL)) {
@@ -386,6 +412,15 @@
                 const VCOL_fish = Math.floor(f.VCOL);
                 if (R_fish == surferRow && VCOL_fish == surferVCOL) {
                     score += 50;
+                    return false;
+                }
+                return true;
+            });
+            octopuses = octopuses.filter(octopus => {
+                const R_octopus = Math.floor(octopus.row);
+                const VCOL_octopus = Math.floor(octopus.VCOL);
+                if (R_octopus == surferRow && VCOL_octopus == surferVCOL) {
+                    score += 10000;
                     return false;
                 }
                 return true;
@@ -430,9 +465,14 @@
 
         function getBackgroundColor(timeOfDay) {
             const keyPoints = [
-                { t: 0.0, color: '#000000' }, { t: 0.1, color: '#FF0000' }, { t: 0.2, color: '#FFFF00' },
-                { t: 0.3, color: '#0000FF' }, { t: 0.7, color: '#0000FF' }, { t: 0.8, color: '#FFFF00' },
-                { t: 0.9, color: '#FF0000' }, { t: 1.0, color: '#000000' }
+                { t: 0.0, color: '#000000' }, // Black for night
+                { t: 0.1, color: '#800000' }, // Dark red
+                { t: 0.2, color: '#FF0000' }, // Red
+                { t: 0.3, color: '#FFA500' }, // Orange for day
+                { t: 0.7, color: '#FFA500' }, // Orange for day
+                { t: 0.8, color: '#FF0000' }, // Red
+                { t: 0.9, color: '#800000' }, // Dark red
+                { t: 1.0, color: '#000000' }  // Black for night
             ];
             for (let i = 0; i < keyPoints.length - 1; i++) {
                 if (timeOfDay >= keyPoints[i].t && timeOfDay <= keyPoints[i + 1].t) {
@@ -454,14 +494,14 @@
         function drawGrid() {
             const center_i = Math.floor(COLS / 2);
             const startVCOL = (Math.floor(surferX) - center_i + VIRTUAL_WIDTH) % VIRTUAL_WIDTH;
-            let grid = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => ({char: ' ', color: 'transparent', backgroundColor: ''})));
+            let grid = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => ({char: ' ', color: 'black', backgroundColor: ''})));
 
             // Background color based on time
             const dayCycle = 120;
             const timeOfDay = (gameTime % dayCycle) / dayCycle;
             document.body.style.backgroundColor = getBackgroundColor(timeOfDay);
 
-            // Render sky (rows 0-4)
+            // Sky (rows 0-4)
             let skyColor = timeOfDay < 0.25 ? '#87CEEB' : timeOfDay < 0.5 ? '#BFEFFF' : timeOfDay < 0.75 ? '#FFA500' : '#00008B';
             for (let R = 0; R < 5; R++) {
                 for (let i = 0; i < COLS; i++) {
@@ -470,7 +510,7 @@
                 }
             }
 
-            // Render beach with yellow background
+            // Beach with smoothed heights
             for (let i = 0; i < COLS; i++) {
                 const VCOL = (startVCOL + i) % VIRTUAL_WIDTH;
                 const h = beachHeights[VCOL];
@@ -478,11 +518,11 @@
                     const R = ROWS - h + k;
                     grid[R][i].char = '.';
                     grid[R][i].color = 'black';
-                    grid[R][i].backgroundColor = '#FFFF00';
+                    grid[R][i].backgroundColor = '#FFFF00'; // Yellow beach
                 }
             }
 
-            // Render mountains
+            // Mountains
             mountains.forEach(mountain => {
                 const s = mountain_speeds[mountain.layer];
                 let render_vcol = (mountain.vcol - s * surferX) % VIRTUAL_WIDTH;
@@ -494,7 +534,7 @@
                 }
             });
 
-            // Render clouds
+            // Clouds
             clouds.forEach(cloud => {
                 const s = cloud_speeds[cloud.layer];
                 let render_vcol = (cloud.vcol - s * surferX) % VIRTUAL_WIDTH;
@@ -525,7 +565,42 @@
                 }
             }
 
-            // Render waves
+            // Water layers (5 layers)
+            // 1. Base water layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    if (grid[R][i].backgroundColor === '') {
+                        grid[R][i].backgroundColor = '#00008B'; // Deep blue base
+                    }
+                }
+            }
+
+            // 2. Depth layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    const depth = (R - 5) / (ROWS - 5);
+                    const baseColor = hexToRgb('#00008B');
+                    const shallowColor = hexToRgb('#00CED1');
+                    grid[R][i].backgroundColor = rgbToHex(
+                        interpolate(baseColor.r, shallowColor.r, depth * 0.5),
+                        interpolate(baseColor.g, shallowColor.g, depth * 0.5),
+                        interpolate(baseColor.b, shallowColor.b, depth * 0.5)
+                    );
+                }
+            }
+
+            // 3. Aquatic layer (fish and lobsters handled below)
+            // 4. Debris layer
+            for (let R = 5; R < ROWS; R++) {
+                for (let i = 0; i < COLS; i++) {
+                    if (Math.random() < 0.02 && grid[R][i].char === ' ') {
+                        grid[R][i].char = '.';
+                        grid[R][i].color = '#808080'; // Gray debris
+                    }
+                }
+            }
+
+            // 5. Surface layer (waves and reflections)
             activeWaves.forEach(wave => {
                 const R_wave = Math.floor(wave.row);
                 if (R_wave >= 5 && R_wave < ROWS) {
@@ -540,6 +615,10 @@
                         if (i_wave >= 0 && i_wave < COLS) {
                             grid[R_wave][i_wave].char = char;
                             grid[R_wave][i_wave].color = wave.color;
+                            if (Math.random() < 0.1) {
+                                grid[R_wave - 1][i_wave].char = '*'; // Reflection
+                                grid[R_wave - 1][i_wave].color = 'white';
+                            }
                         }
                     }
                 }
@@ -593,6 +672,18 @@
                 }
             });
 
+            // Render octopuses
+            octopuses.forEach(octopus => {
+                const R_octopus = Math.floor(octopus.row);
+                if (R_octopus >= 5 && R_octopus < ROWS) {
+                    const i_octopus = ((Math.floor(octopus.VCOL) - startVCOL) % COLS + COLS) % COLS;
+                    if (i_octopus >= 0 && i_octopus < COLS) {
+                        grid[R_octopus][i_octopus].char = '🐙';
+                        grid[R_octopus][i_octopus].color = '#800080'; // Purple
+                    }
+                }
+            });
+
             // Render surfer
             const surferR = Math.floor(surferY);
             if (surferR >= 0 && surferR < ROWS) {
@@ -631,6 +722,7 @@
             boats = [];
             lobsters = [];
             fish = [];
+            octopuses = [];
             surferX = VIRTUAL_WIDTH / 2;
             surferY = ROWS - 1;
             surferVx = 0;
@@ -677,7 +769,6 @@
             let touchY = touch.clientY;
             let dx = touchX - centerX;
             let dy = touchY - centerY;
-            // Clamp within bounds
             dx = Math.max(-halfWidth, Math.min(dx, halfWidth));
             dy = Math.max(-halfHeight, Math.min(dy, halfHeight));
             horizontalInput = dx / halfWidth;
