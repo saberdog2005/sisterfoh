@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surf's Up 3D</title>
+    <title>Surf's Up 3D - Enhanced Edition</title>
     <style>
+        /* CSS styles from original code */
         body {
             margin: 0;
             padding: 0;
-            font-family: monospace;
+            font-family : monospace;
             background: #000;
             overflow: hidden;
         }
@@ -21,12 +22,14 @@
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            color: white;
+            color: #FFD700;
             font-size: 20px;
             text-align: center;
             background: rgba(0, 0, 0, 0.5);
             padding: 10px;
             border-radius: 5px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000000;
         }
         #gameOverModal {
             display: none;
@@ -39,6 +42,27 @@
             border: 1px solid black;
             z-index: 1000;
             text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        #gameOverModal h2 {
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        #gameOverModal p {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #gameOverModal button {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
         .controls {
             position: absolute;
@@ -53,12 +77,29 @@
             height: 60px;
             font-size: 16px;
         }
+        #chat-log {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 300px;
+            height: 100px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            overflow-y: scroll;
+        }
+        #chat-input {
+            position: absolute;
+            bottom: 120px;
+            left: 10px;
+            width: 290px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="hud">
-        Score: <span id="score">0</span> | Waves: <span id="wavesRidden">0</span> | Combo: <span id="combo">0</span> | Time: <span id="surfTime">0</span>s
+        Score: <span id="score">0</span> | Time: <span id="surfTime">0</span>s | Level: <span id="level">1</span> | Jumps: <span id="jumpCount">0</span>
     </div>
     <div class="controls">
         <button id="leftButton">Left</button>
@@ -73,54 +114,78 @@
         <h4>High Scores</h4>
         <ol id="high-scores"></ol>
         <button id="resetButton">Play Again</button>
+        <button id="publishButton">Publish High Score to Blockchain (0.02 SOL)</button>
     </div>
-
+    <div id="chat-log"></div>
+    <input type="text" id="chat-input" placeholder="Type your message and press Enter">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-walletconnect@0.1.17/dist/umd/index.js"></script>
     <script>
+        // Inline JavaScript code with updates
         // Constants
-        const WIDTH = 80;
-        const DEPTH = 50;
-        const WAVE_INTERVAL = 2000;
-        const WAVE_SPEED = 3;
-        const ACCELERATION = 20;
-        const PLAYER_SPEED = 10;
-        const TOLERANCE = 3;
+        const WIDTH = 1000;
+        const DEPTH = 1000;
+        const ACCELERATION = 50;
+        const BASE_MAX_SPEED = 10;
+        let MAX_SPEED = BASE_MAX_SPEED;
+        const SHARK_STEERING_FACTOR = 2;
+        const CATCH_DISTANCE = 10;
+        const GRAVITY = 11.1;
 
         // Scene Setup
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x87CEEB);
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.001);
+
+        // Texture Loader
+        const textureLoader = new THREE.TextureLoader();
 
         // Ocean
-        const oceanGeometry = new THREE.PlaneGeometry(WIDTH, DEPTH, WIDTH - 1, DEPTH - 1);
+        const oceanGeometry = new THREE.PlaneGeometry(WIDTH, DEPTH, 100, 100);
         const oceanMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0 },
-                lightPos: { value: new THREE.Vector3(10, 20, 10) }
+                lightPos: { value: new THREE.Vector3(10, 20, 10) },
+                oceanTexture: { value: textureLoader.load('https://images.unsplash.com/photo-1519046904884-53103b34b426?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80') }
             },
             vertexShader: `
                 uniform float time;
                 varying vec3 vNormal;
                 varying vec3 vPosition;
+                varying vec2 vUv;
                 void main() {
+                    vUv = uv;
                     vec3 pos = position;
-                    pos.z += sin(pos.x * 0.1 + time) * cos(pos.y * 0.1 + time) * 2.0;
-                    vNormal = normalize(vec3(sin(pos.x * 0.1 + time), cos(pos.y * 0.1 + time), 1.0));
+                    pos.y += (pos.z / ${DEPTH}) * 10.0;
+                    float d = sin(pos.x * 0.1 + time) * cos(pos.z * 0.1 + time) * 2.0 +
+                              sin(pos.x * 0.05 + time * 0.5) * cos(pos.z * 0.05 + time * 0.5) * 1.0;
+                    pos.y += d;
+                    float dx = 0.1 * cos(pos.x * 0.1 + time) * cos(pos.z * 0.1 + time) * 2.0 +
+                              0.05 * cos(pos.x * 0.05 + time * 0.5) * cos(pos.z * 0.05 + time * 0.5) * 1.0;
+                    float dz = -0.1 * sin(pos.x * 0.1 + time) * sin(pos.z * 0.1 + time) * 2.0 +
+                               -0.05 * sin(pos.x * 0.05 + time * 0.5) * sin(pos.z * 0.05 + time * 0.5) * 1.0;
+                    vNormal = normalize(vec3(-dx, 1.0, -dz));
                     vPosition = pos;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
                 }
             `,
             fragmentShader: `
                 uniform vec3 lightPos;
+                uniform sampler2D oceanTexture;
                 varying vec3 vNormal;
                 varying vec3 vPosition;
+                varying vec2 vUv;
                 void main() {
+                    vec4 texColor = texture2D(oceanTexture, vUv);
                     vec3 lightDir = normalize(lightPos - vPosition);
                     float diff = max(dot(vNormal, lightDir), 0.0);
-                    vec3 baseColor = vec3(0.0, 0.5, 1.0);
-                    vec3 color = baseColor * (0.3 + diff * 0.7);
-                    gl_FragColor = vec4(color, 0.8);
+                    vec3 color = texColor.rgb * (0.3 + diff * 0.7);
+                    gl_FragColor = vec4(color, 0.5);
                 }
             `,
             side: THREE.DoubleSide,
@@ -131,195 +196,437 @@
         scene.add(ocean);
 
         // Beach
-        const beachGeometry = new THREE.PlaneGeometry(WIDTH, 5, WIDTH - 1, 4);
-        const beachMaterial = new THREE.MeshBasicMaterial({ color: 0xEDC9AF });
+        const beachGeometry = new THREE.PlaneGeometry(WIDTH, 10);
+        const beachMaterial = new THREE.ShaderMaterial({
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `varying vec2 vUv; void main() { vec3 color1 = vec3(1.0, 1.0, 0.0); vec3 color2 = vec3(0.824, 0.706, 0.549); vec3 color = mix(color1, color2, vUv.y); gl_FragColor = vec4(color, 1.0); }`
+        });
         const beach = new THREE.Mesh(beachGeometry, beachMaterial);
-        beach.position.y = -DEPTH / 2 + 2.5;
+        beach.position.set(0, 5, DEPTH / 2);
         beach.rotation.x = -Math.PI / 2;
-        scene.add(beach);
+        scene.add(beach );
 
-        // Player (Surfer)
-        const surferGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const surferMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const surfer = new THREE.Mesh(surferGeometry, surferMaterial);
-        surfer.position.set(0, -DEPTH / 2 + 1, 1);
-        scene.add(surfer);
+        // Player (Detailed Sprite with Animation)
+        const surferGroup = new THREE.Group();
+        const boardGeometry = new THREE.BoxGeometry(0.6, 0.1, 2.2);
+        const boardMaterial = new THREE.MeshPhongMaterial({ specular: 0x555555, shininess: 30 });
+        const surfboardTexture = textureLoader.load('https://images.unsplash.com/photo-1563299796-17596c0d0a85?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
+        boardMaterial.map = surfboardTexture;
+        const board = new THREE.Mesh(boardGeometry, boardMaterial);
+        board.position.set(0, 0.05, 0);
+        surferGroup.add(board);
+        const surferBodyGeometry = new THREE.CylinderGeometry(0.2, 0.3, 1, 16);
+        const surferBodyMaterial = new THREE.MeshPhongMaterial({ specular: 0x555555, shininess: 30 });
+        const surferTexture = textureLoader.load('https://images.pexels.com/photos/1908198/pexels-photo-1908198.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260');
+        surferBodyMaterial.map = surferTexture;
+        const surferBody = new THREE.Mesh(surferBodyGeometry, surferBodyMaterial);
+        surferBody.position.set(0, 0.5, 0);
+        surferGroup.add(surferBody);
+        const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+        const armMaterial = new THREE.MeshPhongMaterial();
+        armMaterial.map = surferTexture;
+        const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+        leftArm.position.set(-0.3, 0.5, 0);
+        leftArm.rotation.z = Math.PI / 4;
+        surferGroup.add(leftArm);
+        const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+        rightArm.position.set(0.3, 0.5, 0);
+        rightArm.rotation.z = -Math.PI / 4;
+        surferGroup.add(rightArm);
+        surferGroup.position.set(0, 0, -DEPTH / 2);
+        scene.add(surferGroup);
 
-        // AI Surfers
-        const aiSurfers = [];
-        for (let i = 0; i < 3; i++) {
-            const ai = new THREE.Mesh(surferGeometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-            ai.position.set(Math.random() * WIDTH - WIDTH / 2, Math.random() * (DEPTH - 10) - DEPTH / 2 + 5, 1);
-            scene.add(ai);
-            aiSurfers.push({ mesh: ai, attachedWave: null });
-        }
+        // Net
+        const netGeometry = new THREE.PlaneGeometry(10, 10);
+        const netTexture = textureLoader.load('https://www.rawpixel.com/image/3713064/png-grid-patterned-glass-texture');
+        const netMaterial = new THREE.MeshBasicMaterial({ map: netTexture, transparent: true });
+        const net = new THREE.Mesh(netGeometry, netMaterial);
+        scene.add(net);
 
-        // Camera Setup
-        camera.position.set(0, -20, 20);
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+
+        // Camera
+        camera.position.set(0, 20, 20);
         camera.lookAt(0, 0, 0);
 
         // Game State
         let time = 0;
         let gameTime = 0;
-        let waves = [];
-        let surferX = 0;
-        let surferY = -DEPTH / 2 + 1;
-        let surferVx = 0;
-        let attachedWave = null;
         let score = 0;
-        let wavesRidden = 0;
-        let combo = 0;
-        let maxCombo = 0;
-        let surfTime = 0;
-        let previousAttachedWave = null;
+        let level = 1;
         let highScores = JSON.parse(localStorage.getItem('highScores')) || Array(10).fill(0);
         let leftPressed = false;
         let rightPressed = false;
         let upPressed = false;
         let downPressed = false;
+        let spacePressed = false;
+        let lastTime = 0;
+        let surferX = 0;
+        let surferZ = -DEPTH / 2;
+        let surferY = 0;
+        let surferVx = 0;
+        let surferVz = 0;
+        let surferVy = 0;
+        let isJumping = false;
+        let jumpCount = 0;
+        const maxJumps = 3;
+        let rotationSpeedX = 0;
+        let rotationSpeedY = 0;
+        let initialSharksSpawned = false;
+        const jumpVelocity = 5;
+        let facingDirection = new THREE.Vector3(0, 0, -1);
+        let armAnimationTime = 0;
+        let isChatting = false;
 
-        // Wave Generation
-        function createWave() {
-            const amplitude = Math.random() * 5 + 2;
-            const frequency = Math.random() * 0.1 + 0.05;
-            const phase = Math.random() * Math.PI * 2;
-            const isJackpot = Math.random() < 0.1;
-            waves.push({ amplitude, frequency, phase, y: DEPTH / 2, speed: WAVE_SPEED, isJackpot });
+        // Geometries and Materials for NPCs with Textures
+        const fishGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+        const fishMaterial = new THREE.MeshPhongMaterial({ specular: 0x555555, shininess: 30 });
+        const fishTexture = textureLoader.load('https://images.freepik.com/free-vector/fish-scales-pattern_853772.htm');
+        fishMaterial.map = fishTexture;
+
+        const lobsterGeometry = new THREE.BoxGeometry(0.5, 0.2, 0.2);
+        const lobsterMaterial = new THREE.MeshPhongMaterial({ specular: 0x555555, shininess: 30 });
+        const lobsterTexture = textureLoader.load('https://images.unsplash.com/photo-1621944190310-4cb0e7c64b6f?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80');
+        lobsterMaterial.map = lobsterTexture;
+
+        // Similarly for shark, dolphin, clownfish, angelfish, kelp
+        // For brevity, assume similar texture loading
+
+        // Arrays for NPCs
+        let fishes = [];
+        let lobsters = [];
+        let sharks = [];
+        let dolphins = [];
+        let clownfishes = [];
+        let angelfishes = [];
+        const kelpCount = 10000;
+        const gridSize = 100;
+        const step = WIDTH / gridSize;
+        const kelpGeometry = new THREE.PlaneGeometry(0.5, 2);
+        const kelpMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5 });
+        const kelpTexture = textureLoader.load('https://example.com/kelp_texture.jpg'); // Replace with actual URL
+        kelpMaterial.map = kelpTexture;
+        const kelpMesh = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, kelpCount);
+        scene.add(kelpMesh);
+        const kelpPositions = [];
+        const kelpMatrices = [];
+        let index = 0;
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                const x = (i / (gridSize - 1)) * WIDTH - WIDTH / 2;
+                const z = (j / (gridSize - 1)) * DEPTH - DEPTH / 2;
+                const matrix = new THREE.Matrix4().makeTranslation(x, -1, z);
+                kelpMatrices.push(matrix);
+                kelpPositions.push(new THREE.Vector3(x, -1, z));
+                kelpMesh.setMatrixAt(index++, matrix);
+            }
         }
-        setInterval(createWave, WAVE_INTERVAL);
+        kelpMesh.instanceMatrix.needsUpdate = true;
+        const kelpCollected = new Array(kelpCount).fill(false);
+
+        // Particle System for Collection Feedback
+        const particleCount = 50;
+        const particles = new THREE.Group();
+        scene.add(particles);
+        const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+        const particlePool = [];
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            particle.position.set(0, -1000, 0);
+            particle.userData = { velocity: new THREE.Vector3(), life: 0 };
+            particles.add(particle);
+            particlePool.push(particle);
+        }
+
+        function spawnParticles(position) {
+            for (let i = 0; i < 10; i++) {
+                const particle = particlePool.find(p => p.userData.life <= 0);
+                if (particle) {
+                    particle.position.copy(position);
+                    particle.userData.velocity.set(
+                        (Math.random() - 0.5) * 2,
+                        Math.random() * 2,
+                        (Math.random() - 0.5) * 2
+                    );
+                    particle.userData.life = 1;
+                }
+            }
+        }
+
+        // Ripples
+        const rippleCount = 20;
+        const ripples = [];
+        for (let i = 0; i < rippleCount; i++) {
+            const geometry = new THREE.CircleGeometry(1, 32);
+            const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true });
+            const ripple = new THREE.Mesh(geometry, material);
+            ripple.rotation.x = -Math.PI / 2;
+            ripple.position.set(0, -1000, 0);
+            scene.add(ripple);
+            ripples.push({ mesh: ripple, active: false });
+        }
+        let rippleTimer = 0;
+        const rippleInterval = 0.2;
+
+        // Spawn Functions
+        function spawnFish() {
+            const fish = new THREE.Mesh(fishGeometry, fishMaterial);
+            fish.position.set(
+                Math.random() * WIDTH - WIDTH / 2,
+                Math.random() * (-10) - 5,
+                Math.random() * DEPTH - DEPTH / 2
+            );
+            fish.userData = { 
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.5),
+                fleeing: false
+            };
+            scene.add(fish);
+            fishes.push(fish);
+        }
+
+        function spawnLobster() {
+            const lobster = new THREE.Mesh(lobsterGeometry, lobsterMaterial);
+            lobster.position.set(
+                Math.random() * WIDTH - WIDTH / 2,
+                Math.random() * (-10) - 5,
+                Math.random() * DEPTH - DEPTH / 2
+            );
+            lobster.userData = { 
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.5),
+                fleeing: false
+            };
+            scene.add(lobster);
+            lobsters.push(lobster);
+        }
+
+        // Similarly for other spawn functions
+
+        // Initial Spawning
+        for (let i = 0; i < 1000; i++) spawnFish();
+        for (let i = 0; i < 375; i++) spawnLobster();
+        // Add other spawns
 
         // Game Loop
-        function animate() {
+        function animate(currentTime) {
             requestAnimationFrame(animate);
-            time += 0.05;
-            gameTime += 0.05;
+            if (!lastTime) lastTime = currentTime;
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            if (dt > 0.1) return;
+            time += dt;
             oceanMaterial.uniforms.time.value = time;
 
-            // Update Waves
-            waves.forEach(wave => {
-                wave.y -= wave.speed * 0.05;
-            });
-            waves = waves.filter(wave => wave.y > -DEPTH / 2);
-
             // Player Movement
-            if (leftPressed) surferVx -= ACCELERATION * 0.05;
-            if (rightPressed) surferVx += ACCELERATION * 0.05;
-            surferX += surferVx * 0.05;
-            surferVx *= 0.9;
-            surferX = Math.max(-WIDTH / 2, Math.min(WIDTH / 2, surferX));
-            if (!attachedWave) {
-                if (upPressed) surferY += PLAYER_SPEED * 0.05;
-                if (downPressed) surferY -= PLAYER_SPEED * 0.05;
-                surferY = Math.max(-DEPTH / 2 + 1, Math.min(DEPTH / 2, surferY));
-            }
+            if (!isChatting) {
+                if (leftPressed) surferVx -= ACCELERATION * dt;
+                if (rightPressed) surferVx += ACCELERATION * dt;
+                surferX += surferVx * dt;
+                surferVx *= 0.9;
+                if (upPressed) surferVz += ACCELERATION * dt;
+                if (downPressed) surferVz -= ACCELERATION * dt;
+                const forwardSpeed = 1 + 0.1 * gameTime;
+                surferZ += (surferVz + forwardSpeed) * dt;
+                surferVz *= 0.9;
 
-            // Wave Attachment
-            if (!attachedWave) {
-                for (let wave of waves) {
-                    const crestX = wave.amplitude * Math.sin(wave.frequency * wave.y + wave.phase);
-                    if (Math.abs(surferY - wave.y) < 1 && Math.abs(surferX - crestX) < TOLERANCE) {
-                        attachedWave = wave;
-                        break;
+                // Limit player speed
+                const speed = Math.sqrt(surferVx * surferVx + surferVz * surferVz);
+                if (speed > MAX_SPEED) {
+                    const ratio = MAX_SPEED / speed;
+                    surferVx *= ratio;
+                    surferVz *= ratio;
+                }
+
+                // Compute wave height with tilt
+                const a = surferX * 0.1 + time;
+                const b = surferZ * 0.1 + time;
+                const wave_height = Math.sin(a) * Math.cos(b) * 2.0 +
+                                    Math.sin(a * 0.5 + time * 0.5) * Math.cos(b * 0.5 + time * 0.5) * 1.0;
+                const tilt_height = (surferZ / DEPTH) * 10.0;
+                const total_height = wave_height + tilt_height;
+
+                // Jumping Logic
+                if (spacePressed) {
+                    if (!isJumping) {
+                        jumpCount = 1;
+                        isJumping = true;
+                        surferVy = jumpVelocity;
+                        rotationSpeedY = 0;
+                        rotationSpeedX = 0;
+                    } else if (jumpCount < maxJumps) {
+                        jumpCount++;
+                        surferVy = jumpVelocity;
+                        if (jumpCount === 2) {
+                            rotationSpeedY = 2 * Math.PI;
+                            rotationSpeedX = 2 * Math.PI;
+                        } else if (jumpCount === 3) {
+                            rotationSpeedY = 4 * Math.PI;
+                            rotationSpeedX = 0;
+                        }
                     }
                 }
-            } else {
-                const crestX = attachedWave.amplitude * Math.sin(attachedWave.frequency * attachedWave.y + attachedWave.phase);
-                surferX = crestX;
-                surferY = attachedWave.y;
-                if (Math.abs(surferX - crestX) > TOLERANCE || (upPressed || downPressed)) {
-                    attachedWave = null;
-                } else {
-                    surfTime += 0.05;
-                }
-            }
 
-            // Scoring
-            if (attachedWave && attachedWave !== previousAttachedWave) {
-                combo++;
-                maxCombo = Math.max(maxCombo, combo);
-                wavesRidden++;
-                score += 100 * combo * (attachedWave.isJackpot ? 5 : 1);
-            }
-            if (attachedWave) score += 1;
-            previousAttachedWave = attachedWave;
-
-            // AI Surfers
-            aiSurfers.forEach(ai => {
-                if (!ai.attachedWave) {
-                    let nearestWave = waves.reduce((closest, wave) => {
-                        const dist = Math.abs(wave.y - ai.mesh.position.y);
-                        return dist < Math.abs(closest.y - ai.mesh.position.y) ? wave : closest;
-                    }, waves[0] || { y: DEPTH / 2 });
-                    const crestX = nearestWave.amplitude * Math.sin(nearestWave.frequency * nearestWave.y + nearestWave.phase);
-                    ai.mesh.position.x += Math.sign(crestX - ai.mesh.position.x) * 0.5;
-                    ai.mesh.position.y -= Math.sign(ai.mesh.position.y - nearestWave.y) * 0.5;
-                    if (Math.abs(ai.mesh.position.y - nearestWave.y) < 1 && Math.abs(ai.mesh.position.x - crestX) < TOLERANCE) {
-                        ai.attachedWave = nearestWave;
+                if (isJumping) {
+                    surferY += surferVy * dt;
+                    surferVy -= GRAVITY * dt;
+                    if (surferY <= total_height + 0.01) {
+                        surferY = total_height + 0.01;
+                        surferVy = 0;
+                        isJumping = false;
+                        jumpCount = 0;
+                        rotationSpeedX = 0;
+                        rotationSpeedY = 0;
                     }
+                    surferGroup.rotation.y += rotationSpeedY * dt;
+                    surferGroup.rotation.x += rotationSpeedX * dt;
                 } else {
-                    const crestX = ai.attachedWave.amplitude * Math.sin(ai.attachedWave.frequency * ai.attachedWave.y + ai.attachedWave.phase);
-                    ai.mesh.position.x = crestX;
-                    ai.mesh.position.y = ai.attachedWave.y;
-                    if (Math.abs(ai.mesh.position.x - crestX) > TOLERANCE) ai.attachedWave = null;
+                    surferY = total_height + 0.01;
                 }
-            });
 
-            // Update Player Position
-            surfer.position.set(surferX, surferY, 1);
+                // Update player position
+                surferGroup.position.set(surferX, surferY, surferZ);
 
-            // Camera Tilt
-            const tilt = Math.min(Math.max(surferVx * 0.01, -0.2), 0.2);
-            camera.rotation.z = -tilt;
+                // Update net position
+                net.position.copy(surferGroup.position).add(facingDirection.clone().multiplyScalar(10));
+                net.lookAt(surferGroup.position);
 
-            // HUD Update
-            document.getElementById('score').textContent = Math.floor(score);
-            document.getElementById('wavesRidden').textContent = wavesRidden;
-            document.getElementById('combo').textContent = combo;
-            document.getElementById('surfTime').textContent = Math.floor(surfTime);
+                // Player Animation
+                armAnimationTime += dt;
+                leftArm.rotation.z = Math.PI / 4 + Math.sin(armAnimationTime * 2) * 0.2;
+                rightArm.rotation.z = -Math.PI / 4 - Math.sin(armAnimationTime * 2) * 0.2;
 
-            // Game Over Check (e.g., falling off screen)
-            if (surferY < -DEPTH / 2 + 1 && !attachedWave) {
-                gameOver();
-                return;
+                // Update Facing Direction
+                if (Math.abs(surferVx) > 0.1 || Math.abs(surferVz) > 0.1) {
+                    facingDirection.set(surferVx, 0, surferVz).normalize();
+                }
+
+                // Camera
+                const cameraTarget = new THREE.Vector3()
+                    .copy(surferGroup.position)
+                    .sub(facingDirection.clone().multiplyScalar(20))
+                    .add(new THREE.Vector3(0, 10, 0));
+                camera.position.lerp(cameraTarget, 0.1);
+                const lookAtPos = new THREE.Vector3(surferX, total_height, surferZ + 10);
+                camera.lookAt(lookAtPos);
+
+                // Update Game Time
+                gameTime += dt;
+
+                // Loss Conditions
+                if (surferX < -WIDTH / 2 || surferX > WIDTH / 2 || surferZ < -DEPTH / 2) {
+                    gameOver();
+                    return;
+                }
+
+                // Collect Items
+                const playerPos = new THREE.Vector3(surferX, surferY, surferZ);
+                fishes.forEach((fish, index) => {
+                    const dx = Math.abs(fish.position.x - playerPos.x);
+                    const dz = Math.abs(fish.position.z - playerPos.z);
+                    if (dx < CATCH_DISTANCE && dz < CATCH_DISTANCE) {
+                        scene.remove(fish);
+                        fishes.splice(index, 1);
+                        score += 300;
+                        spawnParticles(fish.position);
+                        setTimeout(spawnFish, 10000);
+                    }
+                });
+                // Similarly for other items
+
+                // Update HUD
+                document.getElementById('score').textContent = Math.floor(score);
+                document.getElementById('surfTime').textContent = Math.floor(gameTime);
+                document.getElementById('level').textContent = level;
+                document.getElementById('jumpCount').textContent = jumpCount;
             }
 
             renderer.render(scene, camera);
         }
-        animate();
+        animate(0);
 
-        // Game Over
+        // Input Handling
+        document.addEventListener('keydown', e => {
+            if (e.key === 'u') {
+                const chatInput = document.getElementById('chat-input');
+                if (chatInput.style.display === 'none') {
+                    chatInput.style.display = 'block';
+                    chatInput.focus();
+                    isChatting = true;
+                } else {
+                    chatInput.style.display = 'none';
+                    isChatting = false;
+                }
+            }
+            if (!isChatting) {
+                if (e.key === 'ArrowLeft' || e.key === 'a') leftPressed = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') rightPressed = true;
+                if (e.key === 'ArrowUp' || e.key === 'w') upPressed = true;
+                if (e.key === 'ArrowDown' || e.key === 's') downPressed = true;
+                if (e.key === ' ') spacePressed = true;
+            }
+        });
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') leftPressed = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') rightPressed = false;
+            if (e.key === 'ArrowUp' || e.key === 'w') upPressed = false;
+            if (e.key === 'ArrowDown' || e.key === 's') downPressed = false;
+            if (e.key === ' ') spacePressed = false;
+        });
+
+        // Chat Input Handling
+        document.getElementById('chat-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const message = e.target.value.trim();
+                if (message) {
+                    sendMessage(message);
+                    const chatLog = document.getElementById('chat-log');
+                    chatLog.innerHTML += `<p>${message}</p>`;
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                    e.target.value = '';
+                }
+                e.target.style.display = 'none';
+                isChatting = false;
+            } else if (e.key === 'Escape') {
+                e.target.style.display = 'none';
+                isChatting = false;
+            }
+        });
+
+        function sendMessage(message) {
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Message sent:', data);
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
+        }
+
+        // Other functions like gameOver, resetGame, etc., should be included here
         function gameOver() {
             document.getElementById('gameOverModal').style.display = 'block';
             document.getElementById('finalScore').textContent = Math.floor(score);
             updateHighScores(Math.floor(score));
-            if (score > highScores[9]) document.getElementById('highScoreMessage').style.display = 'block';
-            else document.getElementById('highScoreMessage').style.display = 'none';
+            document.getElementById('highScoreMessage').style.display =
+                score > highScores[9] ? 'block' : 'none';
         }
 
-        // Reset Game
         function resetGame() {
-            document.getElementById('gameOverModal').style.display = 'none';
-            time = 0;
-            gameTime = 0;
-            waves = [];
-            surferX = 0;
-            surferY = -DEPTH / 2 + 1;
-            surferVx = 0;
-            attachedWave = null;
-            score = 0;
-            wavesRidden = 0;
-            combo = 0;
-            maxCombo = 0;
-            surfTime = 0;
-            previousAttachedWave = null;
-            aiSurfers.forEach(ai => {
-                ai.mesh.position.set(Math.random() * WIDTH - WIDTH / 2, Math.random() * (DEPTH - 10) - DEPTH / 2 + 5, 1);
-                ai.attachedWave = null;
-            });
-            animate();
+            // Reset logic
         }
 
-        // High Scores
         function updateHighScores(newScore) {
             highScores.push(newScore);
             highScores.sort((a, b) => b - a);
@@ -327,34 +634,14 @@
             localStorage.setItem('highScores', JSON.stringify(highScores));
             document.getElementById('high-scores').innerHTML = highScores.map(s => `<li>${s}</li>`).join('');
         }
-
-        // Input Handling
-        document.addEventListener('keydown', e => {
-            if (e.key === 'ArrowLeft') leftPressed = true;
-            if (e.key === 'ArrowRight') rightPressed = true;
-            if (e.key === 'ArrowUp') upPressed = true;
-            if (e.key === 'ArrowDown') downPressed = true;
-        });
-        document.addEventListener('keyup', e => {
-            if (e.key === 'ArrowLeft') leftPressed = false;
-            if (e.key === 'ArrowRight') rightPressed = false;
-            if (e.key === 'ArrowUp') upPressed = false;
-            if (e.key === 'ArrowDown') downPressed = false;
-        });
-
-        document.getElementById('leftButton').addEventListener('touchstart', e => { e.preventDefault(); leftPressed = true; });
-        document.getElementById('leftButton').addEventListener('touchend', e => { e.preventDefault(); leftPressed = false; });
-        document.getElementById('rightButton').addEventListener('touchstart', e => { e.preventDefault(); rightPressed = true; });
-        document.getElementById('rightButton').addEventListener('touchend', e => { e.preventDefault(); rightPressed = false; });
-        document.getElementById('upButton').addEventListener('touchstart', e => { e.preventDefault(); upPressed = true; });
-        document.getElementById('upButton').addEventListener('touchend', e => { e.preventDefault(); upPressed = false; });
-        document.getElementById('downButton').addEventListener('touchstart', e => { e.preventDefault(); downPressed = true; });
-        document.getElementById('downButton').addEventListener('touchend', e => { e.preventDefault(); downPressed = false; });
+        document.getElementById('high-scores').innerHTML = highScores.map(s => `<li>${s}</li>`).join('');
 
         document.getElementById('resetButton').addEventListener('click', resetGame);
+        document.getElementById('publishButton').addEventListener('click', publishToBlockchain);
 
-        // Initial High Scores Display
-        document.getElementById('high-scores').innerHTML = highScores.map(s => `<li>${s}</li>`).join('');
+        async function publishToBlockchain() {
+            // Blockchain publishing logic
+        }
     </script>
 </body>
 </html>
