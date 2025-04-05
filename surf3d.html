@@ -16,6 +16,7 @@
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.175.0/build/three.module.js';
         import { GLTFLoader } from 'https://unpkg.com/three@0.175.0/examples/jsm/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'https://unpkg.com/three@0.175.0/examples/jsm/loaders/DRACOLoader.js';
         import { SimplexNoise } from 'https://unpkg.com/three@0.175.0/examples/jsm/math/SimplexNoise.js';
 
         // Scene setup
@@ -31,7 +32,7 @@
 
         // Terrain generation
         function generateTerrain(width, depth, scale) {
-            const geometry = new THREE.PlaneGeometry(width, depth, width / scale | 0, depth / scale | 0);
+            const geometry = new THREE.PlaneGeometry(width, depth, Math.floor(width / scale), Math.floor(depth / scale));
             const noise = new SimplexNoise();
             const vertices = geometry.attributes.position.array;
             for (let i = 0; i < vertices.length; i += 3) {
@@ -85,7 +86,10 @@
         scene.add(player);
 
         // Load player model
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
         const loader = new GLTFLoader();
+        loader.setDRACOLoader(dracoLoader);
         loader.load('path/to/surfer.glb', function (gltf) {
             scene.remove(player); // remove placeholder
             player = gltf.scene;
