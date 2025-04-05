@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surf's Up - Three.js Version</title>
+    <style>
+        body { margin: 0; }
+        #canvas { width: 100%; height: 100vh; }
+        #scoreDisplay { position: absolute; top: 10px; left: 10px; color: white; font-size: 24px; }
+        #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 48px; display: none; }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <div id="scoreDisplay">Score: 0</div>
+    <div id="gameOver">Game Over</div>
+    <script src="https://threejs.org/build/three.js"></script>
+    <script type="module">
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas').appendChild(renderer.domElement);
+
+        // Water setup
+        const vertexShader = `
+        uniform float time;
+        uniform int numWaves;
+        uniform float amplitudes[10];
+        uniform float kxs[10];
+        uniform float kzs[10];
+        uniform float omegas[10];
+        uniform float phases[10];
+
+        void main() {
+            vec3 pos = position;
+            for(int i = 0; i < numWaves; i++) {
+                pos.y += amplitudes[i] * sin(kxs[i] * pos.x + kzs[i] * pos.z + omegas[i] * time + phases[i]);
+            }
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+        `;
+
+        const fragmentShader = `
+        void main() {
+            gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        }
+        `;
+
+        const maxWaves = 10;
+        const waterGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
+        waterGeometry.rotateX(-Math.PI / 2);
+        const waterMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                numWaves: { value: 0 },
+                amplitudes: { value: new Array(maxWaves).fill(0) },
+                kxs: { value: new Array(maxWaves).fill(0) },
+                kzs: { value: new Array(maxWaves).fill(0) },
+                omegas: { value: new Array(maxWaves).fill(0) },
+                phases: { value: new Array(maxWaves).fill(0) }
+            },
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader
+        });
+        const water = new THREE.Mesh(waterGeometry, waterMaterial);
+        scene.add(water);
+
+        // Surfer setup
+        const surferGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const surferMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const surfer = new THREE.Mesh(surferGeometry, surferMaterial);
+        scene.add(surfer);
+        const surferPosition = new THREE.Vector3(0, 0, 0);
+        const surferVelocity = new THREE.Vector3(0, 0, 0);
+        const surferSpeed = 10;
+
+        // Wave class
+        class Wave {
+            constructor(A, kx, kz, omega, phi) {
+                this.A = A;
+                this.kx = kx;
+                this.kz = kz;
+                this.omega = omega;
+                this.phi = phi;
+            }
+            height(x, z, t) {
+                return this.A * Math.sin(this.kx * x + this.kz * z + this.omega * t + this.phi);
+            }
+        }
+
+        const activeWaves = [];
+
+        // Generate waves
+        function createWave() {
+            const A = Math.random() * 2 + 1;
+            const k = Math.random() * 0.1 + 0.05;
+            const theta = (Math.random() - 0.5) * Math.PI / 3;
+            const kx = k * Math.sin(theta);
+            const kz = k * Math.cos(theta);
+            const omega = Math.random() * 0.5 + 0.5;
+            const phi = Math.random() * 2 * Math.PI;
+            const wave = new Wave(A, kx, kz, omega, phi);
+            activeWaves.push(wave);
+            if (activeWaves.length > maxWaves) {
+                activeWaves.shift();
+            }
+        }
+        setInterval(createWave, 5000);
+
+        // Get water height
+        function getWaterHeight(x, z, t) {
+            let height = 0;
+            activeWaves.forEach(wave => {
+                height += wave.height(x, z, t);
+            });
+            return height;
+        }
+
+        // Check if on wave
+        function isOnWave() {
+            const threshold = 0.8;
+            for(let wave of activeWaves) {
+                const phase = wave.kx * surferPosition.x + wave.kz * surferPosition.z + wave.omega * time + wave.phi;
+                if (Math.sin(phase) > threshold) {
+                    return wave;
+                }
+            }
+            return null;
+        }
+
+        // Game variables
+        let score = 0;
+        let time = 0;
+        const clock = new THREE.Clock();
+        clock.start();
+
+        // Keyboard input
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Update function
+        function update(dt) {
+            time += dt;
+            updateWaterUniforms(time);
+
+            // Surfer movement
+            let inputX = 0;
+            let inputZ = 0;
+            if (keys['ArrowLeft']) inputX -= 1;
+            if (keys['ArrowRight']) inputX += 1;
+            if (keys['ArrowUp']) inputZ -= 1;
+            if (keys['ArrowDown']) inputZ += 1;
+
+            const inputLength = Math.sqrt(inputX * inputX + inputZ * inputZ);
+            if (inputLength > 0) {
+                inputX /= inputLength;
+                inputZ /= inputLength;
+            }
+
+            surferVelocity.x = inputX * surferSpeed;
+            surferVelocity.z = inputZ * surferSpeed;
+
+            const attachedWave = isOnWave();
+            if (attachedWave) {
+                surferVelocity.z = -attachedWave.omega / attachedWave.kz;
+                score += 5 * dt;
+            }
+
+            surferPosition.x += surferVelocity.x * dt;
+            surferPosition.z += surferVelocity.z * dt;
+            surferPosition.y = getWaterHeight(surferPosition.x, surferPosition.z, time) + 0.5;
+            surfer.position.copy(surferPosition);
+
+            // Camera follow
+            const cameraOffset = new THREE.Vector3(0, 10, 20);
+            camera.position.copy(surferPosition).add(cameraOffset);
+            camera.lookAt(surferPosition);
+
+            // Update score display
+            document.getElementById('scoreDisplay').textContent = 'Score: ' + Math.floor(score);
+        }
+
+        // Update water uniforms
+        function updateWaterUniforms(t) {
+            const numWaves = activeWaves.length;
+            waterMaterial.uniforms.numWaves.value = numWaves;
+            for(let i = 0; i < numWaves; i++) {
+                waterMaterial.uniforms.amplitudes.value[i] = activeWaves[i].A;
+                waterMaterial.uniforms.kxs.value[i] = activeWaves[i].kx;
+                waterMaterial.uniforms.kzs.value[i] = activeWaves[i].kz;
+                waterMaterial.uniforms.omegas.value[i] = activeWaves[i].omega;
+                waterMaterial.uniforms.phases.value[i] = activeWaves[i].phi;
+            }
+            waterMaterial.uniforms.time.value = t;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            update(dt);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Placeholder gameOver function
+        function gameOver() {
+            document.getElementById('gameOver').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
