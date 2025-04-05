@@ -3,218 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surf's Up - Three.js Version</title>
+    <title>Surf's Up - Enhanced Version</title>
     <style>
         body { margin: 0; }
-        #canvas { width: 100%; height: 100vh; }
-        #scoreDisplay { position: absolute; top: 10px; left: 10px; color: white; font-size: 24px; }
-        #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 48px; display: none; }
+        #mainCanvas { width: 100%; height: 100vh; }
+        #minimap { position: absolute; top: 10px; right: 10px; width:200px; height:200px; }
     </style>
 </head>
 <body>
-    <div id="canvas"></div>
-    <div id="scoreDisplay">Score: 0</div>
-    <div id="gameOver">Game Over</div>
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="minimap"></canvas>
     <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.175.0/build/three.module.js';
+        import * as THREE from 'https://cdn.skypack.dev/three@latest';
+        import { SimplexNoise } from 'https://cdn.skypack.dev/three@latest/examples/jsm/math/SimplexNoise.js';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@latest/examples/jsm/controls/OrbitControls.js';
+
         // Scene setup
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('mainCanvas') });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById('canvas').appendChild(renderer.domElement);
 
-        // Water setup
-        const vertexShader = `
-        uniform float time;
-        uniform int numWaves;
-        uniform float amplitudes[10];
-        uniform float kxs[10];
-        uniform float kzs[10];
-        uniform float omegas[10];
-        uniform float phases[10];
+        // Lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(0, 100, 0);
+        scene.add(light);
 
-        void main() {
-            vec3 pos = position;
-            for(int i = 0; i < numWaves; i++) {
-                pos.y += amplitudes[i] * sin(kxs[i] * pos.x + kzs[i] * pos.z + omegas[i] * time + phases[i]);
+        // Terrain generation
+        function generateTerrain(width, depth, scale) {
+            const geometry = new THREE.PlaneGeometry(width, depth, width / scale | 0 , depth / scale | 0 );
+            const noise = new SimplexNoise();
+            const vertices = geometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const z = vertices[i + 2];
+                let y = noise.noise(x / 100 , z / 100 ) * 15;
+                if (x >= width / 2) y = Math.min(y + (Math.random() * 5 - 2), 2); // Lower heights on east side for beach
+                vertices[i + 1] = y;
             }
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            geometry.computeVertexNormals();
+            const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xFFFFFF });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotateX(-Math.PI / 2);
+            return mesh;
         }
-        `;
 
-        const fragmentShader = `
-        void main() {
-            gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
-        }
-        `;
+        const terrain = generateTerrain(256, 256, 8);
+        scene.add(terrain);
 
-        const maxWaves = 10;
-        const waterGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-        waterGeometry.rotateX(-Math.PI / 2);
+        // Water plane
+        const waterGeometry = new THREE.PlaneGeometry(300, 300, 100, 100);
         const waterMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                time: { value: 0 },
-                numWaves: { value: 0 },
-                amplitudes: { value: new Array(maxWaves).fill(0) },
-                kxs: { value: new Array(maxWaves).fill(0) },
-                kzs: { value: new Array(maxWaves).fill(0) },
-                omegas: { value: new Array(maxWaves).fill(0) },
-                phases: { value: new Array(maxWaves).fill(0) }
-            },
-            vertexShader: vertexShader,
-            fragmentShader: fragmentShader
+            uniforms: { time: { value: 0 } },
+            vertexShader: `
+                uniform float time;
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    vec3 pos = position;
+                    float wave = sin(pos.x * 0.1 + time) * cos(pos.z * 0.1 + time) * 2.0;
+                    pos.y += wave;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                varying vec2 vUv;
+                void main() {
+                    gl_FragColor = vec4(0.2, 0.4, 0.6, 0.8);
+                }
+            `
         });
         const water = new THREE.Mesh(waterGeometry, waterMaterial);
+        water.rotateX(-Math.PI / 2);
         scene.add(water);
 
-        // Surfer setup
-        const surferGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const surferMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const surfer = new THREE.Mesh(surferGeometry, surferMaterial);
-        scene.add(surfer);
-        const surferPosition = new THREE.Vector3(0, 0, 0);
-        const surferVelocity = new THREE.Vector3(0, 0, 0);
-        const surferSpeed = 10;
+        // Player setup
+        const playerGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2, 6);
+        const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        player.position.y = 2;
+        scene.add(player);
 
-        // Wave class
-        class Wave {
-            constructor(A, kx, kz, omega, phi) {
-                this.A = A;
-                this.kx = kx;
-                this.kz = kz;
-                this.omega = omega;
-                this.phi = phi;
+        // Direction line
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+        const directionLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, -5)]);
+        const directionLine = new THREE.Line(directionLineGeometry, lineMaterial);
+        scene.add(directionLine);
+
+        // Coconut setup
+        const coconutGeometry = new THREE.SphereGeometry(0.5);
+        const coconutMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
+        const coconuts = [];
+
+        // Raycaster for mouse
+        const raycaster = new THREE.Raycaster();
+        let mouseX = 0;
+        let mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        // Controls
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        window.addEventListener('keydown', e => {
+            if (e.key == 'w' || e.key == 'W') moveForward = true;
+            if (e.key == 's' || e.key == 'S') moveBackward = true;
+            if (e.key == 'a' || e.key == 'A') moveLeft = true;
+            if (e.key == 'd' || e.key == 'D') moveRight = true;
+            if (e.code == 'Space') {
+                // Throw coconut
+                const coconut = new THREE.Mesh(coconutGeometry, coconutMaterial);
+                coconut.position.copy(player.position);
+                scene.add(coconut);
+                const mouse = new THREE.Vector2(mouseX, mouseY);
+                raycaster.setFromCamera(mouse, camera);
+                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -player.position.y);
+                const intersection = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, intersection);
+                const direction = intersection.sub(player.position).normalize();
+                coconut.velocity = direction.multiplyScalar(10);
+                coconut.timer = 5;
+                coconuts.push(coconut);
             }
-            height(x, z, t) {
-                return this.A * Math.sin(this.kx * x + this.kz * z + this.omega * t + this.phi);
+        });
+        window.addEventListener('keyup', e => {
+            if (e.key == 'w' || e.key == 'W') moveForward = false;
+            if (e.key == 's' || e.key == 'S') moveBackward = false;
+            if (e.key == 'a' || e.key == 'A') moveLeft = false;
+            if (e.key == 'd' || e.key == 'D') moveRight = false;
+        });
+
+        // Player movement
+        let velocity = { x: 0, z: 0 };
+        function updatePlayer(dt) {
+            let speed = 10;
+            if (moveForward) velocity.z -= speed * dt;
+            if (moveBackward) velocity.z += speed * dt;
+            if (moveLeft) velocity.x -= speed * dt;
+            if (moveRight) velocity.x += speed * dt;
+
+            player.position.x += velocity.x * dt;
+            player.position.z += velocity.z * dt;
+
+            // Boundary check
+            if (player.position.x < -128 || player.position.x > 128 || player.position.z < -128 || player.position.z > 128) {
+                player.position.x = Math.max(Math.min(player.position.x, 128), -128);
+                player.position.z = Math.max(Math.min(player.position.z, 128), -128);
             }
+
+            // Set rotation based on velocity
+            if (velocity.x != 0 || velocity.z != 0) {
+                player.rotation.y = Math.atan2(velocity.x, velocity.z);
+            }
+
+            // Set position y based on water height
+            const t = waterMaterial.uniforms.time.value;
+            player.position.y = getWaterHeight(player.position.x, player.position.z, t) + 1;
         }
 
-        const activeWaves = [];
-
-        // Generate waves
-        function createWave() {
-            const A = Math.random() * 2 + 1;
-            const k = Math.random() * 0.1 + 0.05;
-            const theta = (Math.random() - 0.5) * Math.PI / 3;
-            const kx = k * Math.sin(theta);
-            const kz = k * Math.cos(theta);
-            const omega = Math.random() * 0.5 + 0.5;
-            const phi = Math.random() * 2 * Math.PI;
-            const wave = new Wave(A, kx, kz, omega, phi);
-            activeWaves.push(wave);
-            if (activeWaves.length > maxWaves) {
-                activeWaves.shift();
-            }
-        }
-        setInterval(createWave, 5000);
-
-        // Get water height
         function getWaterHeight(x, z, t) {
-            let height = 0;
-            activeWaves.forEach(wave => {
-                height += wave.height(x, z, t);
-            });
-            return height;
+            return Math.sin(x * 0.1 + t) * Math.cos(z * 0.1 + t) * 2.0;
         }
 
-        // Check if on wave
-        function isOnWave() {
-            const threshold = 0.8;
-            for(let wave of activeWaves) {
-                const phase = wave.kx * surferPosition.x + wave.kz * surferPosition.z + wave.omega * time + wave.phi;
-                if (Math.sin(phase) > threshold) {
-                    return wave;
-                }
-            }
-            return null;
+        // Minimap setup
+        const miniMapCanvas = document.getElementById('minimap');
+        const miniMapCamera = new THREE.OrthographicCamera(-16, 16, 16, -16, -16, 16);
+        miniMapCamera.position.y = 50;
+        miniMapCamera.lookAt(0, 0, 0);
+
+        const miniMapScene = new THREE.Scene();
+        const miniMapTerrain = terrain.clone();
+        miniMapTerrain.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+        miniMapScene.add(miniMapTerrain);
+
+        const miniMapRenderer = new THREE.WebGLRenderer({ canvas: miniMapCanvas });
+        miniMapRenderer.setSize(200, 200);
+
+        function renderMiniMap() {
+            miniMapCamera.position.set(player.position.x, 50, player.position.z);
+            miniMapCamera.lookAt(player.position.x, 0, player.position.z);
+            miniMapRenderer.render(miniMapScene, miniMapCamera);
         }
 
-        // Game variables
-        let score = 0;
-        let time = 0;
-        const clock = new THREE.Clock();
-        clock.start();
+        // Camera controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+        controls.maxPolarAngle = Math.PI / 2;
 
-        // Keyboard input
-        const keys = {};
-        window.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
-
-        // Update function
-        function update(dt) {
-            time += dt;
-            updateWaterUniforms(time);
-
-            // Surfer movement
-            let inputX = 0;
-            let inputZ = 0;
-            if (keys['ArrowLeft']) inputX -= 1;
-            if (keys['ArrowRight']) inputX += 1;
-            if (keys['ArrowUp']) inputZ -= 1;
-            if (keys['ArrowDown']) inputZ += 1;
-
-            const inputLength = Math.sqrt(inputX * inputX + inputZ * inputZ);
-            if (inputLength > 0) {
-                inputX /= inputLength;
-                inputZ /= inputLength;
-            }
-
-            surferVelocity.x = inputX * surferSpeed;
-            surferVelocity.z = inputZ * surferSpeed;
-
-            const attachedWave = isOnWave();
-            if (attachedWave) {
-                surferVelocity.z = -attachedWave.omega / attachedWave.kz;
-                score += 5 * dt;
-            }
-
-            surferPosition.x += surferVelocity.x * dt;
-            surferPosition.z += surferVelocity.z * dt;
-            surferPosition.y = getWaterHeight(surferPosition.x, surferPosition.z, time) + 0.5;
-            surfer.position.copy(surferPosition);
-
-            // Camera follow
-            const cameraOffset = new THREE.Vector3(0, 10, 20);
-            camera.position.copy(surferPosition).add(cameraOffset);
-            camera.lookAt(surferPosition);
-
-            // Update score display
-            document.getElementById('scoreDisplay').textContent = 'Score: ' + Math.floor(score);
-        }
-
-        // Update water uniforms
-        function updateWaterUniforms(t) {
-            const numWaves = activeWaves.length;
-            waterMaterial.uniforms.numWaves.value = numWaves;
-            for(let i = 0; i < numWaves; i++) {
-                waterMaterial.uniforms.amplitudes.value[i] = activeWaves[i].A;
-                waterMaterial.uniforms.kxs.value[i] = activeWaves[i].kx;
-                waterMaterial.uniforms.kzs.value[i] = activeWaves[i].kz;
-                waterMaterial.uniforms.omegas.value[i] = activeWaves[i].omega;
-                waterMaterial.uniforms.phases.value[i] = activeWaves[i].phi;
-            }
-            waterMaterial.uniforms.time.value = t;
-        }
-
-        // Animation loop
+        // Main loop
+        let lastTime = performance.now();
         function animate() {
             requestAnimationFrame(animate);
-            const dt = clock.getDelta();
-            update(dt);
-            renderer.render(scene, camera);
-        }
-        animate();
 
-        // Placeholder gameOver function
-        function gameOver() {
-            document.getElementById('gameOver').style.display = 'block';
+            const timeNow = performance.now();
+            const dt = (timeNow - lastTime) / 1000;
+            lastTime = timeNow;
+
+            // Update time uniform for water shader
+            waterMaterial.uniforms.time.value += dt;
+
+            // Update player
+            updatePlayer(dt);
+
+            // Update direction line
+            directionLine.position.copy(player.position);
+            directionLine.rotation.y = player.rotation.y;
+
+            // Update coconuts
+            coconuts.forEach(c => {
+                c.position.add(c.velocity.clone().multiplyScalar(dt));
+                c.timer -= dt;
+                if (c.timer <= 0) {
+                    scene.remove(c);
+                }
+            });
+            coconuts = coconuts.filter(c => c.timer > 0);
+
+            // Update camera
+            controls.target.copy(player.position);
+            controls.update();
+
+            // Render main scene
+            renderer.clear();
+            renderer.render(scene, camera);
+
+            // Render minimap
+            renderMiniMap();
         }
+
+        animate();
     </script>
 </body>
 </html>
