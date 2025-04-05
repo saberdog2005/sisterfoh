@@ -14,9 +14,9 @@
     <canvas id="mainCanvas"></canvas>
     <canvas id="minimap"></canvas>
     <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@latest';
-        import { SimplexNoise } from 'https://cdn.skypack.dev/three@latest/examples/jsm/math/SimplexNoise.js';
-        import { OrbitControls } from 'https://cdn.skypack.dev/three@latest/examples/jsm/controls/OrbitControls.js';
+        import * as THREE from 'https://unpkg.com/three@0.175.0/build/three.module.js';
+        import { GLTFLoader } from 'https://unpkg.com/three@0.175.0/examples/jsm/loaders/GLTFLoader.js';
+        import { SimplexNoise } from 'https://unpkg.com/three@0.175.0/examples/jsm/math/SimplexNoise.js';
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -31,14 +31,14 @@
 
         // Terrain generation
         function generateTerrain(width, depth, scale) {
-            const geometry = new THREE.PlaneGeometry(width, depth, width / scale | 0 , depth / scale | 0 );
+            const geometry = new THREE.PlaneGeometry(width, depth, width / scale | 0, depth / scale | 0);
             const noise = new SimplexNoise();
             const vertices = geometry.attributes.position.array;
             for (let i = 0; i < vertices.length; i += 3) {
                 const x = vertices[i];
                 const z = vertices[i + 2];
-                let y = noise.noise(x / 100 , z / 100 ) * 15;
-                if (x >= width / 2) y = Math.min(y + (Math.random() * 5 - 2), 2); // Lower heights on east side for beach
+                let y = noise.noise(x / 100, z / 100) * 15;
+                if (x >= width / 2) y = Math.min(y + (Math.random() * 5 - 2), 2);
                 vertices[i + 1] = y;
             }
             geometry.computeVertexNormals();
@@ -77,12 +77,22 @@
         water.rotateX(-Math.PI / 2);
         scene.add(water);
 
-        // Player setup
+        // Player setup (placeholder until model is loaded)
         const playerGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2, 6);
         const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        let player = new THREE.Mesh(playerGeometry, playerMaterial);
         player.position.y = 2;
         scene.add(player);
+
+        // Load player model
+        const loader = new GLTFLoader();
+        loader.load('path/to/surfer.glb', function (gltf) {
+            scene.remove(player); // remove placeholder
+            player = gltf.scene;
+            player.scale.set(1, 1, 1);
+            player.position.y = 2;
+            scene.add(player);
+        });
 
         // Direction line
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
@@ -97,69 +107,62 @@
 
         // Raycaster for mouse
         const raycaster = new THREE.Raycaster();
-        let mouseX = 0;
-        let mouseY = 0;
+        const mouse = new THREE.Vector2();
         window.addEventListener('mousemove', (e) => {
-            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-            mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
         });
 
         // Controls
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let coconutInventory = 0;
         window.addEventListener('keydown', e => {
-            if (e.key == 'w' || e.key == 'W') moveForward = true;
-            if (e.key == 's' || e.key == 'S') moveBackward = true;
-            if (e.key == 'a' || e.key == 'A') moveLeft = true;
-            if (e.key == 'd' || e.key == 'D') moveRight = true;
-            if (e.code == 'Space') {
-                // Throw coconut
+            if (e.key == 'w' || e.key == 'W' || e.key == 'ArrowUp') moveForward = true;
+            if (e.key == 's' || e.key == 'S' || e.key == 'ArrowDown') moveBackward = true;
+            if (e.key == 'a' || e.key == 'A' || e.key == 'ArrowLeft') moveLeft = true;
+            if (e.key == 'd' || e.key == 'D' || e.key == 'ArrowRight') moveRight = true;
+            if (e.code == 'Space' && coconutInventory > 0) {
+                coconutInventory -= 1;
                 const coconut = new THREE.Mesh(coconutGeometry, coconutMaterial);
                 coconut.position.copy(player.position);
                 scene.add(coconut);
-                const mouse = new THREE.Vector2(mouseX, mouseY);
                 raycaster.setFromCamera(mouse, camera);
                 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -player.position.y);
                 const intersection = new THREE.Vector3();
                 raycaster.ray.intersectPlane(plane, intersection);
                 const direction = intersection.sub(player.position).normalize();
                 coconut.velocity = direction.multiplyScalar(10);
-                coconut.timer = 5;
+                coconut.velocity.y = 5; // initial upward velocity
                 coconuts.push(coconut);
+            }
+            if (e.key == 'b' && isNearIsland()) {
+                coconutInventory += 1;
             }
         });
         window.addEventListener('keyup', e => {
-            if (e.key == 'w' || e.key == 'W') moveForward = false;
-            if (e.key == 's' || e.key == 'S') moveBackward = false;
-            if (e.key == 'a' || e.key == 'A') moveLeft = false;
-            if (e.key == 'd' || e.key == 'D') moveRight = false;
+            if (e.key == 'w' || e.key == 'W' || e.key == 'ArrowUp') moveForward = false;
+            if (e.key == 's' || e.key == 'S' || e.key == 'ArrowDown') moveBackward = false;
+            if (e.key == 'a' || e.key == 'A' || e.key == 'ArrowLeft') moveLeft = false;
+            if (e.key == 'd' || e.key == 'D' || e.key == 'ArrowRight') moveRight = false;
         });
 
         // Player movement
-        let velocity = { x: 0, z: 0 };
+        let velocity = new THREE.Vector3(0, 0, 0);
+        const speed = 10;
         function updatePlayer(dt) {
-            let speed = 10;
-            if (moveForward) velocity.z -= speed * dt;
-            if (moveBackward) velocity.z += speed * dt;
-            if (moveLeft) velocity.x -= speed * dt;
-            if (moveRight) velocity.x += speed * dt;
+            velocity.set(0, 0, 0);
+            if (moveForward) velocity.z = -speed;
+            if (moveBackward) velocity.z = speed;
+            if (moveLeft) velocity.x = -speed;
+            if (moveRight) velocity.x = speed;
 
-            player.position.x += velocity.x * dt;
-            player.position.z += velocity.z * dt;
+            player.position.add(velocity.clone().multiplyScalar(dt));
+            const t = waterMaterial.uniforms.time.value;
+            player.position.y = getWaterHeight(player.position.x, player.position.z, t) + 1 + Math.sin(t * 2) * 0.5;
 
-            // Boundary check
-            if (player.position.x < -128 || player.position.x > 128 || player.position.z < -128 || player.position.z > 128) {
-                player.position.x = Math.max(Math.min(player.position.x, 128), -128);
-                player.position.z = Math.max(Math.min(player.position.z, 128), -128);
-            }
-
-            // Set rotation based on velocity
-            if (velocity.x != 0 || velocity.z != 0) {
+            if (velocity.length() > 0) {
                 player.rotation.y = Math.atan2(velocity.x, velocity.z);
             }
-
-            // Set position y based on water height
-            const t = waterMaterial.uniforms.time.value;
-            player.position.y = getWaterHeight(player.position.x, player.position.z, t) + 1;
         }
 
         function getWaterHeight(x, z, t) {
@@ -167,18 +170,17 @@
         }
 
         // Minimap setup
-        const miniMapCanvas = document.getElementById('minimap');
+        const miniMapScene = new THREE.Scene();
         const miniMapCamera = new THREE.OrthographicCamera(-16, 16, 16, -16, -16, 16);
         miniMapCamera.position.y = 50;
         miniMapCamera.lookAt(0, 0, 0);
 
-        const miniMapScene = new THREE.Scene();
+        const miniMapRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('minimap') });
+        miniMapRenderer.setSize(200, 200);
+
         const miniMapTerrain = terrain.clone();
         miniMapTerrain.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
         miniMapScene.add(miniMapTerrain);
-
-        const miniMapRenderer = new THREE.WebGLRenderer({ canvas: miniMapCanvas });
-        miniMapRenderer.setSize(200, 200);
 
         function renderMiniMap() {
             miniMapCamera.position.set(player.position.x, 50, player.position.z);
@@ -186,14 +188,22 @@
             miniMapRenderer.render(miniMapScene, miniMapCamera);
         }
 
-        // Camera controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.screenSpacePanning = false;
-        controls.minDistance = 5;
-        controls.maxDistance = 50;
-        controls.maxPolarAngle = Math.PI / 2;
+        // Islands (example)
+        const islandGeometry = new THREE.SphereGeometry(5, 32, 32);
+        const islandMaterial = new THREE.MeshStandardMaterial({ color: 0xdeb887 });
+        const island = new THREE.Mesh(islandGeometry, islandMaterial);
+        island.position.set(50, 0, 50);
+        scene.add(island);
+        const islands = [island];
+
+        function isNearIsland() {
+            for (let isl of islands) {
+                if (player.position.distanceTo(isl.position) < 10) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         // Main loop
         let lastTime = performance.now();
@@ -215,18 +225,26 @@
             directionLine.rotation.y = player.rotation.y;
 
             // Update coconuts
+            const gravity = -9.81;
             coconuts.forEach(c => {
+                c.velocity.y += gravity * dt;
                 c.position.add(c.velocity.clone().multiplyScalar(dt));
-                c.timer -= dt;
-                if (c.timer <= 0) {
+                if (c.position.y < 0) {
                     scene.remove(c);
                 }
             });
-            coconuts = coconuts.filter(c => c.timer > 0);
+            coconuts = coconuts.filter(c => c.position.y >= 0);
 
             // Update camera
-            controls.target.copy(player.position);
-            controls.update();
+            const angle = player.rotation.y;
+            const offset = 10;
+            const cameraPosition = new THREE.Vector3(
+                player.position.x - Math.sin(angle) * offset,
+                player.position.y + 5,
+                player.position.z - Math.cos(angle) * offset
+            );
+            camera.position.lerp(cameraPosition, 0.1);
+            camera.lookAt(player.position);
 
             // Render main scene
             renderer.clear();
