@@ -9,6 +9,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
+        * {
+            box-sizing: border-box; /* Ensures padding/borders don’t increase element width */
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -54,28 +57,28 @@
         .openbtn { background-color: #2e7d32; }
         .closebtn { background-color: #d32f2f; }
         .content-wrapper {
-            max-width: 90%;
+            max-width: 100%; /* Fits within viewport width */
             margin: 0 auto;
         }
         .button-container {
             display: grid;
-            grid-template-columns: repeat(5, 200px);
+            grid-template-columns: repeat(5, minmax(0, 1fr)); /* Flexible columns that scale */
             grid-auto-rows: 130px;
             gap: 10px;
             padding: 10px;
             flex-grow: 1;
             overflow-y: hidden;
+            width: 100%; /* Prevents exceeding parent width */
         }
         .product-item, .cash-item {
-            width: 200px;
+            width: 100%; /* Fills grid cell width */
             background-color: #2e2e2e;
             padding: 5px;
             border-radius: 15px;
             display: flex;
             flex-direction: row;
             align-items: center;
-            justify-content: flex-start; /* Align items to the left */
-            grid-column: auto;
+            justify-content: flex-start;
         }
         .product-item {
             height: 120px;
@@ -110,10 +113,10 @@
         .comp { background-color: #ffa500; color: white; }
         .control-row {
             display: flex;
-            flex-direction: row; /* Align tally and minus horizontally */
+            flex-direction: row;
             align-items: center;
             gap: 5px;
-            padding-right: 10px; /* Add right padding to prevent accidental presses */
+            padding-right: 10px;
         }
         .cash-item .control-row {
             gap: 2px;
@@ -128,7 +131,7 @@
             font-size: 14px;
         }
         .minus {
-            width: 40px; /* Increased width for easier pressing */
+            width: 40px;
             background-color: #555;
             color: white;
             border: none;
@@ -137,14 +140,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding-right: 10px; /* Right padding for touch accuracy */
+            padding-right: 10px;
         }
         .product-item .minus {
-            height: 40px; /* Increased height for easier pressing */
+            height: 40px;
             font-size: 16px;
         }
         .cash-item .minus {
-            height: 30px; /* Adjusted for smaller cash buttons */
+            height: 30px;
             font-size: 12px;
         }
         .note-section {
@@ -240,7 +243,7 @@
         .thru-door {
             grid-row: 2;
             grid-column: 4;
-            width: 150px;
+            width: 100%; /* Fills grid cell width */
             height: 100px;
             display: flex;
             flex-direction: column;
@@ -267,7 +270,7 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-            width: 200px;
+            width: 100%; /* Fills grid cell width */
             margin: auto;
         }
     </style>
