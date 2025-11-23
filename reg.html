@@ -180,6 +180,47 @@
       cursor: pointer;
     }
 
+    /* REALTIME 15-MIN CANDLE GRAPH */
+    #graphContainer {
+      margin-top: 20px;
+      background: #111;
+      border-radius: 12px;
+      padding: 15px;
+      height: 180px;
+      overflow: hidden;
+      position: relative;
+    }
+    #candleGraph {
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+    .candle {
+      background: var(--green);
+      width: 20px;
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      transition: height 0.4s ease;
+      position: relative;
+    }
+    .candle-label {
+      position: absolute;
+      bottom: -20px;
+      left: 0;
+      right: 0;
+      font-size: 10px;
+      color: #aaa;
+      text-align: center;
+    }
+    #graphTitle {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #aaa;
+    }
+
     footer {
       background: var(--card);
       padding: 10px 15px;
@@ -189,7 +230,12 @@
       align-items: center;
       font-size: 15px;
     }
-    #timer { color: var(--yellow); font-weight: bold; }
+    #timer { 
+      color: var(--yellow); 
+      font-weight: bold; 
+      font-size: 32px !important; 
+      letter-spacing: 2px;
+    }
     #editLayoutFooterBtn {
       background: #0288d1;
       color: white;
@@ -198,6 +244,11 @@
       border-radius: 8px;
       font-size: 14px;
       cursor: pointer;
+    }
+    #editLayoutFooterBtn:disabled {
+      background: #444;
+      cursor: not-allowed;
+      opacity: 0.5;
     }
 
     .modal {
@@ -299,6 +350,11 @@
         <textarea id="noteInput" placeholder="Add note..."></textarea>
         <button id="logSaleBtn">Log Sale</button>
       </div>
+
+      <div id="graphContainer">
+        <div id="graphTitle">15-Minute Cash Flow</div>
+        <div id="candleGraph"></div>
+      </div>
     </div>
   </main>
 
@@ -380,9 +436,9 @@
           sessionDoorCount: 0,
           currentItems: new Map(),
           isEditing: false,
-          clickCount: 0,
-          clickTimer: null,
-          timerInterval: null
+          timerInterval: null,
+          sessionStartTime: null,
+          candleData: []  // {time: '12:00', cash: 240}
         };
 
         this.elements = {
@@ -398,7 +454,8 @@
           footerCashier: document.getElementById('footerCashier'),
           editLayoutFooterBtn: document.getElementById('editLayoutFooterBtn'),
           addNewButtonBtn: document.getElementById('addNewButtonBtn'),
-          editInstructions: document.getElementById('editInstructions')
+          editInstructions: document.getElementById('editInstructions'),
+          candleGraph: document.getElementById('candleGraph')
         };
 
         this.counts = new Map();
@@ -531,24 +588,21 @@
           }
         });
 
+        // Single press = Open sales
         this.elements.toggleBtn.addEventListener('click', () => {
-          this.state.clickCount++;
-          clearTimeout(this.state.clickTimer);
-          this.state.clickTimer = setTimeout(() => {
-            if (this.state.clickCount === 3) {
-              if (this.state.sessionStarted) {
-                document.getElementById('pinModal').classList.add('active');
-                document.getElementById('pinInput').focus();
-              } else {
-                this.startSession();
-              }
-            }
-            this.state.clickCount = 0;
-          }, 600);
+          if (this.state.sessionStarted) {
+            document.getElementById('pinModal').classList.add('active');
+            document.getElementById('pinInput').focus();
+          } else {
+            this.startSession();
+          }
         });
 
         this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
-        this.elements.editLayoutFooterBtn.addEventListener('click', () => this.toggleEditMode());
+        this.elements.editLayoutFooterBtn.addEventListener('click', () => {
+          if (this.state.sessionStarted) return;
+          this.toggleEditMode();
+        });
         this.elements.addNewButtonBtn.addEventListener('click', () => document.getElementById('addButtonModal').classList.add('active'));
 
         [this.elements.eventVenue, this.elements.eventName].forEach(el => {
@@ -638,14 +692,18 @@
         }
         this.state.sessionStarted = true;
         this.state.sessionId = Date.now().toString();
+        this.state.sessionStartTime = Date.now();
         localStorage.setItem('sessionActive', 'true');
         localStorage.setItem('activeSessionId', this.state.sessionId);
         localStorage.setItem('eventName', this.elements.eventName.value);
         localStorage.setItem('cashierName', this.elements.cashierName.value);
         this.elements.toggleBtn.classList.replace('open', 'close');
         this.elements.toggleBtn.textContent = 'CLOSE';
+        this.elements.editLayoutFooterBtn.disabled = true;
         this.startTimer();
         this.updateFooter();
+        this.state.candleData = [];
+        this.renderGraph();
       }
 
       startTimer() {
@@ -663,13 +721,16 @@
         if (localStorage.getItem('sessionActive') === 'true') {
           this.state.sessionStarted = true;
           this.state.sessionId = localStorage.getItem('activeSessionId');
+          this.state.sessionStartTime = parseInt(this.state.sessionId);
           this.elements.eventName.value = localStorage.getItem('eventName') || '';
           this.elements.cashierName.value = localStorage.getItem('cashierName') || '';
           this.state.sessionDoorCount = parseInt(localStorage.getItem(`doorCount_${this.state.sessionId}`) || '0');
           this.elements.toggleBtn.classList.replace('open', 'close');
           this.elements.toggleBtn.textContent = 'CLOSE';
+          this.elements.editLayoutFooterBtn.disabled = true;
           this.startTimer();
           this.updateDisplay();
+          this.renderGraph();
         }
         this.updateFooter();
       }
@@ -725,8 +786,13 @@
 ${items || '<p>None</p>'}
 </body></html>`;
 
-        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(reportHTML);
-        window.open(dataUrl, '_blank');
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.write(reportHTML);
+          win.document.close();
+        } else {
+          alert('Please allow popups to view the report');
+        }
       }
 
       endSession() {
@@ -736,12 +802,18 @@ ${items || '<p>None</p>'}
         this.elements.toggleBtn.classList.replace('close', 'open');
         this.elements.toggleBtn.textContent = 'OPEN';
         this.elements.timer.textContent = '00:00:00';
+        this.elements.editLayoutFooterBtn.disabled = false;
+        this.elements.candleGraph.innerHTML = '';
         alert('Register closed successfully!');
         location.reload();
       }
 
       async logSale(final = false) {
         if (this.state.currentItems.size === 0) return;
+
+        // Update candle graph
+        this.updateCandleGraph();
+
         const itemsStr = Array.from(this.state.currentItems.entries())
           .map(([n, d]) => `${d.type.toUpperCase()} ${n}: ${d.count}`).join('; ');
         const payload = {
@@ -750,7 +822,7 @@ ${items || '<p>None</p>'}
           eventName: this.elements.eventName.value,
           cashierName: this.elements.cashierName.value,
           items: itemsStr,
-          cashTotal: this.state.cashTotal,
+          cashTotal: Number(this.state.cashTotal.toFixed(2)),  // Exact match
           doorCount: this.state.sessionDoorCount,
           note: this.elements.noteInput.value,
           sessionId: this.state.sessionId,
@@ -764,17 +836,57 @@ ${items || '<p>None</p>'}
           });
           if (!final) {
             this.state.currentItems.clear();
-            this.state.cashTotal = 0;
             this.counts.forEach(c => c.textContent = '0');
             this.elements.noteInput.value = '';
-            this.updateDisplay();
           }
         } catch (e) {
           alert('Failed to log sale');
         }
       }
 
+      updateCandleGraph() {
+        if (!this.state.sessionStartTime) return;
+
+        const now = Date.now();
+        const elapsedMin = Math.floor((now - this.state.sessionStartTime) / (1000 * 60));
+        const currentCandleIndex = Math.floor(elapsedMin / 15);
+
+        if (!this.state.candleData[currentCandleIndex]) {
+          this.state.candleData[currentCandleIndex] = { cash: 0, time: this.getCandleLabel(currentCandleIndex) };
+        }
+        this.state.candleData[currentCandleIndex].cash += this.state.cashTotal;
+
+        this.renderGraph();
+        if (!final) this.state.cashTotal = 0; // reset for next candle
+      }
+
+      getCandleLabel(index) {
+        const start = new Date(this.state.sessionStartTime);
+        const mins = index * 15;
+        start.setMinutes(start.getMinutes() + mins);
+        return start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      }
+
+      renderGraph() {
+        this.elements.candleGraph.innerHTML = '';
+        const maxCash = Math.max(...this.state.candleData.map(c => c ? c.cash : 0), 100);
+        this.state.candleData.forEach((candle, i) => {
+          if (!candle) return;
+          const height = (candle.cash / maxCash) * 140;
+          const bar = document.createElement('div');
+          bar.className = 'candle';
+          bar.style.height = height + 'px';
+          bar.title = `${candle.time}: $${candle.cash.toFixed(2)}`;
+          const label = document.createElement('div');
+          label.className = 'candle-label';
+          label.textContent = candle.time;
+          bar.appendChild(label);
+          this.elements.candleGraph.appendChild(bar);
+        });
+      }
+
       toggleEditMode() {
+        if (this.state.sessionStarted) return;
         this.state.isEditing = !this.state.isEditing;
         this.elements.editLayoutFooterBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
         this.elements.editInstructions.classList.toggle('hidden', !this.state.isEditing);
