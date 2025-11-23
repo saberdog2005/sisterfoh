@@ -125,25 +125,26 @@
 
     .thru-door {
       grid-column: 1 / 6;
-      background: rgba(255,255,255,0.08);
+      display: flex;
+      gap: 10px;
+      margin: 8px 0;
       border-radius: 14px;
-      padding: 12px 10px;
+      overflow: hidden;
+    }
+    .cash-total, .thru-door-count {
+      flex: 1;
+      padding: 14px;
       text-align: center;
       font-size: 15px;
-      margin: 8px 0;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      gap: 20px;
     }
-    .thru-door div { flex: 1; }
-    .thru-door .number {
-      font-size: 30px;
+    .cash-total { background: rgba(46, 125, 50, 0.2); }
+    .thru-door-count { background: rgba(33, 150, 243, 0.2); }
+    .number {
+      font-size: 32px;
       color: var(--pink);
       font-weight: bold;
       display: block;
     }
-    .thru-door span { font-size: 13px; color: #aaa; }
 
     .cash-buttons {
       grid-column: 5;
@@ -179,22 +180,25 @@
       cursor: pointer;
     }
 
-    .control-section {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-      justify-content: center;
-    }
-
     footer {
       background: var(--card);
       padding: 10px 15px;
       border-top: 1px solid #444;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 15px;
     }
     #timer { color: var(--yellow); font-weight: bold; }
+    #editLayoutFooterBtn {
+      background: #0288d1;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
 
     .modal {
       display: none;
@@ -217,7 +221,7 @@
       max-width: 440px;
       color: white;
       box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 3px solid white;
     }
 
     .till-row {
@@ -295,17 +299,16 @@
         <textarea id="noteInput" placeholder="Add note..."></textarea>
         <button id="logSaleBtn">Log Sale</button>
       </div>
-
-      <div class="control-section">
-        <button id="editLayoutBtn">Edit Layout</button>
-        <button id="addNewButtonBtn" class="hidden">+ Add Button</button>
-      </div>
     </div>
   </main>
 
   <footer>
-    <span>Time: <strong id="timer">00:00:00</strong></span>
-    <span>Cashier: <strong id="footerCashier">—</strong></span>
+    <div>
+      <span>Time: <strong id="timer">00:00:00</strong></span>
+      <span style="margin-left:20px;">Cashier: <strong id="footerCashier">—</strong></span>
+    </div>
+    <button id="editLayoutFooterBtn">Edit Layout</button>
+    <button id="addNewButtonBtn" class="hidden">+ Add Button</button>
   </footer>
 
   <!-- Modals -->
@@ -393,7 +396,7 @@
           buttonContainer: document.getElementById('buttonContainer'),
           timer: document.getElementById('timer'),
           footerCashier: document.getElementById('footerCashier'),
-          editLayoutBtn: document.getElementById('editLayoutBtn'),
+          editLayoutFooterBtn: document.getElementById('editLayoutFooterBtn'),
           addNewButtonBtn: document.getElementById('addNewButtonBtn'),
           editInstructions: document.getElementById('editInstructions')
         };
@@ -467,13 +470,13 @@
           }
         });
 
-        const thru = document.createElement('div');
-        thru.className = 'thru-door';
-        thru.innerHTML = `
-          <div><span class="number">$${this.state.cashTotal.toFixed(2)}</span><br><span>Cash Total</span></div>
-          <div><span class="number">${this.state.sessionDoorCount}</span><br><span>Thru Door</span></div>
+        const thruContainer = document.createElement('div');
+        thruContainer.className = 'thru-door';
+        thruContainer.innerHTML = `
+          <div class="cash-total"><span class="number">$${this.state.cashTotal.toFixed(2)}</span><br>Cash Total</div>
+          <div class="thru-door-count"><span class="number">${this.state.sessionDoorCount}</span><br>Thru Door</div>
         `;
-        this.elements.buttonContainer.appendChild(thru);
+        this.elements.buttonContainer.appendChild(thruContainer);
 
         const cashRow = document.createElement('div');
         cashRow.className = 'cash-buttons';
@@ -545,7 +548,7 @@
         });
 
         this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
-        this.elements.editLayoutBtn.addEventListener('click', () => this.toggleEditMode());
+        this.elements.editLayoutFooterBtn.addEventListener('click', () => this.toggleEditMode());
         this.elements.addNewButtonBtn.addEventListener('click', () => document.getElementById('addButtonModal').classList.add('active'));
 
         [this.elements.eventVenue, this.elements.eventName].forEach(el => {
@@ -622,13 +625,10 @@
       }
 
       updateDisplay() {
-        const thru = this.elements.buttonContainer.querySelector('.thru-door');
-        if (thru) {
-          thru.innerHTML = `
-            <div><span class="number">$${this.state.cashTotal.toFixed(2)}</span><br><span>Cash Total</span></div>
-            <div><span class="number">${this.state.sessionDoorCount}</span><br><span>Thru Door</span></div>
-          `;
-        }
+        const cashEl = this.elements.buttonContainer.querySelector('.cash-total .number');
+        const doorEl = this.elements.buttonContainer.querySelector('.thru-door-count .number');
+        if (cashEl) cashEl.textContent = `$${this.state.cashTotal.toFixed(2)}`;
+        if (doorEl) doorEl.textContent = this.state.sessionDoorCount;
       }
 
       startSession() {
@@ -703,8 +703,17 @@
           .map(([n, d]) => `${n}: ${d.count} × $${d.price.toFixed(2)}`).join('<br>');
         const reportHTML = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Sister Bar Report</title>
-<style>body{font-family:Arial;background:#1e1e1e;color:#e0e0e0;padding:40px;line-height:1.6;}</style>
+<style>
+  body{font-family:Arial;background:#1e1e1e;color:#e0e0e0;padding:40px;line-height:1.6;}
+  @media print { body { background:white; color:black; } }
+  .print-btn { 
+    position:fixed; top:20px; right:20px; padding:12px 24px; 
+    background:#0288d1; color:white; border:none; border-radius:8px; 
+    font-size:16px; cursor:pointer; z-index:1000;
+  }
+</style>
 </head><body>
+<button class="print-btn" onclick="window.print()">Print Report</button>
 <h1>Sister Bar Report</h1>
 <p><strong>Date:</strong> ${this.elements.eventDate.value}</p>
 <p><strong>Venue:</strong> ${this.elements.eventVenue.value}</p>
@@ -767,7 +776,7 @@ ${items || '<p>None</p>'}
 
       toggleEditMode() {
         this.state.isEditing = !this.state.isEditing;
-        this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+        this.elements.editLayoutFooterBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
         this.elements.editInstructions.classList.toggle('hidden', !this.state.isEditing);
         this.elements.addNewButtonBtn.classList.toggle('hidden', !this.state.isEditing);
         if (!this.state.isEditing) this.saveLayout();
