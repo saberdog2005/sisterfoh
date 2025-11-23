@@ -1,356 +1,1037 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self'; 
-    script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; 
-    connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; 
-    style-src 'self' 'unsafe-inline'; 
-    img-src 'self' data:; 
-  ">
-  <title>Sister Bar - Sales Log</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #1e1e1e; color: #e0e0e0; overflow: hidden; }
-    .container { width: 98.5%; height: 98.5vh; position: relative; }
-    .grid { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 10px; height: 100%; }
-    .graph { background:#2e2e2e; padding:20px; border-radius:8px; display:flex; flex-direction:column; position:relative; }
-    .middle-panel, .right-panel { display:flex; flex-direction:column; gap:10px; }
-    .tally-sheet, .totals, .transaction-log, .filters, .summary { background:#2e2e2e; padding:20px; border-radius:8px; }
-    .tally-sheet { flex:0 0 320px; }
-    .transaction-log { flex:1; }
-    .summary { position:relative; }
-
-    #closedSessionTotals {
-      position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.9);
-      border: 3px solid #ff69b4; border-radius: 14px; padding: 16px; font-size: 20px;
-      font-weight: bold; color: #ff69b4; box-shadow: 0 0 30px rgba(255,105,180,0.5);
-      z-index: 100; display: none; text-align: center; min-width: 200px;
-    }
-    #closedSessionTotals.show { display: block; }
-
-    table { width:100%; border-collapse:collapse; font-size:14px; }
-    th { background:#333; padding:12px; }
-    td { padding:10px; border-bottom:1px solid #444; }
-    .cash-header { color:#2e7d32; }
-    .credit-card-header { color:#d32f2f; }
-    .comp-header { color:#ffa500; }
-    .ticket-header { color:#1a73e8; }
-    .total-row td { color:orange; font-weight:bold; }
-    .cash-breakdown td:first-child { padding-left:30px; }
-
-    button { background:#0288d1; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-size:15px; }
-    #exportHTMLBtn { background:#2e7d32; margin-top:10px; }
-    #sessionStatus { font-weight:bold; }
-
-    .graph-wrapper { flex:1; min-height:0; }
-    #doorCountChart { width:100%; height:100%; }
-
-    .modal.active { 
-      display:flex; position:fixed; top:0; left:0; width:100%; height:100%; 
-      background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000;
-    }
-    .modal-content { background:#2e2e2e; padding:40px; border-radius:12px; width:320px; text-align:center; border:3px solid white; }
-    input { width:100%; padding:12px; margin:10px 0; background:#333; border:1px solid #555; color:white; font-size:16px; }
-  </style>
+    <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
+        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co;
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data:;
+    ">
+    <title>Sales Log</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        .container {
+            width: 98.5%;
+            height: 98.5vh;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr;
+            grid-template-rows: auto;
+            gap: 10px;
+            height: 100%;
+            transition: grid-template-columns 0.2s ease;
+        }
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 24px;
+            display: none;
+        }
+        .graph {
+            grid-column: 1;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .middle-panel {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .tally-sheet {
+            flex: 0 0 300px;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .totals {
+            background-color: #2e2e2e;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .transaction-log {
+            flex: 1;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .right-panel {
+            grid-column: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .filters {
+            flex: 0 0 auto;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .summary {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .graph-wrapper {
+            flex: 1;
+            min-height: 0;
+        }
+        #doorCountChart {
+            width: 100%;
+            height: 100%;
+        }
+        .tally-sheet table, .transaction-log table, .totals table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .tally-sheet table, .totals table {
+            table-layout: fixed;
+        }
+        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) {
+            width: 25%;
+        }
+        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) {
+            width: 25%;
+        }
+        .tally-sheet th, .transaction-log th {
+            background-color: #3e3e3e;
+            position: static;
+        }
+        .tally-sheet td, .transaction-log td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background-color: #3e3e3e;
+            color: #ffffff;
+        }
+        .scrollable-body {
+            overflow-y: visible; /* No scrolling for tally sheet */
+        }
+        .transaction-log .scrollable-body {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .summary h3 {
+            font-size: 18px;
+        }
+        .filters label, .filters select, .filters button {
+            display: block;
+            margin: 10px 0;
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+        }
+        .filters select {
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            max-width: 300px;
+        }
+        .filters button {
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #exportBtn {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #2e2e2e;
+            margin: 15% auto;
+            padding: 45px;
+            width: 300px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            font-size: 16px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
+        }
+        .graph.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+            background-color: #1e1e1e;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .grid.fullscreen {
+            grid-template-columns: 1fr;
+        }
+        .middle-panel.fullscreen, .right-panel.fullscreen {
+            display: none;
+        }
+        .resize-handle {
+            height: 10px;
+            background-color: #444;
+            cursor: ns-resize;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        .vertical-resize-handle {
+            width: 10px;
+            background-color: #444;
+            cursor: ew-resize;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+        }
+        .cash-header { color: #2e7d32; }
+        .credit-card-header { color: #d32f2f; }
+        .comp-header { color: #ffa500; }
+        .ticket-header { color: #1a73e8; }
+        .summary h3 span { color: orange; }
+        .total-row td { color: orange; }
+        .cash-breakdown td:first-child {
+            padding-left: 20px;
+        }
+    </style>
 </head>
 <body>
-
-  <div id="loginModal" class="modal active">
-    <div class="modal-content">
-      <h2>Admin Login</h2>
-      <input type="text" id="username" placeholder="Username">
-      <input type="password" id="password" placeholder="Password">
-      <button id="loginBtn">Login</button>
-      <p id="errorMsg" style="color:#d32f2f;margin-top:10px;"></p>
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <p id="errorMsg" class="error"></p>
+        </div>
     </div>
-  </div>
 
-  <div class="container" id="salesLogContainer" style="display:none;">
-    <div class="grid">
-      <div class="graph">
-        <h2>Real-Time Sales Graph</h2>
-        <button id="toggleGraphSize">Full Screen</button>
-        <div class="graph-wrapper"><canvas id="doorCountChart"></canvas></div>
-      </div>
-
-      <div class="middle-panel">
-        <div class="tally-sheet">
-          <h2>Tally Sheet</h2>
-          <table>
-            <thead><tr><th>Payment Type</th><th>People</th><th>Total</th><th>Per Person</th></tr></thead>
-            <tbody id="summaryBody"></tbody>
-          </table>
+    <div class="container" id="salesLogContainer">
+        <div class="grid">
+            <h1 class="header">Sales Log</h1>
+            <div class="graph">
+                <h2>Sales Log</h2>
+                <button id="toggleGraphSize">Toggle Full Screen</button>
+                <div class="graph-wrapper">
+                    <canvas id="doorCountChart"></canvas>
+                </div>
+                <div class="resize-handle"></div>
+                <div class="vertical-resize-handle"></div>
+            </div>
+            <div class="middle-panel">
+                <div class="tally-sheet">
+                    <h2>Tally Sheet</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="payment-type-header">Payment Type</th>
+                                <th>People</th>
+                                <th>Total Amount</th>
+                                <th>Price per Person</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="scrollable-body">
+                        <table>
+                            <tbody id="summaryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="totals">
+                    <table>
+                        <tbody id="totalsBody"></tbody>
+                    </table>
+                </div>
+                <div class="transaction-log">
+                    <h2>Transaction Log</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Items</th>
+                                <th>Cash Total</th>
+                                <th>Door Count</th>
+                                <th>Cashier</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="scrollable-body">
+                        <table>
+                            <tbody id="transactionLogBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="right-panel">
+                <div class="filters">
+                    <h2>Filters</h2>
+                    <label>Cashier Session:
+                        <select id="sessionSelect">
+                            <option value="">Select Cashier Session</option>
+                        </select>
+                    </label>
+                    <button id="applyFilters">Apply</button>
+                </div>
+                <div class="summary">
+                    <h2>Summary</h2>
+                    <div id="sessionInfo"></div>
+                    <p id="eventDateDisplay"></p>
+                    <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
+                    <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
+                    <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
+                    <button id="exportBtn">Export to PDF</button>
+                </div>
+            </div>
         </div>
-
-        <div class="totals">
-          <table><tbody id="totalsBody"></tbody></table>
-        </div>
-
-        <div class="transaction-log">
-          <h2>Transaction Log</h2>
-          <table>
-            <thead><tr><th>Time</th><th>Items</th><th>Cash</th><th>Door</th><th>Cashier</th><th>Note</th></tr></thead>
-            <tbody id="transactionLogBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="right-panel">
-        <div class="filters">
-          <h2>Session Filter</h2>
-          <select id="sessionSelect"><option value="">Loading sessions...</option></select>
-          <button id="applyFilters">Apply</button>
-        </div>
-
-        <div class="summary">
-          <h2>Session Summary</h2>
-          <div id="sessionInfo"></div>
-          <p id="eventDateDisplay"></p>
-          <p><strong>Status: <span id="sessionStatus">OPEN</span></strong></p>
-          <h3 style="color:pink">Thru Door: <span id="totalDoorCount">0</span></h3>
-          <h3 style="color:pink">Cash Sales: $<span id="totalSales">0.00</span></h3>
-          <h3 style="color:pink">Transactions: <span id="totalTransactions">0</span></h3>
-          <button id="exportBtn">Export to PDF</button>
-          <button id="exportHTMLBtn">Export to HTML (CSV)</button>
-        </div>
-
-        <div id="closedSessionTotals">
-          <div>SESSION CLOSED</div>
-          <div>Final Door: <span id="finalDoor">0</span></div>
-          <div>Final Cash: $<span id="finalCash">0.00</span></div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <script>
-    const supabase = window.supabase.createClient(
-      'https://nnbevkohcjnzyxgkzgna.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY'
-    );
+    <script>
+        const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const ADMIN_USER = "admin";
-    const ADMIN_PASS = "password123";
-    let chart = null;
-    let selectedSessionId = null;
+        const adminUsername = "admin";
+        const adminPassword = "password123";
+        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
+        const channel = new BroadcastChannel('transaction_channel');
 
-    const typeMap = { 'CASH': 'Cash', 'CC': 'Credit Card', 'TICKET': 'Ticket', 'COMP': 'Comp' };
-    function getType(key) { return typeMap[key?.split(' ')[0]] || key; }
+        const loginModal = document.getElementById('loginModal');
+        const salesLogContainer = document.getElementById('salesLogContainer');
+        const errorMsg = document.getElementById('errorMsg');
 
-    class SalesLog {
-      constructor() { this.transactions = []; this.init(); }
+        let sessionTimeoutId;
+        let salesLogInstance;
+        let chart;
+        let selectedSessionId = null;
 
-      async init() {
-        await this.updateLog();
-        setInterval(() => this.updateLog(), 5000);
-      }
+        const typeMap = {
+            'CASH': 'Cash',
+            'Cash': 'Cash',
+            'CC': 'Credit Card',
+            'Credit Card': 'Credit Card',
+            'TICKET': 'Ticket',
+            'Ticket': 'Ticket',
+            'COMP': 'Comp',
+            'Comp': 'Comp'
+        };
 
-      async updateLog() {
-        try {
-          const { data: allTx } = await supabase.from('transactions').select('*').order('sessionId', { ascending: false });
-          const validTx = allTx.filter(t => t?.sessionId);
-          const sessions = [...new Set(validTx.map(t => t.sessionId))];
+        function getType(key) {
+            return typeMap[key] || typeMap[key.split(' ')[0]] || key;
+        }
 
-          const select = document.getElementById('sessionSelect');
-          select.innerHTML = '<option value="">Select Session</option>' +
-            sessions.map(id => {
-              const tx = validTx.find(t => t.sessionId === id);
-              const isClosed = !validTx.some(t => t.sessionId === id && new Date(t.timestamp) > new Date(Date.now() - 15*60*1000));
-              const status = isClosed ? ' [CLOSED]' : '';
-              return `<option value="${id}">${tx?.cashierName || 'Unknown'} - ${id}${status}</option>`;
-            }).join('');
+        function colorCodeItems(items) {
+            return items.split('; ').map(item => {
+                const [key, rest] = item.split(': ');
+                const type = getType(key);
+                const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
+                return `<span class="${colorClass}">${key}</span>: ${rest}`;
+            }).join('; ');
+        }
 
-          if (!selectedSessionId && sessions.length) selectedSessionId = sessions[0];
-          if (!selectedSessionId) return;
+        function getColorForType(type) {
+            const colors = {
+                'Cash': '#2e7d32',
+                'Credit Card': '#d32f2f',
+                'Comp': '#ffa500',
+                'Ticket': '#1a73e8',
+                'Total': '#808080'
+            };
+            return colors[type] || '#888888';
+        }
 
-          const tx = validTx.filter(t => t.sessionId === selectedSessionId)
-            .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+        function getPaymentTypeColor(paymentType) {
+            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) {
+                return '#2e7d32'; // Cash color (green)
+            } else if (paymentType === 'Credit Card') {
+                return '#d32f2f'; // Credit Card color (red)
+            } else if (paymentType === 'Comp') {
+                return '#ffa500'; // Comp color (orange)
+            } else if (paymentType === 'Ticket') {
+                return '#1a73e8'; // Ticket color (blue)
+            } else {
+                return '#000000'; // Default to black
+            }
+        }
 
-          this.transactions = tx;
+        class SalesLog {
+            constructor() {
+                this.transactions = [];
+                const urlParams = new URLSearchParams(window.location.search);
+                const sessionIdFromUrl = urlParams.get('sessionId');
+                const exportFlag = urlParams.get('export');
 
-          const isClosed = !tx.some(t => new Date(t.timestamp) > new Date(Date.now() - 15*60*1000));
-          document.getElementById('sessionStatus').textContent = isClosed ? 'CLOSED' : 'OPEN';
-          document.getElementById('sessionStatus').style.color = isClosed ? '#ff69b4' : '#2e7d32';
+                if (sessionIdFromUrl) selectedSessionId = sessionIdFromUrl;
 
-          const eventName = tx[0]?.eventName || 'Unknown';
-          const eventDate = tx[0]?.eventDate || 'Unknown';
-          const cashiers = [...new Set(tx.map(t => t.cashierName))].join(', ');
-          document.getElementById('sessionInfo').innerHTML = `<p><strong>Event:</strong> ${eventName}</p><p><strong>Cashier(s):</strong> ${cashiers}</p>`;
-          document.getElementById('eventDateDisplay').innerHTML = `<p><strong>Date:</strong> ${eventDate}</p>`;
+                this.updateInterval = null;
+                this.init().then(() => {
+                    this.updateLog();
+                    if (exportFlag === 'true') this.exportPDF();
+                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
+                    channel.onmessage = (event) => {
+                        if (event.data.type === 'new_transaction') this.updateLog();
+                        else if (event.data.type === 'new_session') {
+                            selectedSessionId = event.data.sessionId;
+                            this.updateLog();
+                        }
+                    };
+                    supabase
+                        .channel('public:transactions')
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
+                            console.log('Real-time update triggered');
+                            this.updateLog();
+                        })
+                        .subscribe(status => console.log('Subscription status:', status));
+                });
 
-          // === TALLY SHEET ===
-          const summary = {};
-          const cashBreakdown = {};
-          let totalPeople = 0, totalCash = 0;
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+                document.getElementById('applyFilters').addEventListener('click', () => {
+                    selectedSessionId = document.getElementById('sessionSelect').value || null;
+                    this.updateLog();
+                });
+                document.getElementById('sessionSelect').addEventListener('change', (event) => {
+                    selectedSessionId = event.target.value || null;
+                    this.updateLog();
+                });
+                document.getElementById('toggleGraphSize').addEventListener('click', () => {
+                    const graph = document.querySelector('.graph');
+                    const grid = document.querySelector('.grid');
+                    const middlePanel = document.querySelector('.middle-panel');
+                    const rightPanel = document.querySelector('.right-panel');
+                    
+                    if (!graph.dataset.originalHeight) {
+                        graph.dataset.originalHeight = window.getComputedStyle(graph).height;
+                    }
+                    
+                    graph.classList.toggle('fullscreen');
+                    grid.classList.toggle('fullscreen');
+                    middlePanel.classList.toggle('fullscreen');
+                    rightPanel.classList.toggle('fullscreen');
+                    
+                    if (!graph.classList.contains('fullscreen')) {
+                        graph.style.height = graph.dataset.originalHeight;
+                    }
+                    
+                    if (chart) setTimeout(() => chart.resize(), 100);
+                });
 
-          tx.forEach(t => {
-            totalCash += t.cashTotal || 0;
-            t.items?.split('; ').forEach(item => {
-              const [key, val] = item.split(': ');
-              if (!key || !val) return;
-              const type = getType(key);
-              const count = parseInt(val.split(' ')[0]) || 0;
-              totalPeople += count;
+                let isResizingHorizontally = false;
+                let startX, startWidth;
+                const verticalResizeHandle = document.querySelector('.vertical-resize-handle');
+                const graph = document.querySelector('.graph');
 
-              if (type === 'Cash') {
-                if (!cashBreakdown[key]) cashBreakdown[key] = 0;
-                cashBreakdown[key] += count;
-                summary.Cash = (summary.Cash || 0) + count;
-              } else {
-                summary[type] = (summary[type] || 0) + count;
-              }
-            });
-          });
+                verticalResizeHandle.addEventListener('mousedown', (e) => {
+                    isResizingHorizontally = true;
+                    startX = e.clientX;
+                    startWidth = parseInt(window.getComputedStyle(graph).width, 10);
+                    document.addEventListener('mousemove', horizontalResize);
+                    document.addEventListener('mouseup', stopHorizontalResize);
+                });
 
-          let rows = '';
-          if (summary.Cash) {
-            const avg = summary.Cash > 0 ? (totalCash / summary.Cash) : 0;
-            rows += `<tr><td class="cash-header">Cash</td><td>${summary.Cash}</td><td>$${totalCash.toFixed(2)}</td><td>$${avg.toFixed(2)}</td></tr>`;
-            Object.keys(cashBreakdown).sort((a,b) => parseFloat(a.split('$')[1]) - parseFloat(b.split('$')[1])).forEach(k => {
-              const subAvg = cashBreakdown[k] > 0 ? (totalCash * (cashBreakdown[k]/summary.Cash) / cashBreakdown[k]) : 0;
-              rows += `<tr class="cash-breakdown"><td>- ${k}</td><td>${cashBreakdown[k]}</td><td>$${(totalCash * (cashBreakdown[k]/summary.Cash)).toFixed(2)}</td><td>$${subAvg.toFixed(2)}</td></tr>`;
-            });
-          }
-          Object.keys(summary).filter(t => t !== 'Cash').forEach(type => {
-            rows += `<tr><td class="${type.toLowerCase().replace(' ','-')}-header">${type}</td><td>${summary[type]}</td><td>$0.00</td><td>$0.00</td></tr>`;
-          });
-          document.getElementById('summaryBody').innerHTML = rows;
+                function horizontalResize(e) {
+                    if (!isResizingHorizontally) return;
+                    const dx = e.clientX - startX;
+                    const newWidth = startWidth + dx;
+                    if (newWidth > 100 && newWidth < window.innerWidth * 0.8) {
+                        graph.style.width = `${newWidth}px`;
+                        chart.resize();
+                    }
+                }
 
-          document.getElementById('totalsBody').innerHTML = `<tr class="total-row"><td>TOTALS</td><td>${totalPeople}</td><td>$${totalCash.toFixed(2)}</td><td>${totalPeople ? (totalCash/totalPeople).toFixed(2) : '0.00'}</td></tr>`;
+                function stopHorizontalResize() {
+                    isResizingHorizontally = false;
+                    document.removeEventListener('mousemove', horizontalResize);
+                    document.removeEventListener('mouseup', stopHorizontalResize);
+                }
 
-          document.getElementById('totalDoorCount').textContent = totalPeople;
-          document.getElementById('totalSales').textContent = totalCash.toFixed(2);
-          document.getElementById('totalTransactions').textContent = tx.length;
+                let isResizing = false;
+                let startY, startHeight;
+                const resizeHandle = document.querySelector('.resize-handle');
 
-          if (isClosed) {
-            document.getElementById('finalDoor').textContent = totalPeople;
-            document.getElementById('finalCash').textContent = totalCash.toFixed(2);
-            document.getElementById('closedSessionTotals').classList.add('show');
-          } else {
-            document.getElementById('closedSessionTotals').classList.remove('show');
-          }
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startY = e.clientY;
+                    startHeight = parseInt(window.getComputedStyle(graph).height, 10);
+                    document.addEventListener('mousemove', resize);
+                    document.addEventListener('mouseup', stopResize);
+                });
 
-          // === TRANSACTION LOG ===
-          document.getElementById('transactionLogBody').innerHTML = tx.map(t => `
-            <tr>
-              <td>${new Date(t.timestamp).toLocaleString()}</td>
-              <td>${t.items.split('; ').map(i => {
-                const [k,v] = i.split(': ');
-                const type = getType(k);
-                return `<span class="${type.toLowerCase().replace(' ','-')}-header">${k}</span>: ${v}`;
-              }).join('; ')}</td>
-              <td>$${t.cashTotal?.toFixed(2) || '0.00'}</td>
-              <td>${t.doorCount}</td>
-              <td>${t.cashierName}</td>
-              <td>${t.note || ''}</td>
-            </tr>
-          `).join('');
+                function resize(e) {
+                    if (!isResizing) return;
+                    const dy = e.clientY - startY;
+                    const newHeight = startHeight + dy;
+                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                        graph.style.height = `${newHeight}px`;
+                        chart.resize();
+                    }
+                }
 
-          // === GRAPH ===
-          const cumulative = { Cash:0, 'Credit Card':0, Comp:0, Ticket:0, Total:0 };
-          const datasets = Object.keys(cumulative).map(type => ({
-            label: type === 'Total' ? 'Total Door' : type,
-            data: [],
-            borderColor: type === 'Cash' ? '#2e7d32' : type === 'Credit Card' ? '#d32f2f' : type === 'Comp' ? '#ffa500' : type === 'Ticket' ? '#1a73e8' : '#ff69b4',
-            fill: false,
-            stepped: true
-          }));
+                function stopResize() {
+                    isResizing = false;
+                    document.removeEventListener('mousemove', resize);
+                    document.removeEventListener('mouseup', stopResize);
+                }
+            }
 
-          tx.forEach(t => {
-            t.items?.split('; ').forEach(item => {
-              const [key, val] = item.split(': ');
-              if (!key) return;
-              const type = getType(key);
-              const count = parseInt(val.split(' ')[0]) || 0;
-              if (type in cumulative) cumulative[type] += count;
-            });
-            cumulative.Total = Object.values(cumulative).slice(0,4).reduce((a,b)=>a+b,0);
-            const time = new Date(t.timestamp);
-            datasets.forEach((ds, i) => {
-              const key = i === 4 ? 'Total' : Object.keys(cumulative)[i];
-              ds.data.push({ x: time, y: cumulative[key] });
-            });
-          });
+            async init() {
+                const { data, error } = await supabase.from('transactions').select('id').limit(1);
+                console.log('Test fetch:', data, error);
+                await this.updateLog();
+            }
 
-          if (chart) {
-            chart.data.datasets = datasets;
-            chart.update();
-          } else {
-            chart = new Chart(document.getElementById('doorCountChart'), {
-              type: 'line',
-              data: { datasets },
-              options: { maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'minute' } } } }
-            });
-          }
+            stop() {
+                if (this.updateInterval) clearInterval(this.updateInterval);
+            }
 
-        } catch (e) { console.error('Update failed:', e); }
-      }
+            async updateLog() {
+                try {
+                    const { data: allTransactions, error } = await supabase
+                        .from('transactions')
+                        .select('*')
+                        .order('sessionId', { ascending: false });
+                    if (error) throw new Error(`Error fetching transactions: ${error.message}`);
 
-      exportHTML() {
-        if (!this.transactions.length) return alert('No data');
-        const csv = [
-          ['Timestamp','Cashier','Items','Cash Total','Door Count','Note'],
-          ...this.transactions.map(t => [
-            new Date(t.timestamp).toLocaleString(),
-            t.cashierName,
-            t.items,
-            t.cashTotal,
-            t.doorCount,
-            t.note || ''
-          ])
-        ].map(r => r.join(',')).join('\n');
+                    console.log('Fetched transactions:', allTransactions);
 
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sister Bar Session ${selectedSessionId}</title>
-<style>body{font-family:Arial;background:#1e1e1e;color:#e0e0e0;padding:40px;}
-table{width:100%;border-collapse:collapse;margin:20px 0;}
-th,td{border:1px solid #444;padding:12px;text-align:left;}
-th{background:#333;}
-.download-btn{padding:15px 30px;background:#2e7d32;color:white;border:none;font-size:18px;border-radius:8px;cursor:pointer;}
-</style></head><body>
-<h1>Sister Bar - Session ${selectedSessionId}</h1>
-<button class="download-btn" onclick="download()">Download CSV</button>
-<pre style="background:#111;padding:20px;border-radius:8px;overflow:auto;max-height:80vh;">${csv}</pre>
-<script>
-function download(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(["${csv}"],{type:'text/csv'}));a.download='sisterbar_${selectedSessionId}.csv';a.click();}
-</script></body></html>`;
+                    // Filter out transactions without sessionId
+                    const validTransactions = allTransactions.filter(t => t && t.sessionId != null);
 
-        const win = window.open('', '_blank');
-        win.document.write(html);
-        win.document.close();
-      }
-    }
+                    const allSessionIds = [...new Set(validTransactions.map(t => t.sessionId))];
+                    const sessionSelect = document.getElementById('sessionSelect');
+                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
+                        allSessionIds.map(id => {
+                            const sessionTx = validTransactions.find(t => t.sessionId === id);
+                            const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
+                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
+                        }).join('');
 
-    // Login
-    document.getElementById('loginBtn').onclick = () => {
-      if (document.getElementById('username').value === ADMIN_USER && 
-          document.getElementById('password').value === ADMIN_PASS) {
-        document.getElementById('loginModal').classList.remove('active');
-        document.getElementById('salesLogContainer').style.display = 'block';
-        const log = new SalesLog();
-        document.getElementById('exportHTMLBtn').onclick = () => log.exportHTML();
-      } else {
-        document.getElementById('errorMsg').textContent = 'Invalid credentials';
-      }
-    };
+                    if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
+                    console.log('Selected Session ID:', selectedSessionId);
 
-    // Auto-login if already logged in
-    if (localStorage.getItem('loggedIn') === 'true') {
-      document.getElementById('loginModal').classList.remove('active');
-      document.getElementById('salesLogContainer').style.display = 'block';
-      const log = new SalesLog();
-      document.getElementById('exportHTMLBtn').onclick = () => log.exportHTML();
-    }
-  </script>
+                    if (!selectedSessionId) {
+                        document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
+                        document.getElementById('eventDateDisplay').innerHTML = '';
+                        if (chart) {
+                            chart.data.datasets = [];
+                            chart.update();
+                        }
+                        document.getElementById('summaryBody').innerHTML = '';
+                        document.getElementById('totalsBody').innerHTML = '';
+                        document.getElementById('transactionLogBody').innerHTML = '';
+                        document.getElementById('totalDoorCount').textContent = '0';
+                        document.getElementById('totalSales').textContent = '0.00';
+                        document.getElementById('totalTransactions').textContent = '0';
+                        return;
+                    }
+
+                    const transactions = validTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
+                    this.transactions = transactions;
+                    sessionSelect.value = selectedSessionId;
+                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    console.log('Filtered transactions:', transactions);
+
+                    const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
+                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'No Date';
+                    const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
+                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
+                    document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
+
+                    const itemSummary = {};
+                    const cashBreakdown = {};
+                    let totalDoorCount = 0;
+                    let totalSales = 0;
+
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const type = getType(key);
+                                const [countStr, priceStr] = value.split(' @ ');
+                                const count = parseInt(countStr, 10) || 0;
+                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
+                                if (type === 'Cash') {
+                                    if (!cashBreakdown[key]) cashBreakdown[key] = { people: 0, total: 0, price };
+                                    cashBreakdown[key].people += count;
+                                    cashBreakdown[key].total += count * price;
+                                    if (!itemSummary['Cash']) itemSummary['Cash'] = { people: 0, total: 0 };
+                                    itemSummary['Cash'].people += count;
+                                    itemSummary['Cash'].total += count * price;
+                                } else {
+                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
+                                    itemSummary[type].people += count;
+                                    itemSummary[type].total += count * price;
+                                }
+                                totalDoorCount += count;
+                            }
+                        });
+                        totalSales += t.cashTotal || 0;
+                    });
+
+                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
+                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+                    document.getElementById('totalTransactions').textContent = transactions.length;
+
+                    let summaryRows = '';
+
+                    // Add Cash total row
+                    if (itemSummary['Cash']) {
+                        const data = itemSummary['Cash'];
+                        const averagePrice = data.people > 0 ? data.total / data.people : 0;
+                        summaryRows += `
+                            <tr>
+                                <td class="cash-header">Cash</td>
+                                <td>${data.people}</td>
+                                <td>$${data.total.toFixed(2)}</td>
+                                <td>$${averagePrice.toFixed(2)}</td>
+                            </tr>
+                        `;
+
+                        // Add cash breakdown rows, sorted by dollar amount
+                        Object.keys(cashBreakdown).sort((a, b) => {
+                            const amountA = parseFloat(a.split('$')[1]);
+                            const amountB = parseFloat(b.split('$')[1]);
+                            return amountA - amountB;
+                        }).forEach(subKey => {
+                            const subData = cashBreakdown[subKey];
+                            const subAveragePrice = subData.people > 0 ? subData.total / subData.people : 0;
+                            summaryRows += `
+                                <tr class="cash-breakdown">
+                                    <td> - ${subKey}</td>
+                                    <td>${subData.people}</td>
+                                    <td>$${subData.total.toFixed(2)}</td>
+                                    <td>$${subAveragePrice.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+
+                    // Add other payment types
+                    Object.entries(itemSummary).forEach(([type, data]) => {
+                        if (type !== 'Cash') {
+                            const averagePrice = data.people > 0 ? data.total / data.people : 0;
+                            const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
+                            summaryRows += `
+                                <tr>
+                                    <td class="${colorClass}">${type}</td>
+                                    <td>${data.people}</td>
+                                    <td>$${data.total.toFixed(2)}</td>
+                                    <td>$${averagePrice.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }
+                    });
+
+                    document.getElementById('summaryBody').innerHTML = summaryRows;
+
+                    const totalsRow = `
+                        <tr class="total-row">
+                            <td><strong>TOTALS</strong></td>
+                            <td><strong>${totalDoorCount}</strong></td>
+                            <td><strong>$${totalSales.toFixed(2)}</strong></td>
+                            <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
+                        </tr>
+                    `;
+                    document.getElementById('totalsBody').innerHTML = totalsRow;
+
+                    const transactionLogBody = document.getElementById('transactionLogBody');
+                    transactionLogBody.innerHTML = transactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.timestamp).toLocaleString()}</td>
+                            <td>${colorCodeItems(t.items)}</td>
+                            <td>$${t.cashTotal.toFixed(2)}</td>
+                            <td>${t.doorCount}</td>
+                            <td>${t.cashierName}</td>
+                            <td>${t.note || ''}</td>
+                        </tr>
+                    `).join('');
+                    console.log('Transaction log HTML:', transactionLogBody.innerHTML);
+
+                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+                    const cumulative = {};
+                    types.forEach(type => cumulative[type] = 0);
+                    cumulative.total = 0;
+
+                    const dataPoints = {};
+                    types.forEach(type => dataPoints[type] = []);
+                    dataPoints.total = [];
+
+                    transactions.forEach(t => {
+                        const items = t.items.split('; ');
+                        items.forEach(item => {
+                            const [key, value] = item.split(': ');
+                            if (key && value) {
+                                const type = getType(key);
+                                if (types.includes(type)) {
+                                    const [countStr] = value.split(' @ ');
+                                    const count = parseInt(countStr, 10) || 0;
+                                    cumulative[type] += count;
+                                    cumulative.total += count;
+                                }
+                            }
+                        });
+                        const timestamp = new Date(t.timestamp);
+                        types.forEach(type => {
+                            dataPoints[type].push({ x: timestamp, y: cumulative[type] });
+                        });
+                        dataPoints.total.push({ x: timestamp, y: cumulative.total });
+                    });
+
+                    const datasets = types.map(type => ({
+                        label: type,
+                        data: dataPoints[type],
+                        borderColor: getColorForType(type),
+                        fill: false,
+                        stepped: true
+                    }));
+                    datasets.push({
+                        label: 'Total',
+                        data: dataPoints.total,
+                        borderColor: '#808080',
+                        fill: false,
+                        stepped: true
+                    });
+                    console.log('Chart datasets:', datasets);
+
+                    if (chart) {
+                        chart.data.datasets = datasets;
+                        chart.update();
+                    } else {
+                        chart = new Chart(document.getElementById('doorCountChart'), {
+                            type: 'line',
+                            data: { datasets },
+                            options: {
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: {
+                                        type: 'time',
+                                        time: { unit: 'minute' },
+                                        title: { display: true, text: 'Time', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Door Count', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } }
+                                    }
+                                },
+                                plugins: {
+                                    legend: { labels: { font: { size: 14 } } }
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating log:', error);
+                }
+            }
+
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 0.5;
+                const graphWidth = pageWidth - 2 * margin;
+                const graphHeight = graphWidth * (11.69 / 8.27) / 2;
+                const dpi = 150;
+
+                if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
+                    console.error('No chart data available for export.');
+                    return;
+                }
+
+                // Add title
+                doc.setFontSize(16);
+                doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
+
+                // Add session info and event date as separate lines
+                const sessionInfo = document.getElementById('sessionInfo').innerText;
+                const eventDate = document.getElementById('eventDateDisplay').innerText;
+                doc.setFontSize(12);
+                let y = margin + 0.2; // Start below the title
+                const lineHeight = 12 / 72; // 12pt font height in inches
+                const headerLines = [sessionInfo, eventDate];
+                headerLines.forEach(line => {
+                    doc.text(line, margin, y);
+                    y += lineHeight;
+                });
+
+                // Add summary table
+                const summaryData = [
+                    ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
+                    ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
+                    ['Total Transactions', document.getElementById('totalTransactions').innerText]
+                ];
+                doc.autoTable({
+                    startY: y + 0.2, // Add a small gap after header
+                    head: [['Metric', 'Value']],
+                    body: summaryData,
+                    theme: 'grid',
+                    styles: { fontSize: 12 }
+                });
+
+                // Add tally sheet table with color coding
+                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
+                    body: tallyData,
+                    theme: 'grid',
+                    styles: { fontSize: 10 },
+                    didParseCell: (data) => {
+                        if (data.section === 'body' && data.column.index === 0) {
+                            const paymentType = data.cell.raw;
+                            const color = getPaymentTypeColor(paymentType);
+                            data.cell.styles.textColor = color;
+                        }
+                    }
+                });
+
+                // Add totals table
+                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['', 'People', 'Total Amount', 'Price per Person']],
+                    body: totalsData,
+                    theme: 'grid',
+                    styles: { fontSize: 10 }
+                });
+
+                // Add transaction log table
+                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
+                    Array.from(row.cells).map(cell => cell.innerText)
+                );
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 0.2,
+                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
+                    body: transactionData,
+                    theme: 'grid',
+                    styles: { fontSize: 8 }
+                });
+
+                doc.addPage();
+
+                const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
+                const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
+                const interval = 30 * 60 * 1000;
+                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+
+                for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
+                    const intervalStart = new Date(time);
+                    const intervalEnd = new Date(time + interval);
+                    const intervalTransactions = this.transactions.filter(t => {
+                        const txTime = new Date(t.timestamp);
+                        return txTime >= intervalStart && txTime < intervalEnd;
+                    });
+
+                    if (intervalTransactions.length > 0) {
+                        const intervalSummary = {};
+                        types.forEach(type => intervalSummary[type] = 0);
+                        let intervalTotal = 0;
+
+                        intervalTransactions.forEach(t => {
+                            const items = t.items.split('; ');
+                            items.forEach(item => {
+                                const [key, value] = item.split(': ');
+                                if (key && value) {
+                                    const type = getType(key);
+                                    if (types.includes(type)) {
+                                        const [countStr] = value.split(' @ ');
+                                        const count = parseInt(countStr, 10) || 0;
+                                        intervalSummary[type] += count;
+                                        intervalTotal += count;
+                                    }
+                                }
+                            });
+                        });
+
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = graphWidth * dpi;
+                        tempCanvas.height = graphHeight * dpi;
+                        document.body.appendChild(tempCanvas);
+                        const tempCtx = tempCanvas.getContext('2d');
+                        const barChart = new Chart(tempCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: types.concat('Total'),
+                                datasets: [{
+                                    label: 'Door Count',
+                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
+                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
+                                }]
+                            },
+                            options: {
+                                animation: { duration: 0 },
+                                scales: {
+                                    y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
+                                    x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                                },
+                                plugins: {
+                                    legend: { labels: { font: { size: 14 } } }
+                                }
+                            }
+                        });
+                        barChart.update();
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        doc.setFontSize(16);
+                        doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
+                        doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                        document.body.removeChild(tempCanvas);
+                        barChart.destroy();
+                        doc.addPage();
+                    }
+                }
+
+                const mainCanvas = document.createElement('canvas');
+                mainCanvas.width = graphWidth * dpi;
+                mainCanvas.height = graphHeight * dpi;
+                document.body.appendChild(mainCanvas);
+                const mainCtx = mainCanvas.getContext('2d');
+                const tempChart = new Chart(mainCtx, {
+                    type: 'line',
+                    data: chart.data,
+                    options: {
+                        animation: { duration: 0 },
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                        },
+                        plugins: {
+                            legend: { labels: { font: { size: 14 } } }
+                        }
+                    }
+                });
+                tempChart.update();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                doc.setFontSize(16);
+                doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
+                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
+                document.body.removeChild(mainCanvas);
+                tempChart.destroy();
+
+                doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
+            }
+        }
+
+        function isLoggedIn() {
+            return localStorage.getItem('isLoggedIn') === 'true';
+        }
+
+        function setLoggedIn(value) {
+            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
+        }
+
+        function logout() {
+            clearTimeout(sessionTimeoutId);
+            setLoggedIn(false);
+            if (salesLogInstance) salesLogInstance.stop();
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
+        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
+            salesLogContainer.style.display = 'block';
+            loginModal.style.display = 'none';
+            salesLogInstance = new SalesLog();
+            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
+            sessionTimeoutId = setTimeout(logout, remainingTime);
+        } else {
+            setLoggedIn(false);
+            salesLogContainer.style.display = 'none';
+            loginModal.style.display = 'block';
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === adminUsername && password === adminPassword) {
+                setLoggedIn(true);
+                localStorage.setItem('loginTime', Date.now().toString());
+                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
+                loginModal.style.display = 'none';
+                salesLogContainer.style.display = 'block';
+                salesLogInstance = new SalesLog();
+                errorMsg.textContent = '';
+            } else {
+                errorMsg.textContent = 'Invalid username or password';
+            }
+        });
+    </script>
 </body>
 </html>
