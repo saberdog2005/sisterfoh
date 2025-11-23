@@ -196,7 +196,6 @@
     }
     #timer { color: var(--yellow); font-weight: bold; }
 
-    /* MODAL WITH GAUSSIAN BLUR */
     .modal {
       display: none;
       position: fixed;
@@ -207,9 +206,8 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      transition: opacity 0.3s ease;
     }
-    .modal.active { display: flex; opacity: 1; }
+    .modal.active { display: flex; }
 
     .modal-content {
       background: var(--card);
@@ -590,9 +588,48 @@
         });
       }
 
-      increment(item) { /* unchanged - works */ }
-      decrement(item) { /* unchanged - works */ }
-      updateDisplay() { /* unchanged - works */ }
+      increment(item) {
+        if (!this.state.sessionStarted) return;
+        const name = item.dataset.name;
+        const price = parseFloat(item.dataset.price) || 0;
+        const type = item.dataset.type || 'cash';
+
+        let entry = this.state.currentItems.get(name) || { count: 0, price, type };
+        entry.count++;
+        this.state.currentItems.set(name, entry);
+        this.counts.get(name).textContent = entry.count;
+
+        if (type === 'cash') this.state.cashTotal += price;
+        this.state.sessionDoorCount++;
+        this.updateDisplay();
+      }
+
+      decrement(item) {
+        if (!this.state.sessionStarted) return;
+        const name = item.dataset.name;
+        const entry = this.state.currentItems.get(name);
+        if (!entry || entry.count === 0) return;
+
+        const price = parseFloat(item.dataset.price) || 0;
+        entry.count--;
+        if (entry.count === 0) this.state.currentItems.delete(name);
+        else this.state.currentItems.set(name, entry);
+        this.counts.get(name).textContent = entry.count;
+
+        if (item.dataset.type === 'cash') this.state.cashTotal -= price;
+        this.state.sessionDoorCount--;
+        this.updateDisplay();
+      }
+
+      updateDisplay() {
+        const thru = this.elements.buttonContainer.querySelector('.thru-door');
+        if (thru) {
+          thru.innerHTML = `
+            <div><span class="number">$${this.state.cashTotal.toFixed(2)}</span><br><span>Cash Total</span></div>
+            <div><span class="number">${this.state.sessionDoorCount}</span><br><span>Thru Door</span></div>
+          `;
+        }
+      }
 
       startSession() {
         if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
@@ -679,9 +716,8 @@
 ${items || '<p>None</p>'}
 </body></html>`;
 
-        const blob = new Blob([reportHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
+        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(reportHTML);
+        window.open(dataUrl, '_blank');
       }
 
       endSession() {
@@ -695,12 +731,86 @@ ${items || '<p>None</p>'}
         location.reload();
       }
 
-      async logSale(final = false) { /* unchanged - logs to Supabase */ }
-      toggleEditMode() { /* unchanged */ }
-      toggleActive(item) { /* unchanged */ }
-      saveLayout() { /* unchanged */ }
-      addCustomButton() { /* unchanged */ }
-      saveNewItem() { /* unchanged */ }
+      async logSale(final = false) {
+        if (this.state.currentItems.size === 0) return;
+        const itemsStr = Array.from(this.state.currentItems.entries())
+          .map(([n, d]) => `${d.type.toUpperCase()} ${n}: ${d.count}`).join('; ');
+        const payload = {
+          eventDate: this.elements.eventDate.value,
+          eventVenue: this.elements.eventVenue.value,
+          eventName: this.elements.eventName.value,
+          cashierName: this.elements.cashierName.value,
+          items: itemsStr,
+          cashTotal: this.state.cashTotal,
+          doorCount: this.state.sessionDoorCount,
+          note: this.elements.noteInput.value,
+          sessionId: this.state.sessionId,
+          timestamp: new Date().toISOString()
+        };
+        try {
+          await fetch(SERVER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: API_KEY, Authorization: `Bearer ${API_KEY}` },
+            body: JSON.stringify(payload)
+          });
+          if (!final) {
+            this.state.currentItems.clear();
+            this.state.cashTotal = 0;
+            this.counts.forEach(c => c.textContent = '0');
+            this.elements.noteInput.value = '';
+            this.updateDisplay();
+          }
+        } catch (e) {
+          alert('Failed to log sale');
+        }
+      }
+
+      toggleEditMode() {
+        this.state.isEditing = !this.state.isEditing;
+        this.elements.editLayoutBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
+        this.elements.editInstructions.classList.toggle('hidden', !this.state.isEditing);
+        this.elements.addNewButtonBtn.classList.toggle('hidden', !this.state.isEditing);
+        if (!this.state.isEditing) this.saveLayout();
+      }
+
+      toggleActive(item) {
+        const active = item.dataset.active === 'true';
+        item.dataset.active = !active;
+        item.style.opacity = active ? '1' : '0.5';
+      }
+
+      saveLayout() {
+        const items = Array.from(this.elements.buttonContainer.querySelectorAll('.product-item'))
+          .map(el => ({
+            name: el.dataset.name,
+            type: el.dataset.type,
+            price: parseFloat(el.dataset.price),
+            active: el.dataset.active === 'true'
+          }));
+        localStorage.setItem('sisterbar_layout', JSON.stringify(items));
+      }
+
+      addCustomButton() {
+        const name = document.getElementById('newButtonName').value.trim();
+        const price = parseFloat(document.getElementById('newButtonValue').value) || 0;
+        const type = document.getElementById('newButtonType').value;
+        if (!name) return;
+        const el = this.createButton({ name, type, price, active: true });
+        this.elements.buttonContainer.insertBefore(el, this.elements.buttonContainer.querySelector('.thru-door'));
+        this.counts.set(name, el.querySelector('.count'));
+        this.saveLayout();
+        document.getElementById('addButtonModal').classList.remove('active');
+      }
+
+      saveNewItem() {
+        const val = document.getElementById('newItemInput').value.trim();
+        if (!val) return;
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = val;
+        this.currentSelect.insertBefore(opt, this.currentSelect.lastElementChild);
+        this.currentSelect.value = val;
+        document.getElementById('addItemModal').classList.remove('active');
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => new SalesApp());
