@@ -1,968 +1,662 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
+    <!-- SOFTWARE COPYRIGHT 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; ">
-    <title>Sales Log</title>
+    <title>Sister Bar • Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #1e1e1e; color: #e0e0e0; overflow: auto; }
-        .container { width: 98.5%; min-height: 98.5vh; }
-        .grid { display: grid; grid-template-columns: 2fr 2fr 1fr; grid-template-rows: auto; gap: 10px; min-height: 100%; transition: grid-template-columns 0.2s ease; }
-        .header { grid-column: 1 / -1; text-align: center; font-size: 24px; display: none; }
-        .graph { grid-column: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; position: relative; }
-        .middle-panel { grid-column: 2; display: flex; flex-direction: column; gap: 10px; }
-        .tally-sheet { flex: 0 0 300px; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
-        .totals { background-color: #2e2e2e; padding: 10px; border-radius: 5px; }
-        .transaction-log { flex: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
-        .right-panel { grid-column: 3; display: flex; flex-direction: column; gap: 10px; }
-        .filters { flex: 0 0 auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
-        .summary { flex: 1; overflow-y: auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
-        .graph-wrapper { flex: 1; min-height: 0; }
-        #doorCountChart { width: 100%; height: 100%; }
-        .tally-sheet table, .transaction-log table, .totals table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .tally-sheet table, .totals table { table-layout: fixed; }
-        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) { width: 25%; }
-        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) { width: 25%; }
-        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) { width: 25%; }
-        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) { width: 25%; }
-        .tally-sheet th, .transaction-log th { background-color: #3e3e3e; position: static; }
-        .tally-sheet td, .transaction-log td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
-        th { background-color: #3e3e3e; color: #ffffff; }
-        .scrollable-body { overflow-y: visible; /* No scrolling for tally sheet */ }
-        .transaction-log .scrollable-body { max-height: 300px; overflow-y: auto; }
-        .summary h3 { font-size: 18px; color: white; }
-        .filters label, .filters select, .filters button { display: block; margin: 10px 0; width: 100%; padding: 8px; font-size: 16px; }
-        .filters select { background-color: #333; color: #e0e0e0; border: 1px solid #555; max-width: 300px; }
-        .filters button { background-color: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #exportBtn, #exportHtmlBtn { background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; padding: 8px; font-size: 16px; margin-top: 10px; }
-        #removeSessionBtn { background-color: #d32f2f; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; padding: 8px; font-size: 16px; margin-top: 10px; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #2e2e2e; margin: 15% auto; padding: 45px; width: 300px; border-radius: 5px; text-align: center; }
-        .modal-content input { width: 100%; padding: 10px; margin: 10px 0; background-color: #333; color: #e0e0e0; border: 1px solid #555; font-size: 16px; }
-        .modal-content button { padding: 10px 20px; background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        .error { color: #d32f2f; margin-top: 10px; }
-        .graph.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background-color: #1e1e1e; padding: 20px; box-sizing: border-box; }
-        .grid.fullscreen { grid-template-columns: 1fr; }
-        .middle-panel.fullscreen, .right-panel.fullscreen { display: none; }
-        .resize-handle { height: 10px; background-color: #444; cursor: ns-resize; position: absolute; bottom: 0; left: 0; right: 0; }
-        .vertical-resize-handle { width: 10px; background-color: #444; cursor: ew-resize; position: absolute; top: 0; right: 0; bottom: 0; }
-        .cash-header { color: #2e7d32; }
-        .credit-card-header { color: #d32f2f; }
-        .comp-header { color: #ffa500; }
-        .ticket-header { color: #1a73e8; }
-        .summary h3 span { color: white; font-weight: bold; }
-        .total-row td { color: orange; }
-        .cash-breakdown td:first-child { padding-left: 20px; }
-        .transaction-log table td:nth-child(even) { background-color: #3e3e3e; }
-        .tally-sheet .scrollable-body table td:nth-child(even) { background-color: #3e3e3e; }
-        .totals table td:nth-child(even) { background-color: #3e3e3e; }
-        .dollar { font-weight: bold; }
-        .highlight { background-color: #4a4a4a !important; }
-        #tillBreakdown { font-style: italic; color: #aaa; }
-        @media (max-width: 1200px) {
-            .grid { grid-template-columns: 1fr 1fr; }
-            .right-panel { grid-column: 1 / 3; grid-row: 3; }
+        :root {
+            --bg: #0f0f0f;
+            --card: #1a1a1a;
+            --text: #f0f0f0;
+            --green: #00ff88;
+            --red: #ff3333;
+            --orange: #ffaa00;
+            --blue: #3399ff;
         }
-        @media (max-width: 800px) {
-            .grid { grid-template-columns: 1fr; }
-            .graph, .middle-panel, .right-panel { grid-column: 1; }
-            .middle-panel { flex-direction: column; }
-            .tally-sheet, .totals, .transaction-log { flex: auto; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            min-height: 100vh;
+            overflow-y: auto;
+            padding: 15px;
         }
+        .header {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #00ff88, #3399ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 420px;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .graph-panel {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+        .timeframe-btn {
+            padding: 12px 20px;
+            background: #333;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .timeframe-btn:hover { background: #444; }
+        .timeframe-btn.active { 
+            background: var(--green); 
+            color: black;
+            border-color: var(--green);
+        }
+        .graph-wrapper {
+            height: 95vh;
+            min-height: 600px;
+            margin-top: 15px;
+        }
+        #doorCountChart { width: 100% !important; height: 100% !important; }
+        .panel {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+        }
+        .panel h2 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--green);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+        th {
+            background: #2a2a2a;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 16px;
+            border-bottom: 3px solid var(--green);
+        }
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #333;
+        }
+        .transaction-log tbody tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .transaction-log tbody tr:hover {
+            background: #2a2a2a !important;
+            transform: translateX(5px);
+        }
+        .transaction-log tbody tr.active {
+            background: #003311 !important;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0,255,136,0.4);
+        }
+        .cash-header { color: var(--green); font-weight: bold; }
+        .credit-card-header { color: var(--red); font-weight: bold; }
+        .comp-header { color: var(--orange); font-weight: bold; }
+        .ticket-header { color: var(--blue); font-weight: bold; }
+        .total-row td {
+            background: #2a2a2a !important;
+            color: var(--green);
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .cash-breakdown td:first-child {
+            padding-left: 30px;
+            font-style: italic;
+            color: #aaa;
+        }
+        .dollar { font-weight: bold; color: var(--green); }
+        #sessionSelect {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 8px 0;
+            transition: all 0.2s;
+        }
+        #exportBtn { background: var(--green); color: black; }
+        #exportHtmlBtn { background: var(--blue); color: white; }
+        #removeSessionBtn { background: var(--red); color: white; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+        .summary h3 {
+            margin: 20px 0 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .summary span { 
+            font-size: 28px; 
+            font-weight: 900; 
+            color: var(--green);
+        }
+        @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr 1fr 380px; } }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 380px; } .graph-panel { grid-column: 1/-1; } }
+        @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p id="errorMsg" class="error"></p>
+    <div id="loginModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:1000;">
+        <div style="background:#1a1a1a;padding:50px;border-radius:16px;width:90%;max-width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+            <h2 style="font-size:32px;margin-bottom:30px;color:var(--green);">SISTER BAR</h2>
+            <input type="text" id="username" placeholder="Username" style="width:100%;padding:18px;margin:15px 0;background:#222;color:white;border:2px solid #555;border-radius:10px;font-size:18px;">
+            <input type="password" id="password" placeholder="Password" style="width:100%;padding:18px;margin:15px 0;background:#222;color:white;border:2px solid #555;border-radius:10px;font-size:18px;">
+            <button id="loginBtn" style="background:var(--green);color:black;padding:18px 40px;border-radius:12px;font-weight:bold;font-size:20px;width:100%;margin-top:20px;">ENTER</button>
+            <p id="errorMsg" style="color:var(--red);margin-top:15px;font-weight:bold;"></p>
         </div>
     </div>
-    <div class="container" id="salesLogContainer">
-        <div class="grid">
-            <h1 class="header">Sales Log</h1>
-            <div class="graph">
-                <h2>Sales Log</h2>
-                <button id="toggleGraphSize">Toggle Full Screen</button>
+
+    <div id="salesLogContainer" style="display:none;">
+        <div class="header">
+            <h1>SISTER BAR • SALES LOG</h1>
+            <select id="sessionSelect"></select>
+        </div>
+
+        <div class="main-grid">
+            <div class="graph-panel">
+                <div style="margin-bottom:15px;display:flex;gap:12px;flex-wrap:wrap;">
+                    <button class="timeframe-btn active" data-range="all">ALL TIME</button>
+                    <button class="timeframe-btn" data-range="1h">1 HOUR</button>
+                    <button class="timeframe-btn" data-range="30m">30 MIN</button>
+                    <button class="timeframe-btn" data-range="15m">15 MIN</button>
+                    <button class="timeframe-btn" data-range="5m">5 MIN</button>
+                </div>
                 <div class="graph-wrapper">
                     <canvas id="doorCountChart"></canvas>
                 </div>
-                <div class="resize-handle"></div>
-                <div class="vertical-resize-handle"></div>
             </div>
-            <div class="middle-panel">
-                <div class="tally-sheet">
-                    <h2>Tally Sheet</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="payment-type-header">Payment Type</th>
-                                <th>People</th>
-                                <th>Total Amount</th>
-                                <th>Price per Person</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    <div class="scrollable-body">
-                        <table>
-                            <tbody id="summaryBody"></tbody>
-                        </table>
-                    </div>
+
+            <div>
+                <div class="panel">
+                    <h2>TALLY SHEET</h2>
+                    <table><thead><tr><th>TYPE</th><th>PEOPLE</th><th>AMOUNT</th><th>PER PERSON</th></tr></thead><tbody id="summaryBody"></tbody></table>
                 </div>
-                <div class="totals">
-                    <table>
-                        <tbody id="totalsBody"></tbody>
-                    </table>
+                <div class="panel">
+                    <h2>TOTALS</h2>
+                    <table><tbody id="totalsBody"></tbody></table>
                 </div>
-                <div class="transaction-log">
-                    <h2>Transaction Log</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Items</th>
-                                <th>Cash Total</th>
-                                <th>Door Count</th>
-                                <th>Cashier</th>
-                                <th>Note</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    <div class="scrollable-body">
-                        <table>
-                            <tbody id="transactionLogBody"></tbody>
-                        </table>
+                <div class="panel" style="flex:1;">
+                    <h2>TRANSACTION LOG</h2>
+                    <div class="transaction-log" style="flex:1;overflow:auto;max-height:600px;">
+                        <table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"></tbody></table>
                     </div>
                 </div>
             </div>
-            <div class="right-panel">
-                <div class="filters">
-                    <h2>Filters</h2>
-                    <label>Cashier Session:
-                        <select id="sessionSelect">
-                            <option value="">Select Cashier Session</option>
-                        </select>
-                    </label>
-                    <button id="applyFilters">Apply</button>
-                    <button id="removeSessionBtn">Remove Session</button>
+
+            <div>
+                <div class="panel">
+                    <h2>SESSION SUMMARY</h2>
+                    <div id="sessionInfo" style="margin-bottom:25px;font-size:18px;"></div>
+                    <p id="eventDateDisplay" style="font-size:18px;margin-bottom:20px;"></p>
+                    <h3>TOTAL DOOR: <span id="totalDoorCount">0</span></h3>
+                    <h3>CASH SALES: $<span id="totalSales">0.00</span></h3>
+                    <h3>TRANSACTIONS: <span id="totalTransactions">0</span></h3>
+                    <h3 style="color:var(--red);">TILL COUNT: $<span id="tillTotal">0.00</span></h3>
+                    <p id="tillBreakdown" style="margin-top:15px;"></p>
                 </div>
-                <div class="summary">
-                    <h2>Summary</h2>
-                    <div id="sessionInfo"></div>
-                    <p id="eventDateDisplay"></p>
-                    <h3 style="color: #1a73e8;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
-                    <h3 style="color: #2e7d32;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
-                    <h3>Total Transactions: <span id="totalTransactions">0</span></h3>
-                    <h3 style="color: #d32f2f;">Till Total: $<span id="tillTotal">0.00</span></h3>
-                    <p id="tillBreakdown"></p>
-                    <button id="exportBtn">Export to PDF</button>
-                    <button id="exportHtmlBtn">Export to HTML</button>
+                <div class="panel">
+                    <button id="exportBtn">EXPORT PDF</button>
+                    <button id="exportHtmlBtn">EXPORT HTML</button>
+                    <button id="removeSessionBtn">DELETE SESSION</button>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Remove Session Modal -->
-    <div id="removeSessionModal" class="modal">
-        <div class="modal-content">
-            <h2>Remove Session</h2>
-            <p>Are you sure you want to remove this session? This action cannot be undone.</p>
-            <button id="confirmRemoveSession">Confirm</button>
-            <button id="cancelRemoveSession">Cancel</button>
-        </div>
-    </div>
+
     <script>
         const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const adminUsername = "admin";
-        const adminPassword = "password123";
-        const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
-        const channel = new BroadcastChannel('transaction_channel');
-        const loginModal = document.getElementById('loginModal');
-        const salesLogContainer = document.getElementById('salesLogContainer');
-        const errorMsg = document.getElementById('errorMsg');
-        let sessionTimeoutId;
-        let salesLogInstance;
         let chart;
         let selectedSessionId = null;
-        const typeMap = { 'CASH': 'Cash', 'Cash': 'Cash', 'CC': 'Credit Card', 'Credit Card': 'Credit Card', 'TICKET': 'Ticket', 'Ticket': 'Ticket', 'COMP': 'Comp', 'Comp': 'Comp' };
-        function getType(key) { return typeMap[key] || typeMap[key.split(' ')[0]] || key; }
+
+        const typeMap = { 'CASH': 'Cash', 'CC': 'Credit Card', 'TICKET': 'Ticket', 'COMP': 'Comp' };
+        function getType(key) { return typeMap[key?.split(' ')[0]] || key; }
+
         function colorCodeItems(items) {
+            if (!items) return '';
             return items.split('; ').map(item => {
                 const [key, rest] = item.split(': ');
                 const type = getType(key);
-                const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                return `<span class="${colorClass}">${key}</span>: ${rest}`;
+                const color = type === 'Cash' ? '#00ff88' : type === 'Credit Card' ? '#ff3333' : type === 'Comp' ? '#ffaa00' : '#3399ff';
+                return `<span style="color:${color};font-weight:bold">${key}</span>: ${rest}`;
             }).join('; ');
         }
-        function getColorForType(type) {
-            const colors = { 'Cash': '#2e7d32', 'Credit Card': '#d32f2f', 'Comp': '#ffa500', 'Ticket': '#1a73e8', 'Total': '#808080' };
-            return colors[type] || '#888888';
-        }
-        function getPaymentTypeColor(paymentType) {
-            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) { return '#2e7d32'; }
-            else if (paymentType === 'Credit Card') { return '#d32f2f'; }
-            else if (paymentType === 'Comp') { return '#ffa500'; }
-            else if (paymentType === 'Ticket') { return '#1a73e8'; }
-            else { return '#000000'; }
-        }
+
         class SalesLog {
             constructor() {
-                this.transactions = [];
-                this.persistentHoveredIndex = null;
-                const urlParams = new URLSearchParams(window.location.search);
-                const sessionIdFromUrl = urlParams.get('sessionId');
-                const exportFlag = urlParams.get('export');
-                if (sessionIdFromUrl) selectedSessionId = sessionIdFromUrl;
-                this.updateInterval = null;
-                this.init().then(() => {
-                    this.updateLog();
-                    if (exportFlag === 'true') this.exportPDF();
-                    this.updateInterval = setInterval(() => this.updateLog(), 5000);
-                    channel.onmessage = (event) => {
-                        if (event.data.type === 'new_transaction') this.updateLog();
-                        else if (event.data.type === 'new_session') {
-                            selectedSessionId = event.data.sessionId;
-                            this.updateLog();
-                        }
-                    };
-                    supabase
-                        .channel('public:transactions')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
-                            console.log('Real-time update triggered');
-                            this.updateLog();
-                        })
-                        .subscribe(status => console.log('Subscription status:', status));
-                });
+                this.currentRange = 'all';
+                this.initEvents();
+                this.loadSessions();
+            }
+
+            initEvents() {
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
                 document.getElementById('exportHtmlBtn').addEventListener('click', () => this.exportHTML());
-                document.getElementById('removeSessionBtn').addEventListener('click', () => document.getElementById('removeSessionModal').style.display = 'block');
-                document.getElementById('confirmRemoveSession').addEventListener('click', () => this.removeSession());
-                document.getElementById('cancelRemoveSession').addEventListener('click', () => document.getElementById('removeSessionModal').style.display = 'none');
-                document.getElementById('applyFilters').addEventListener('click', () => {
-                    selectedSessionId = document.getElementById('sessionSelect').value || null;
+                document.getElementById('removeSessionBtn').addEventListener('click', () => this.confirmDelete());
+                document.getElementById('sessionSelect').addEventListener('change', (e) => {
+                    selectedSessionId = e.target.value || null;
                     this.updateLog();
                 });
-                document.getElementById('sessionSelect').addEventListener('change', (event) => {
-                    selectedSessionId = event.target.value || null;
-                    this.updateLog();
+                document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentRange = e.target.dataset.range;
+                        this.updateLog();
+                    });
                 });
-                document.getElementById('toggleGraphSize').addEventListener('click', () => {
-                    const graph = document.querySelector('.graph');
-                    const grid = document.querySelector('.grid');
-                    const middlePanel = document.querySelector('.middle-panel');
-                    const rightPanel = document.querySelector('.right-panel');
-                    if (!graph.dataset.originalHeight) {
-                        graph.dataset.originalHeight = window.getComputedStyle(graph).height;
-                    }
-                    graph.classList.toggle('fullscreen');
-                    grid.classList.toggle('fullscreen');
-                    middlePanel.classList.toggle('fullscreen');
-                    rightPanel.classList.toggle('fullscreen');
-                    if (!graph.classList.contains('fullscreen')) {
-                        graph.style.height = graph.dataset.originalHeight;
-                    }
-                    if (chart) setTimeout(() => chart.resize(), 100);
-                });
-                let isResizingHorizontally = false;
-                let startX, startWidth;
-                const verticalResizeHandle = document.querySelector('.vertical-resize-handle');
-                const graph = document.querySelector('.graph');
-                verticalResizeHandle.addEventListener('mousedown', (e) => {
-                    isResizingHorizontally = true;
-                    startX = e.clientX;
-                    startWidth = parseInt(window.getComputedStyle(graph).width, 10);
-                    document.addEventListener('mousemove', horizontalResize);
-                    document.addEventListener('mouseup', stopHorizontalResize);
-                });
-                function horizontalResize(e) {
-                    if (!isResizingHorizontally) return;
-                    const dx = e.clientX - startX;
-                    const newWidth = startWidth + dx;
-                    if (newWidth > 100 && newWidth < window.innerWidth * 0.8) {
-                        graph.style.width = `${newWidth}px`;
-                        chart.resize();
-                    }
-                }
-                function stopHorizontalResize() {
-                    isResizingHorizontally = false;
-                    document.removeEventListener('mousemove', horizontalResize);
-                    document.removeEventListener('mouseup', stopHorizontalResize);
-                }
-                let isResizing = false;
-                let startY, startHeight;
-                const resizeHandle = document.querySelector('.resize-handle');
-                resizeHandle.addEventListener('mousedown', (e) => {
-                    isResizing = true;
-                    startY = e.clientY;
-                    startHeight = parseInt(window.getComputedStyle(graph).height, 10);
-                    document.addEventListener('mousemove', resize);
-                    document.addEventListener('mouseup', stopResize);
-                });
-                function resize(e) {
-                    if (!isResizing) return;
-                    const dy = e.clientY - startY;
-                    const newHeight = startHeight + dy;
-                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                        graph.style.height = `${newHeight}px`;
-                        chart.resize();
-                    }
-                }
-                function stopResize() {
-                    isResizing = false;
-                    document.removeEventListener('mousemove', resize);
-                    document.removeEventListener('mouseup', stopResize);
-                }
-            }
-            async init() {
-                const { data, error } = await supabase.from('transactions').select('id').limit(1);
-                console.log('Test fetch:', data, error);
-                await this.updateLog();
-            }
-            stop() {
-                if (this.updateInterval) clearInterval(this.updateInterval);
-            }
-            async removeSession() {
-                if (confirm('Are you sure? This cannot be undone.')) {
-                    try {
-                        const { error } = await supabase
-                            .from('transactions')
-                            .delete()
-                            .eq('sessionId', selectedSessionId);
-                        if (error) throw error;
-                        alert('Session removed successfully');
-                        location.reload();
-                    } catch (error) {
-                        console.error('Error removing session:', error);
-                        alert('Failed to remove session');
-                    }
-                }
-                document.getElementById('removeSessionModal').style.display = 'none';
-            }
-            async updateLog() {
-                try {
-                    const { data: allTransactions, error } = await supabase
-                        .from('transactions')
-                        .select('*')
-                        .order('sessionId', { ascending: false });
-                    if (error) throw new Error(`Error fetching transactions: ${error.message}`);
-                    console.log('Fetched transactions:', allTransactions);
-                    // Filter out transactions without sessionId
-                    const validTransactions = allTransactions.filter(t => t && t.sessionId != null);
-                    const allSessionIds = [...new Set(validTransactions.map(t => t.sessionId))];
-                    const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' + allSessionIds.map(id => {
-                        const sessionTx = validTransactions.find(t => t.sessionId === id);
-                        const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
-                        return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
-                    }).join('');
-                    if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
-                    console.log('Selected Session ID:', selectedSessionId);
-                    if (!selectedSessionId) {
-                        document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
-                        document.getElementById('eventDateDisplay').innerHTML = '';
-                        if (chart) {
-                            chart.data.datasets = [];
-                            chart.update('none');
-                        }
-                        document.getElementById('summaryBody').innerHTML = '';
-                        document.getElementById('totalsBody').innerHTML = '';
-                        document.getElementById('transactionLogBody').innerHTML = '';
-                        document.getElementById('totalDoorCount').textContent = '0';
-                        document.getElementById('totalSales').textContent = '0.00';
-                        document.getElementById('totalTransactions').textContent = '0';
-                        document.getElementById('tillTotal').textContent = '0.00';
-                        document.getElementById('tillBreakdown').innerHTML = '';
-                        return;
-                    }
-                    const transactions = validTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
-                    this.transactions = transactions;
-                    sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Latest first
-                    console.log('Filtered transactions:', transactions);
-                    const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
-                    const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'No Date';
-                    const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
-                    document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
-                    document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
-                    const tillTransaction = transactions.find(t => t.items === 'Till Count');
-                    if (tillTransaction) {
-                        document.getElementById('tillTotal').textContent = tillTransaction.cashTotal.toFixed(2);
-                        document.getElementById('tillBreakdown').innerHTML = `<p>Till Breakdown: ${tillTransaction.note}</p>`;
-                    } else {
-                        document.getElementById('tillTotal').textContent = '0.00';
-                        document.getElementById('tillBreakdown').innerHTML = '';
-                    }
-                    const itemSummary = {};
-                    const cashBreakdown = {};
-                    let totalDoorCount = 0;
-                    let totalSales = 0;
-                    transactions.forEach(t => {
-                        if (t.items === 'Till Count') return;
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const type = getType(key);
-                                const [countStr, priceStr] = value.split(' @ ');
-                                const count = parseInt(countStr, 10) || 0;
-                                const price = priceStr ? parseFloat(priceStr.replace('$', '')) : 0;
-                                if (type === 'Cash') {
-                                    if (!cashBreakdown[key]) cashBreakdown[key] = { people: 0, total: 0, price };
-                                    cashBreakdown[key].people += count;
-                                    cashBreakdown[key].total += t.cashTotal; // Use cashTotal for total amount
-                                    if (!itemSummary['Cash']) itemSummary['Cash'] = { people: 0, total: 0 };
-                                    itemSummary['Cash'].people += count;
-                                    itemSummary['Cash'].total += t.cashTotal;
-                                } else {
-                                    if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
-                                    itemSummary[type].people += count;
-                                    itemSummary[type].total += count * price;
-                                }
-                                totalDoorCount += count;
-                            }
-                        });
-                        totalSales += t.cashTotal || 0;
-                    });
-                    document.getElementById('totalDoorCount').textContent = totalDoorCount;
-                    document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('totalTransactions').textContent = transactions.filter(t => t.items !== 'Till Count').length;
-                    let summaryRows = '';
-                    // Add Cash total row
-                    if (itemSummary['Cash']) {
-                        const data = itemSummary['Cash'];
-                        const averagePrice = data.people > 0 ? data.total / data.people : 0;
-                        summaryRows += `
-                            <tr>
-                                <td class="cash-header">Cash</td>
-                                <td>${data.people}</td>
-                                <td><span class="dollar">$${data.total.toFixed(2)}</span></td>
-                                <td><span class="dollar">$${averagePrice.toFixed(2)}</span></td>
-                            </tr>
-                        `;
-                        // Add cash breakdown rows, sorted by dollar amount
-                        Object.keys(cashBreakdown).sort((a, b) => {
-                            const amountA = parseFloat(a.split('$')[1]);
-                            const amountB = parseFloat(b.split('$')[1]);
-                            return amountA - amountB;
-                        }).forEach(subKey => {
-                            const subData = cashBreakdown[subKey];
-                            const subAveragePrice = subData.people > 0 ? subData.total / subData.people : 0;
-                            summaryRows += `
-                                <tr class="cash-breakdown">
-                                    <td> - ${subKey}</td>
-                                    <td>${subData.people}</td>
-                                    <td><span class="dollar">$${subData.total.toFixed(2)}</span></td>
-                                    <td><span class="dollar">$${subAveragePrice.toFixed(2)}</span></td>
-                                </tr>
-                            `;
-                        });
-                    }
-                    // Add other payment types
-                    Object.entries(itemSummary).forEach(([type, data]) => {
-                        if (type !== 'Cash') {
-                            const averagePrice = data.people > 0 ? data.total / data.people : 0;
-                            const colorClass = type.toLowerCase().replace(' ', '-') + '-header';
-                            summaryRows += `
-                                <tr>
-                                    <td class="${colorClass}">${type}</td>
-                                    <td>${data.people}</td>
-                                    <td><span class="dollar">$${data.total.toFixed(2)}</span></td>
-                                    <td><span class="dollar">$${averagePrice.toFixed(2)}</span></td>
-                                </tr>
-                            `;
-                        }
-                    });
-                    document.getElementById('summaryBody').innerHTML = summaryRows;
-                    const totalsRow = `
-                        <tr class="total-row">
-                            <td><strong>TOTALS</strong></td>
-                            <td><strong>${totalDoorCount}</strong></td>
-                            <td><strong><span class="dollar">$${totalSales.toFixed(2)}</span></strong></td>
-                            <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
-                        </tr>
-                    `;
-                    document.getElementById('totalsBody').innerHTML = totalsRow;
-                    const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = transactions.filter(t => t.items !== 'Till Count').map((t, index) => `
-                        <tr ${index === 0 ? 'class="highlight"' : ''}>
-                            <td>${new Date(t.timestamp).toLocaleString()}</td>
-                            <td>${colorCodeItems(t.items)}</td>
-                            <td><span class="dollar">$${t.cashTotal.toFixed(2)}</span></td>
-                            <td>${t.doorCount}</td>
-                            <td>${t.cashierName}</td>
-                            <td>${t.note || ''}</td>
-                        </tr>
-                    `).join('');
-                    console.log('Transaction log HTML:', transactionLogBody.innerHTML);
-                    const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-                    const interval = 15 * 60 * 1000;
-                    let startTime = transactions.length > 0 ? new Date(transactions[transactions.length - 1].timestamp) : new Date(); // Since sorted descending, last is earliest
-                    let endTime = transactions.length > 0 ? new Date(transactions[0].timestamp) : new Date();
-                    startTime = new Date(Math.floor(startTime.getTime() / interval) * interval);
-                    const bins = [];
-                    for (let time = startTime.getTime(); time <= endTime.getTime() + interval; time += interval) {
-                        bins.push(new Date(time));
-                    }
-                    const cumulative = {};
-                    types.forEach(type => cumulative[type] = 0);
-                    cumulative.totalDoor = 0;
-                    cumulative.totalCash = 0;
-                    const dataSetsData = types.map(() => []);
-                    dataSetsData.push([]); // totalDoor
-                    dataSetsData.push([]); // totalCash
-                    let txIndex = transactions.length - 1; // Start from earliest (last in array)
-                    for (let i = 0; i < bins.length; i++) {
-                        const bin = bins[i];
-                        const binTime = bin.getTime();
-                        while (txIndex >= 0 && new Date(transactions[txIndex].timestamp).getTime() < binTime) {
-                            const t = transactions[txIndex];
-                            if (t.items === 'Till Count') {
-                                txIndex--;
-                                continue;
-                            }
-                            const items = t.items.split('; ');
-                            items.forEach(item => {
-                                const [key, value] = item.split(': ');
-                                if (key && value) {
-                                    const type = getType(key);
-                                    if (types.includes(type)) {
-                                        const count = parseInt(value.split(' @ ')[0], 10) || 0;
-                                        cumulative[type] += count;
-                                        cumulative.totalDoor += count;
-                                    }
-                                }
-                            });
-                            cumulative.totalCash += t.cashTotal || 0;
-                            txIndex--;
-                        }
-                        types.forEach((type, j) => dataSetsData[j].push({x: bin, y: cumulative[type]}));
-                        dataSetsData[types.length].push({x: bin, y: cumulative.totalDoor});
-                        dataSetsData[types.length + 1].push({x: bin, y: cumulative.totalCash});
-                    }
-                    const datasets = types.map((type, i) => ({
-                        label: type,
-                        data: dataSetsData[i],
-                        borderColor: getColorForType(type),
-                        backgroundColor: getColorForType(type).replace(')', ', 0.5)').replace('rgb', 'rgba'),
-                        fill: true,
-                        yAxisID: 'y',
-                        tension: 0
-                    }));
-                    datasets.push({
-                        label: 'Total Door',
-                        data: dataSetsData[types.length],
-                        borderColor: '#808080',
-                        fill: false,
-                        yAxisID: 'y'
-                    });
-                    datasets.push({
-                        label: 'Total Cash',
-                        data: dataSetsData[types.length + 1],
-                        borderColor: '#2e7d32',
-                        fill: false,
-                        yAxisID: 'y1'
-                    });
-                    console.log('Chart datasets:', datasets);
-                    const annotation = window['chartjs-plugin-annotation'].default;
-                    Chart.register(annotation);
-                    Chart.register({
-                        id: 'alternatingBackground',
-                        beforeDraw: function(chart) {
-                            const ctx = chart.ctx;
-                            const yAxis = chart.scales.y;
-                            const xAxis = chart.scales.x;
-                            const chartArea = chart.chartArea;
-                            ctx.save();
-                            // Horizontal alternating bands
-                            const tickCount = yAxis.ticks.length;
-                            for (let i = 0; i < tickCount - 1; i++) {
-                                if (i % 2 === 0) {
-                                    ctx.fillStyle = 'rgba(0, 255, 0, 0.05)'; // light green
-                                    const yTop = yAxis.getPixelForTick(i);
-                                    const yBottom = yAxis.getPixelForTick(i + 1);
-                                    ctx.fillRect(chartArea.left, yBottom, chartArea.width, yTop - yBottom);
-                                }
-                            }
-                            // Highlight active vertical grid
-                            if (chart.hoveredIndex !== undefined) {
-                                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-                                const xLeft = chart.hoveredIndex > 0 ? xAxis.getPixelForTick(chart.hoveredIndex - 0.5) : chartArea.left;
-                                const xRight = chart.hoveredIndex < xAxis.ticks.length - 1 ? xAxis.getPixelForTick(chart.hoveredIndex + 0.5) : chartArea.right;
-                                ctx.fillRect(xLeft, chartArea.top, xRight - xLeft, chartArea.bottom - chartArea.top);
-                            }
-                            ctx.restore();
-                        }
-                    });
-                    if (chart) {
-                        chart.data.datasets = datasets;
+                document.getElementById('transactionLogBody').addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    if (!row || !row.dataset.ts) return;
+                    document.querySelectorAll('#transactionLogBody tr').forEach(r => r.classList.remove('active'));
+                    row.classList.add('active');
+                    const time = new Date(parseInt(row.dataset.ts));
+                    if (chart?.options?.plugins?.annotation) {
+                        chart.options.plugins.annotation.annotations.line.value = time;
                         chart.update('none');
-                    } else {
-                        chart = new Chart(document.getElementById('doorCountChart'), {
-                            type: 'line',
-                            data: {
-                                datasets: datasets
-                            },
-                            options: {
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: {
-                                        type: 'time',
-                                        time: { unit: 'minute' },
-                                        title: { display: true, text: 'Time', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } }
-                                    },
-                                    y: {
-                                        stacked: true,
-                                        title: { display: true, text: 'Door Count', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } },
-                                        position: 'left'
-                                    },
-                                    y1: {
-                                        title: { display: true, text: 'Cash Total ($)', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } },
-                                        position: 'right',
-                                        grid: { drawOnChartArea: false }
-                                    }
-                                },
-                                plugins: {
-                                    legend: { labels: { font: { size: 14 } } },
-                                    tooltip: {
-                                        mode: 'index',
-                                        intersect: false,
-                                        backgroundColor: 'white',
-                                        titleColor: 'black',
-                                        bodyColor: 'black',
-                                        borderColor: 'black',
-                                        borderWidth: 1,
-                                        padding: 16,
-                                        titleFont: { size: 16 },
-                                        bodyFont: { size: 14 },
-                                        callbacks: {
-                                            label: function(context) {
-                                                if (context.dataset.label === 'Total Door') {
-                                                    return `Door Count: ${context.parsed.y}`;
-                                                } else if (context.dataset.label === 'Total Cash') {
-                                                    return `Price: $${context.parsed.y.toFixed(2)}`;
-                                                }
-                                                return '';
-                                            }
-                                        }
-                                    },
-                                    annotation: {
-                                        annotations: {
-                                            line1: {
-                                                type: 'line',
-                                                scaleID: 'x',
-                                                value: undefined,
-                                                borderColor: 'white',
-                                                borderWidth: 2,
-                                                label: { enabled: false }
-                                            }
-                                        }
-                                    }
-                                },
-                                onHover: function(event, elements) {
-                                    const chart = this;
-                                    let index = elements.length > 0 ? elements[0].index : undefined;
-                                    if (index !== chart.hoveredIndex) {
-                                        chart.hoveredIndex = index;
-                                        if (index !== undefined) {
-                                            const label = chart.data.labels[index];
-                                            chart.options.plugins.annotation.annotations.line1.value = label;
-                                        } else {
-                                            chart.options.plugins.annotation.annotations.line1.value = undefined;
-                                        }
-                                        chart.update('none');
-                                    }
-                                },
-                                onClick: function(event, elements) {
-                                    const chart = this;
-                                    let index = elements.length > 0 ? elements[0].index : undefined;
-                                    if (index !== undefined) {
-                                        chart.persistentHoveredIndex = index;
-                                        const label = chart.data.labels[index];
-                                        chart.options.plugins.annotation.annotations.line1.value = label;
-                                        chart.tooltip.setActiveElements(elements, { x: event.x, y: event.y });
-                                        chart.update('none');
-                                    } else {
-                                        chart.persistentHoveredIndex = null;
-                                        chart.options.plugins.annotation.annotations.line1.value = undefined;
-                                        chart.tooltip.setActiveElements([]);
-                                        chart.update('none');
-                                    }
-                                }
-                            }
-                        });
                     }
-                } catch (error) {
-                    console.error('Error updating log:', error);
+                });
+            }
+
+            async confirmDelete() {
+                if (!selectedSessionId) return;
+                if (!confirm(`DELETE ENTIRE SESSION ${selectedSessionId}?\n\nThis action is PERMANENT.`)) return;
+                const { error } = await supabase.from('transactions').delete().eq('sessionId', selectedSessionId);
+                if (error) {
+                    alert('Delete failed: ' + error.message);
+                } else {
+                    alert('Session permanently deleted');
+                    location.reload();
                 }
             }
-            async exportPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const margin = 0.5;
-                const graphWidth = pageWidth - 2 * margin;
-                const graphHeight = graphWidth * (11.69 / 8.27) / 2;
-                const dpi = 150;
-                if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
-                    console.error('No chart data available for export.');
+
+            async loadSessions() {
+                const { data, error } = await supabase
+                    .from('transactions')
+                    .select('sessionId, cashierName, eventName, eventDate')
+                    .order('timestamp', { ascending: false });
+                
+                if (error || !data?.length) {
+                    console.error('No sessions found', error);
                     return;
                 }
-                // Add title
-                doc.setFontSize(16);
-                doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
-                // Add session info and event date as separate lines
-                const sessionInfo = document.getElementById('sessionInfo').innerText;
-                const eventDate = document.getElementById('eventDateDisplay').innerText;
-                doc.setFontSize(12);
-                let y = margin + 0.2; // Start below the title
-                const lineHeight = 12 / 72; // 12pt font height in inches
-                const headerLines = [sessionInfo, eventDate];
-                headerLines.forEach(line => {
-                    doc.text(line, margin, y);
-                    y += lineHeight;
+
+                const sessions = [...new Set(data.map(t => t.sessionId))].sort((a,b) => b.localeCompare(a));
+                const select = document.getElementById('sessionSelect');
+                select.innerHTML = '<option value="">Select Session</option>';
+                
+                sessions.forEach(id => {
+                    const tx = data.find(t => t.sessionId === id);
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = `${tx?.cashierName || 'Unknown'} • ${tx?.eventName || 'No Event'} • ${tx?.eventDate || 'No Date'}`;
+                    select.appendChild(opt);
                 });
-                // Add summary table
-                const summaryData = [
-                    ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
-                    ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
-                    ['Total Transactions', document.getElementById('totalTransactions').innerText],
-                    ['Till Total', '$' + document.getElementById('tillTotal').innerText],
-                    ['Till Breakdown', document.getElementById('tillBreakdown').innerText.replace('Till Breakdown: ', '')]
+
+                if (sessions.length && !selectedSessionId) {
+                    selectedSessionId = sessions[0];
+                    select.value = selectedSessionId;
+                }
+                this.updateLog();
+            }
+
+            filterTransactions(txns) {
+                if (this.currentRange === 'all') return txns;
+                const end = new Date(Math.max(...txns.map(t => new Date(t.timestamp))));
+                const mins = { '1h': 60, '30m': 30, '15m': 15, '5m': 5 }[this.currentRange] || 1440;
+                const start = new Date(end.getTime() - mins * 60 * 1000);
+                return txns.filter(t => new Date(t.timestamp) >= start);
+            }
+
+            buildChartData(txns) {
+                txns.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const interval = 15 * 60 * 1000;
+                const start = new Date(Math.floor(new Date(txns[0]?.timestamp || Date.now()).getTime() / interval) * interval);
+                const end = new Date(Math.ceil(new Date(txns[txns.length-1]?.timestamp || Date.now()).getTime() / interval) * interval);
+                const bins = [];
+                for (let t = start.getTime(); t <= end.getTime(); t += interval) bins.push(new Date(t));
+
+                const cum = { Cash: 0, 'Credit Card': 0, Comp: 0, Ticket: 0, door: 0, cash: 0 };
+                const data = [];
+
+                let txIdx = 0;
+                bins.forEach(bin => {
+                    while (txIdx < txns.length && new Date(txns[txIdx].timestamp) <= bin) {
+                        const t = txns[txIdx];
+                        if (t.items !== 'Till Count') {
+                            t.items.split('; ').forEach(item => {
+                                const [key, val] = item.split(': ');
+                                if (!key || !val) return;
+                                const type = getType(key);
+                                const count = parseInt(val.trim(), 10) || 0;
+                                if (['Cash','Credit Card','Comp','Ticket'].includes(type)) {
+                                    cum[type] += count;
+                                    cum.door += count;
+                                }
+                            });
+                            cum.cash += t.cashTotal || 0;
+                        }
+                        txIdx++;
+                    }
+                    data.push({ x: bin, ...cum });
+                });
+
+                return [
+                    { label: 'CASH', data: data.map(d => ({x: d.x, y: d.Cash})), borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.25)', fill: true, tension: 0.4 },
+                    { label: 'CARD', data: data.map(d => ({x: d.x, y: d['Credit Card']})), borderColor: '#ff3333', backgroundColor: 'rgba(255,51,51,0.25)', fill: true, tension: 0.4 },
+                    { label: 'COMP', data: data.map(d => ({x: d.x, y: d.Comp})), borderColor: '#ffaa00', backgroundColor: 'rgba(255,170,0,0.25)', fill: true, tension: 0.4 },
+                    { label: 'TICKET', data: data.map(d => ({x: d.x, y: d.Ticket})), borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.25)', fill: true, tension: 0.4 },
+                    { label: 'TOTAL DOOR', data: data.map(d => ({x: d.x, y: d.door})), borderColor: '#ffffff', borderWidth: 5, fill: false, tension: 0.4 },
+                    { label: 'CASH SALES $', data: data.map(d => ({x: d.x, y: d.cash})), borderColor: '#00ff88', borderWidth: 4, fill: false, yAxisID: 'y1', tension: 0.4 }
                 ];
-                doc.autoTable({
-                    startY: y + 0.2, // Add a small gap after header
-                    head: [['Metric', 'Value']],
-                    body: summaryData,
-                    theme: 'grid',
-                    styles: { fontSize: 12 }
+            }
+
+            async updateLog() {
+                if (!selectedSessionId) return;
+
+                const { data: txns, error } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('sessionId', selectedSessionId)
+                    .order('timestamp', { ascending: true });
+
+                if (error || !txns?.length) {
+                    console.error('No data for session:', selectedSessionId, error);
+                    document.getElementById('sessionInfo').innerHTML = '<p style="color:#ff3333;">No data found for this session</p>';
+                    return;
+                }
+
+                const filtered = this.filterTransactions([...txns]);
+                const graphData = this.buildChartData(filtered);
+
+                // Update summary info
+                const first = txns[0];
+                document.getElementById('sessionInfo').innerHTML = `<strong>${first.cashierName || 'Unknown'}</strong><br>${first.eventName || 'No Event'}`;
+                document.getElementById('eventDateDisplay').textContent = first.eventDate || 'No Date';
+
+                let totalDoor = 0, totalCash = 0;
+                const itemSummary = { Cash: {people:0,total:0}, 'Credit Card': {people:0,total:0}, Comp: {people:0,total:0}, Ticket: {people:0,total:0} };
+                const cashBreakdown = {};
+
+                txns.forEach(t => {
+                    if (t.items === 'Till Count') return;
+                    totalDoor += t.doorCount || 0;
+                    totalCash += t.cashTotal || 0;
+                    t.items.split('; ').forEach(item => {
+                        const [key, val] = item.split(': ');
+                        if (!key || !val) return;
+                        const type = getType(key);
+                        const count = parseInt(val.trim(), 10) || 0;
+                        if (itemSummary[type]) {
+                            itemSummary[type].people += count;
+                            if (type === 'Cash') {
+                                const price = parseFloat(key.match(/\$([\d.]+)/)?.[1] || 0);
+                                const subKey = key.replace(/^CASH\s*/, '');
+                                cashBreakdown[subKey] = cashBreakdown[subKey] || {people:0,total:0};
+                                cashBreakdown[subKey].people += count;
+                                cashBreakdown[subKey].total += count * price;
+                                itemSummary[type].total += count * price;
+                            }
+                        }
+                    });
                 });
-                // Add tally sheet table with color coding
-                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
-                    body: tallyData,
-                    theme: 'grid',
-                    styles: { fontSize: 10 },
-                    didParseCell: (data) => {
-                        if (data.section === 'body' && data.column.index === 0) {
-                            const paymentType = data.cell.raw;
-                            const color = getPaymentTypeColor(paymentType);
-                            data.cell.styles.textColor = color;
+
+                document.getElementById('totalDoorCount').textContent = totalDoor;
+                document.getElementById('totalSales').textContent = totalCash.toFixed(2);
+                document.getElementById('totalTransactions').textContent = txns.filter(t => t.items !== 'Till Count').length;
+
+                const till = txns.find(t => t.items === 'Till Count');
+                if (till) {
+                    document.getElementById('tillTotal').textContent = till.cashTotal.toFixed(2);
+                    document.getElementById('tillBreakdown').innerHTML = `<p style="color:#ffaa00;">${till.note}</p>`;
+                }
+
+                // Tally sheet
+                let rows = '';
+                Object.entries(itemSummary).forEach(([type, d]) => {
+                    if (d.people > 0) {
+                        const avg = d.total / d.people;
+                        const color = type === 'Cash' ? '#00ff88' : type === 'Credit Card' ? '#ff3333' : type === 'Comp' ? '#ffaa00' : '#3399ff';
+                        rows += `<tr><td style="color:${color};font-weight:bold">${type.toUpperCase()}</td><td>${d.people}</td><td>$${d.total.toFixed(2)}</td><td>$${avg.toFixed(2)}</td></tr>`;
+                        if (type === 'Cash') {
+                            Object.keys(cashBreakdown).sort((a,b) => {
+                                const pa = parseFloat(a.match(/\$([\d.]+)/)?.[1]||0);
+                                const pb = parseFloat(b.match(/\$([\d.]+)/)?.[1]||0);
+                                return pa - pb;
+                            }).forEach(k => {
+                                const bd = cashBreakdown[k];
+                                const avg = bd.total / bd.people;
+                                rows += `<tr class="cash-breakdown"><td>   ${k}</td><td>${bd.people}</td><td>$${bd.total.toFixed(2)}</td><td>$${avg.toFixed(2)}</td></tr>`;
+                            });
                         }
                     }
                 });
-                // Add totals table
-                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['', 'People', 'Total Amount', 'Price per Person']],
-                    body: totalsData,
-                    theme: 'grid',
-                    styles: { fontSize: 10 }
-                });
-                // Add transaction log table
-                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
-                doc.autoTable({
-                    startY: doc.lastAutoTable.finalY + 0.2,
-                    head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
-                    body: transactionData,
-                    theme: 'grid',
-                    styles: { fontSize: 8 }
-                });
-                doc.addPage();
-                const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
-                const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 15 * 60 * 1000;
-                for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
-                    const intervalStart = new Date(time);
-                    const intervalEnd = new Date(time + interval);
-                    const intervalTransactions = this.transactions.filter(t => {
-                        const txTime = new Date(t.timestamp);
-                        return txTime >= intervalStart && txTime < intervalEnd;
-                    });
-                    if (intervalTransactions.length > 0) {
-                        const intervalSummary = {};
-                        types.forEach(type => intervalSummary[type] = 0);
-                        let intervalTotal = 0;
-                        intervalTransactions.forEach(t => {
-                            const items = t.items.split('; ');
-                            items.forEach(item => {
-                                const [key, value] = item.split(': ');
-                                if (key && value) {
-                                    const type = getType(key);
-                                    if (types.includes(type)) {
-                                        const count = parseInt(value.split(' @ ')[0], 10) || 0;
-                                        intervalSummary[type] += count;
-                                        intervalTotal += count;
-                                    }
-                                }
-                            });
-                        });
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = graphWidth * dpi;
-                        tempCanvas.height = graphHeight * dpi;
-                        document.body.appendChild(tempCanvas);
-                        const tempCtx = tempCanvas.getContext('2d');
-                        const barChart = new Chart(tempCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: types.concat('Total'),
-                                datasets: [{
-                                    label: 'Door Count',
-                                    data: types.map(type => intervalSummary[type]).concat(intervalTotal),
-                                    backgroundColor: types.map(type => getColorForType(type)).concat('#808080'),
-                                }]
-                            },
-                            options: {
-                                animation: { duration: 0 },
-                                scales: {
-                                    y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
-                                    x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
+                document.getElementById('summaryBody').innerHTML = rows;
+                document.getElementById('totalsBody').innerHTML = `<tr class="total-row"><td>TOTAL</td><td>${totalDoor}</td><td>$${totalCash.toFixed(2)}</td><td>${totalDoor ? (totalCash/totalDoor).toFixed(2) : '0'}</td></tr>`;
+
+                // Transaction log
+                document.getElementById('transactionLogBody').innerHTML = txns
+                    .filter(t => t.items !== 'Till Count')
+                    .map(t => `<tr data-ts="${new Date(t.timestamp).getTime()}">
+                        <td>${new Date(t.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
+                        <td>${colorCodeItems(t.items)}</td>
+                        <td style="color:#00ff88">$${t.cashTotal?.toFixed(2)||'0.00'}</td>
+                        <td>${t.doorCount||0}</td>
+                        <td>${t.cashierName||''}</td>
+                        <td>${t.note||''}</td>
+                    </tr>`).join('');
+
+                // Chart with 30-minute alternating stripes
+                const datasets = graphData;
+                if (chart) {
+                    chart.data.datasets = datasets;
+                    chart.update('none');
+                } else {
+                    chart = new Chart(document.getElementById('doorCountChart'), {
+                        type: 'line',
+                        data: { datasets },
+                        options: {
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                            plugins: {
+                                legend: { 
+                                    position: 'top',
+                                    labels: { 
+                                        font: { size: 18, weight: 'bold' },
+                                        color: 'white',
+                                        padding: 25,
+                                        usePointStyle: true,
+                                        pointStyle: 'rectRounded'
+                                    } 
                                 },
-                                plugins: { legend: { labels: { font: { size: 14 } } } }
+                                tooltip: { 
+                                    backgroundColor: 'rgba(0,0,0,0.9)',
+                                    titleColor: '#00ff88',
+                                    bodyColor: 'white',
+                                    padding: 20,
+                                    titleFont: { size: 18, weight: 'bold' },
+                                    bodyFont: { size: 16 }
+                                },
+                                annotation: {
+                                    annotations: {
+                                        line: { 
+                                            type: 'line', 
+                                            scaleID: 'x', 
+                                            borderColor: '#ffaa00', 
+                                            borderWidth: 4,
+                                            label: { 
+                                                display: true, 
+                                                content: 'SELECTED', 
+                                                backgroundColor: '#ffaa00',
+                                                color: 'black',
+                                                font: { weight: 'bold', size: 16 }
+                                            } 
+                                        }
+                                    }
+                                },
+                                zoom: {
+                                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                                    pan: { enabled: true, mode: 'x' }
+                                }
+                            },
+                            scales: {
+                                x: { 
+                                    type: 'time', 
+                                    time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } }, 
+                                    ticks: { 
+                                        font: { size: 16, weight: 'bold' },
+                                        color: '#cccccc',
+                                        maxRotation: 0
+                                    },
+                                    grid: { color: 'rgba(255,255,255,0.05)' }
+                                },
+                                y: { 
+                                    title: { 
+                                        display: true, 
+                                        text: 'PEOPLE THROUGH DOOR', 
+                                        font: { size: 20, weight: 'bold' },
+                                        color: '#00ff88'
+                                    }, 
+                                    ticks: { font: { size: 16 }, color: '#cccccc' },
+                                    grid: { color: 'rgba(255,255,255,0.1)' }
+                                },
+                                y1: { 
+                                    position: 'right',
+                                    title: { 
+                                        display: true, 
+                                        text: 'CASH SALES ($)', 
+                                        font: { size: 20, weight: 'bold' },
+                                        color: '#00ff88'
+                                    },
+                                    ticks: { font: { size: 16 }, color: '#cccccc' },
+                                    grid: { drawOnChartArea: false }
+                                }
                             }
-                        });
-                        barChart.update();
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        doc.setFontSize(16);
-                        doc.text(`Sales Summary for ${intervalStart.toLocaleTimeString()} - ${intervalEnd.toLocaleTimeString()}`, pageWidth / 2, margin, { align: 'center' });
-                        doc.addImage(tempCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                        document.body.removeChild(tempCanvas);
-                        barChart.destroy();
-                        doc.addPage();
-                    }
-                }
-                const mainCanvas = document.createElement('canvas');
-                mainCanvas.width = graphWidth * dpi;
-                mainCanvas.height = graphHeight * dpi;
-                document.body.appendChild(mainCanvas);
-                const mainCtx = mainCanvas.getContext('2d');
-                const tempChart = new Chart(mainCtx, {
-                    type: 'line',
-                    data: chart.data,
-                    options: {
-                        animation: { duration: 0 },
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
-                            y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
-                        plugins: { legend: { labels: { font: { size: 14 } } } }
-                    }
-                });
-                tempChart.update();
-                await new Promise(resolve => setTimeout(resolve, 100));
+                        plugins: [{
+                            id: 'stripes30min',
+                            beforeDraw: function(chart) {
+                                const ctx = chart.ctx;
+                                const chartArea = chart.chartArea;
+                                const xAxis = chart.scales.x;
+                                if (!xAxis) return;
+
+                                const interval = 30 * 60 * 1000; // 30 minutes
+                                const start = xAxis.min || xAxis.getValueForPixel(chartArea.left);
+                                const end = xAxis.max || xAxis.getValueForPixel(chartArea.right);
+                                let current = new Date(Math.floor(start / interval) * interval);
+
+                                ctx.save();
+                                let i = 0;
+                                while (current < end) {
+                                    const x = xAxis.getPixelForValue(current);
+                                    const next = new Date(current.getTime() + interval);
+                                    const nextX = xAxis.getPixelForValue(next);
+
+                                    if (i % 2 === 1) {
+                                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                                        ctx.fillRect(x, chartArea.top, nextX - x, chartArea.bottom - chartArea.top);
+                                    }
+                                    current = next;
+                                    i++;
+                                }
+                                ctx.restore();
+                            }
+                        }]
+                    });
+                }
+            }
+
+            exportPDF() {
+                if (!chart) return alert('No chart to export');
+                const canvas = chart.toBase64Image();
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                doc.addImage(canvas, 'PNG', 10, 20, 277, 160);
                 doc.setFontSize(16);
-                doc.text('Sales Log (Full Session)', pageWidth / 2, margin, { align: 'center' });
-                doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
-                document.body.removeChild(mainCanvas);
-                tempChart.destroy();
-                doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
+                doc.text(`SISTER BAR • Session: ${selectedSessionId}`, 10, 195);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 205);
+                doc.save(`SISTERBAR_${selectedSessionId}.pdf`);
             }
+
             exportHTML() {
-                const htmlContent = `
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>Sales Log</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; background-color: #1e1e1e; color: #e0e0e0; }
-                            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
-                            th { background-color: #3e3e3e; }
-                            h2, h3 { color: #ffffff; }
-                            .cash-header { color: #2e7d32; }
-                            .credit-card-header { color: #d32f2f; }
-                            .comp-header { color: #ffa500; }
-                            .ticket-header { color: #1a73e8; }
-                            .total-row td { color: orange; }
-                            .cash-breakdown td:first-child { padding-left: 20px; }
-                            .transaction-log table td:nth-child(even) { background-color: #3e3e3e; }
-                            .tally-sheet .scrollable-body table td:nth-child(even) { background-color: #3e3e3e; }
-                            .totals table td:nth-child(even) { background-color: #3e3e3e; }
-                            .dollar { font-weight: bold; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Sales Log Summary</h1>
-                        ${document.getElementById('sessionInfo').outerHTML}
-                        ${document.getElementById('eventDateDisplay').outerHTML}
-                        <h2>Summary</h2>
-                        ${document.querySelector('.summary').innerHTML.replace(/<button.*<\/button>/g, '')}
-                        <h2>Tally Sheet</h2>
-                        ${document.querySelector('.tally-sheet').innerHTML}
-                        <h2>Totals</h2>
-                        ${document.querySelector('.totals').innerHTML}
-                        <h2>Transaction Log</h2>
-                        ${document.querySelector('.transaction-log').innerHTML}
-                    </body>
-                    </html>
-                `;
-                const blob = new Blob([htmlContent], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
+                const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sister Bar Sales Log</title><style>body{background:#0f0f0f;color:#f0f0f0;padding:30px;font-family:Arial;}</style></head><body>${document.querySelector('#salesLogContainer').innerHTML}</body></html>`], {type:'text/html'});
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `sales_log_${selectedSessionId || 'latest'}.html`;
+                a.href = URL.createObjectURL(blob);
+                a.download = `SISTERBAR_${selectedSessionId || 'log'}.html`;
                 a.click();
-                URL.revokeObjectURL(url);
             }
         }
-        function isLoggedIn() { return localStorage.getItem('isLoggedIn') === 'true'; }
-        function setLoggedIn(value) { localStorage.setItem('isLoggedIn', value ? 'true' : 'false'); }
-        function logout() {
-            clearTimeout(sessionTimeoutId);
-            setLoggedIn(false);
-            if (salesLogInstance) salesLogInstance.stop();
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
-        }
-        const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
-        if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
-            salesLogContainer.style.display = 'block';
-            loginModal.style.display = 'none';
-            salesLogInstance = new SalesLog();
-            const remainingTime = LOGIN_TIMEOUT - (Date.now() - loginTime);
-            sessionTimeoutId = setTimeout(logout, remainingTime);
+
+        // Login
+        if (localStorage.getItem('loggedIn') === 'true') {
+            document.getElementById('salesLogContainer').style.display = 'block';
+            document.getElementById('loginModal').style.display = 'none';
+            new SalesLog();
         } else {
-            setLoggedIn(false);
-            salesLogContainer.style.display = 'none';
-            loginModal.style.display = 'block';
+            document.getElementById('loginBtn').onclick = () => {
+                if (document.getElementById('username').value === 'admin' && document.getElementById('password').value === 'password123') {
+                    localStorage.setItem('loggedIn', 'true');
+                    document.getElementById('loginModal').style.display = 'none';
+                    document.getElementById('salesLogContainer').style.display = 'block';
+                    new SalesLog();
+                } else {
+                    document.getElementById('errorMsg').textContent = 'ACCESS DENIED';
+                }
+            };
         }
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            if (username === adminUsername && password === adminPassword) {
-                setLoggedIn(true);
-                localStorage.setItem('loginTime', Date.now().toString());
-                sessionTimeoutId = setTimeout(logout, LOGIN_TIMEOUT);
-                loginModal.style.display = 'none';
-                salesLogContainer.style.display = 'block';
-                salesLogInstance = new SalesLog();
-                errorMsg.textContent = '';
-            } else {
-                errorMsg.textContent = 'Invalid username or password';
-            }
-        });
     </script>
 </body>
 </html>
