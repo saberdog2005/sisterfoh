@@ -4,264 +4,81 @@
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com;
-        connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co;
-        style-src 'self' 'unsafe-inline';
-        img-src 'self' data:;
-    ">
+    <meta http-equiv="Content-Security-Policy" content=" default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; ">
     <title>Sales Log</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            overflow: hidden;
-        }
-        .container {
-            width: 98.5%;
-            height: 98.5vh;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 2fr 2fr 1fr;
-            grid-template-rows: auto;
-            gap: 10px;
-            height: 100%;
-            transition: grid-template-columns 0.2s ease;
-        }
-        .header {
-            grid-column: 1 / -1;
-            text-align: center;
-            font-size: 24px;
-            display: none;
-        }
-        .graph {
-            grid-column: 1;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        .middle-panel {
-            grid-column: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .tally-sheet {
-            flex: 0 0 300px;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .totals {
-            background-color: #2e2e2e;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .transaction-log {
-            flex: 1;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .right-panel {
-            grid-column: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .filters {
-            flex: 0 0 auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .summary {
-            flex: 1;
-            overflow-y: auto;
-            background-color: #2e2e2e;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        .graph-wrapper {
-            flex: 1;
-            min-height: 0;
-        }
-        #doorCountChart {
-            width: 100%;
-            height: 100%;
-        }
-        .tally-sheet table, .transaction-log table, .totals table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        .tally-sheet table, .totals table {
-            table-layout: fixed;
-        }
-        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) {
-            width: 25%;
-        }
-        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) {
-            width: 25%;
-        }
-        .tally-sheet th, .transaction-log th {
-            background-color: #3e3e3e;
-            position: static;
-        }
-        .tally-sheet td, .transaction-log td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background-color: #3e3e3e;
-            color: #ffffff;
-        }
-        .scrollable-body {
-            overflow-y: visible; /* No scrolling for tally sheet */
-        }
-        .transaction-log .scrollable-body {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .summary h3 {
-            font-size: 18px;
-        }
-        .filters label, .filters select, .filters button {
-            display: block;
-            margin: 10px 0;
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
-        }
-        .filters select {
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            max-width: 300px;
-        }
-        .filters button {
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #exportBtn {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            padding: 8px;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: #2e2e2e;
-            margin: 15% auto;
-            padding: 45px;
-            width: 300px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            background-color: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            font-size: 16px;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .error {
-            color: #d32f2f;
-            margin-top: 10px;
-        }
-        .graph.fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1000;
-            background-color: #1e1e1e;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .grid.fullscreen {
-            grid-template-columns: 1fr;
-        }
-        .middle-panel.fullscreen, .right-panel.fullscreen {
-            display: none;
-        }
-        .resize-handle {
-            height: 10px;
-            background-color: #444;
-            cursor: ns-resize;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-        .vertical-resize-handle {
-            width: 10px;
-            background-color: #444;
-            cursor: ew-resize;
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #1e1e1e; color: #e0e0e0; overflow: auto; }
+        .container { width: 98.5%; min-height: 98.5vh; }
+        .grid { display: grid; grid-template-columns: 2fr 2fr 1fr; grid-template-rows: auto; gap: 10px; min-height: 100%; transition: grid-template-columns 0.2s ease; }
+        .header { grid-column: 1 / -1; text-align: center; font-size: 24px; display: none; }
+        .graph { grid-column: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; position: relative; }
+        .middle-panel { grid-column: 2; display: flex; flex-direction: column; gap: 10px; }
+        .tally-sheet { flex: 0 0 300px; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .totals { background-color: #2e2e2e; padding: 10px; border-radius: 5px; }
+        .transaction-log { flex: 1; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .right-panel { grid-column: 3; display: flex; flex-direction: column; gap: 10px; }
+        .filters { flex: 0 0 auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .summary { flex: 1; overflow-y: auto; background-color: #2e2e2e; padding: 20px; border-radius: 5px; }
+        .graph-wrapper { flex: 1; min-height: 0; }
+        #doorCountChart { width: 100%; height: 100%; }
+        .tally-sheet table, .transaction-log table, .totals table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .tally-sheet table, .totals table { table-layout: fixed; }
+        .tally-sheet th:nth-child(1), .tally-sheet td:nth-child(1), .totals td:nth-child(1) { width: 25%; }
+        .tally-sheet th:nth-child(2), .tally-sheet td:nth-child(2), .totals td:nth-child(2) { width: 25%; }
+        .tally-sheet th:nth-child(3), .tally-sheet td:nth-child(3), .totals td:nth-child(3) { width: 25%; }
+        .tally-sheet th:nth-child(4), .tally-sheet td:nth-child(4), .totals td:nth-child(4) { width: 25%; }
+        .tally-sheet th, .transaction-log th { background-color: #3e3e3e; position: static; }
+        .tally-sheet td, .transaction-log td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
+        th { background-color: #3e3e3e; color: #ffffff; }
+        .scrollable-body { overflow-y: visible; /* No scrolling for tally sheet */ }
+        .transaction-log .scrollable-body { max-height: 300px; overflow-y: auto; }
+        .summary h3 { font-size: 18px; color: white; }
+        .filters label, .filters select, .filters button { display: block; margin: 10px 0; width: 100%; padding: 8px; font-size: 16px; }
+        .filters select { background-color: #333; color: #e0e0e0; border: 1px solid #555; max-width: 300px; }
+        .filters button { background-color: #0288d1; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #exportBtn, #exportHtmlBtn { background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; padding: 8px; font-size: 16px; margin-top: 10px; }
+        #removeSessionBtn { background-color: #d32f2f; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; padding: 8px; font-size: 16px; margin-top: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #2e2e2e; margin: 15% auto; padding: 45px; width: 300px; border-radius: 5px; text-align: center; }
+        .modal-content input { width: 100%; padding: 10px; margin: 10px 0; background-color: #333; color: #e0e0e0; border: 1px solid #555; font-size: 16px; }
+        .modal-content button { padding: 10px 20px; background-color: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .error { color: #d32f2f; margin-top: 10px; }
+        .graph.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background-color: #1e1e1e; padding: 20px; box-sizing: border-box; }
+        .grid.fullscreen { grid-template-columns: 1fr; }
+        .middle-panel.fullscreen, .right-panel.fullscreen { display: none; }
+        .resize-handle { height: 10px; background-color: #444; cursor: ns-resize; position: absolute; bottom: 0; left: 0; right: 0; }
+        .vertical-resize-handle { width: 10px; background-color: #444; cursor: ew-resize; position: absolute; top: 0; right: 0; bottom: 0; }
         .cash-header { color: #2e7d32; }
         .credit-card-header { color: #d32f2f; }
         .comp-header { color: #ffa500; }
         .ticket-header { color: #1a73e8; }
-        .summary h3 span { color: orange; }
+        .summary h3 span { color: white; font-weight: bold; }
         .total-row td { color: orange; }
-        .cash-breakdown td:first-child {
-            padding-left: 20px;
+        .cash-breakdown td:first-child { padding-left: 20px; }
+        .transaction-log table td:nth-child(even) { background-color: #3e3e3e; }
+        .tally-sheet .scrollable-body table td:nth-child(even) { background-color: #3e3e3e; }
+        .totals table td:nth-child(even) { background-color: #3e3e3e; }
+        .dollar { font-weight: bold; }
+        .highlight { background-color: #4a4a4a !important; }
+        #tillBreakdown { font-style: italic; color: #aaa; }
+        @media (max-width: 1200px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+            .right-panel { grid-column: 1 / 3; grid-row: 3; }
+        }
+        @media (max-width: 800px) {
+            .grid { grid-template-columns: 1fr; }
+            .graph, .middle-panel, .right-panel { grid-column: 1; }
+            .middle-panel { flex-direction: column; }
+            .tally-sheet, .totals, .transaction-log { flex: auto; }
         }
     </style>
 </head>
@@ -275,7 +92,6 @@
             <p id="errorMsg" class="error"></p>
         </div>
     </div>
-
     <div class="container" id="salesLogContainer">
         <div class="grid">
             <h1 class="header">Sales Log</h1>
@@ -342,54 +158,49 @@
                         </select>
                     </label>
                     <button id="applyFilters">Apply</button>
+                    <button id="removeSessionBtn">Remove Session</button>
                 </div>
                 <div class="summary">
                     <h2>Summary</h2>
                     <div id="sessionInfo"></div>
                     <p id="eventDateDisplay"></p>
-                    <h3 style="color: pink;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
-                    <h3 style="color: pink;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
-                    <h3 style="color: pink;">Total Transactions: <span id="totalTransactions">0</span></h3>
+                    <h3 style="color: #1a73e8;">Total Thru Door: <span id="totalDoorCount">0</span></h3>
+                    <h3 style="color: #2e7d32;">Total Cash Sales: $<span id="totalSales">0.00</span></h3>
+                    <h3>Total Transactions: <span id="totalTransactions">0</span></h3>
+                    <h3 style="color: #d32f2f;">Till Total: $<span id="tillTotal">0.00</span></h3>
+                    <p id="tillBreakdown"></p>
                     <button id="exportBtn">Export to PDF</button>
+                    <button id="exportHtmlBtn">Export to HTML</button>
                 </div>
             </div>
         </div>
     </div>
-
+    <!-- Remove Session Modal -->
+    <div id="removeSessionModal" class="modal">
+        <div class="modal-content">
+            <h2>Remove Session</h2>
+            <p>Are you sure you want to remove this session? This action cannot be undone.</p>
+            <button id="confirmRemoveSession">Confirm</button>
+            <button id="cancelRemoveSession">Cancel</button>
+        </div>
+    </div>
     <script>
         const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         const adminUsername = "admin";
         const adminPassword = "password123";
         const LOGIN_TIMEOUT = 8 * 60 * 60 * 1000;
         const channel = new BroadcastChannel('transaction_channel');
-
         const loginModal = document.getElementById('loginModal');
         const salesLogContainer = document.getElementById('salesLogContainer');
         const errorMsg = document.getElementById('errorMsg');
-
         let sessionTimeoutId;
         let salesLogInstance;
         let chart;
         let selectedSessionId = null;
-
-        const typeMap = {
-            'CASH': 'Cash',
-            'Cash': 'Cash',
-            'CC': 'Credit Card',
-            'Credit Card': 'Credit Card',
-            'TICKET': 'Ticket',
-            'Ticket': 'Ticket',
-            'COMP': 'Comp',
-            'Comp': 'Comp'
-        };
-
-        function getType(key) {
-            return typeMap[key] || typeMap[key.split(' ')[0]] || key;
-        }
-
+        const typeMap = { 'CASH': 'Cash', 'Cash': 'Cash', 'CC': 'Credit Card', 'Credit Card': 'Credit Card', 'TICKET': 'Ticket', 'Ticket': 'Ticket', 'COMP': 'Comp', 'Comp': 'Comp' };
+        function getType(key) { return typeMap[key] || typeMap[key.split(' ')[0]] || key; }
         function colorCodeItems(items) {
             return items.split('; ').map(item => {
                 const [key, rest] = item.split(': ');
@@ -398,41 +209,25 @@
                 return `<span class="${colorClass}">${key}</span>: ${rest}`;
             }).join('; ');
         }
-
         function getColorForType(type) {
-            const colors = {
-                'Cash': '#2e7d32',
-                'Credit Card': '#d32f2f',
-                'Comp': '#ffa500',
-                'Ticket': '#1a73e8',
-                'Total': '#808080'
-            };
+            const colors = { 'Cash': '#2e7d32', 'Credit Card': '#d32f2f', 'Comp': '#ffa500', 'Ticket': '#1a73e8', 'Total': '#808080' };
             return colors[type] || '#888888';
         }
-
         function getPaymentTypeColor(paymentType) {
-            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) {
-                return '#2e7d32'; // Cash color (green)
-            } else if (paymentType === 'Credit Card') {
-                return '#d32f2f'; // Credit Card color (red)
-            } else if (paymentType === 'Comp') {
-                return '#ffa500'; // Comp color (orange)
-            } else if (paymentType === 'Ticket') {
-                return '#1a73e8'; // Ticket color (blue)
-            } else {
-                return '#000000'; // Default to black
-            }
+            if (paymentType === 'Cash' || paymentType.startsWith(' - ')) { return '#2e7d32'; }
+            else if (paymentType === 'Credit Card') { return '#d32f2f'; }
+            else if (paymentType === 'Comp') { return '#ffa500'; }
+            else if (paymentType === 'Ticket') { return '#1a73e8'; }
+            else { return '#000000'; }
         }
-
         class SalesLog {
             constructor() {
                 this.transactions = [];
+                this.persistentHoveredIndex = null;
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionIdFromUrl = urlParams.get('sessionId');
                 const exportFlag = urlParams.get('export');
-
                 if (sessionIdFromUrl) selectedSessionId = sessionIdFromUrl;
-
                 this.updateInterval = null;
                 this.init().then(() => {
                     this.updateLog();
@@ -453,8 +248,11 @@
                         })
                         .subscribe(status => console.log('Subscription status:', status));
                 });
-
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportPDF());
+                document.getElementById('exportHtmlBtn').addEventListener('click', () => this.exportHTML());
+                document.getElementById('removeSessionBtn').addEventListener('click', () => document.getElementById('removeSessionModal').style.display = 'block');
+                document.getElementById('confirmRemoveSession').addEventListener('click', () => this.removeSession());
+                document.getElementById('cancelRemoveSession').addEventListener('click', () => document.getElementById('removeSessionModal').style.display = 'none');
                 document.getElementById('applyFilters').addEventListener('click', () => {
                     selectedSessionId = document.getElementById('sessionSelect').value || null;
                     this.updateLog();
@@ -468,28 +266,22 @@
                     const grid = document.querySelector('.grid');
                     const middlePanel = document.querySelector('.middle-panel');
                     const rightPanel = document.querySelector('.right-panel');
-                    
                     if (!graph.dataset.originalHeight) {
                         graph.dataset.originalHeight = window.getComputedStyle(graph).height;
                     }
-                    
                     graph.classList.toggle('fullscreen');
                     grid.classList.toggle('fullscreen');
                     middlePanel.classList.toggle('fullscreen');
                     rightPanel.classList.toggle('fullscreen');
-                    
                     if (!graph.classList.contains('fullscreen')) {
                         graph.style.height = graph.dataset.originalHeight;
                     }
-                    
                     if (chart) setTimeout(() => chart.resize(), 100);
                 });
-
                 let isResizingHorizontally = false;
                 let startX, startWidth;
                 const verticalResizeHandle = document.querySelector('.vertical-resize-handle');
                 const graph = document.querySelector('.graph');
-
                 verticalResizeHandle.addEventListener('mousedown', (e) => {
                     isResizingHorizontally = true;
                     startX = e.clientX;
@@ -497,7 +289,6 @@
                     document.addEventListener('mousemove', horizontalResize);
                     document.addEventListener('mouseup', stopHorizontalResize);
                 });
-
                 function horizontalResize(e) {
                     if (!isResizingHorizontally) return;
                     const dx = e.clientX - startX;
@@ -507,17 +298,14 @@
                         chart.resize();
                     }
                 }
-
                 function stopHorizontalResize() {
                     isResizingHorizontally = false;
                     document.removeEventListener('mousemove', horizontalResize);
                     document.removeEventListener('mouseup', stopHorizontalResize);
                 }
-
                 let isResizing = false;
                 let startY, startHeight;
                 const resizeHandle = document.querySelector('.resize-handle');
-
                 resizeHandle.addEventListener('mousedown', (e) => {
                     isResizing = true;
                     startY = e.clientY;
@@ -525,7 +313,6 @@
                     document.addEventListener('mousemove', resize);
                     document.addEventListener('mouseup', stopResize);
                 });
-
                 function resize(e) {
                     if (!isResizing) return;
                     const dy = e.clientY - startY;
@@ -535,24 +322,37 @@
                         chart.resize();
                     }
                 }
-
                 function stopResize() {
                     isResizing = false;
                     document.removeEventListener('mousemove', resize);
                     document.removeEventListener('mouseup', stopResize);
                 }
             }
-
             async init() {
                 const { data, error } = await supabase.from('transactions').select('id').limit(1);
                 console.log('Test fetch:', data, error);
                 await this.updateLog();
             }
-
             stop() {
                 if (this.updateInterval) clearInterval(this.updateInterval);
             }
-
+            async removeSession() {
+                if (confirm('Are you sure? This cannot be undone.')) {
+                    try {
+                        const { error } = await supabase
+                            .from('transactions')
+                            .delete()
+                            .eq('sessionId', selectedSessionId);
+                        if (error) throw error;
+                        alert('Session removed successfully');
+                        location.reload();
+                    } catch (error) {
+                        console.error('Error removing session:', error);
+                        alert('Failed to remove session');
+                    }
+                }
+                document.getElementById('removeSessionModal').style.display = 'none';
+            }
             async updateLog() {
                 try {
                     const { data: allTransactions, error } = await supabase
@@ -560,30 +360,24 @@
                         .select('*')
                         .order('sessionId', { ascending: false });
                     if (error) throw new Error(`Error fetching transactions: ${error.message}`);
-
                     console.log('Fetched transactions:', allTransactions);
-
                     // Filter out transactions without sessionId
                     const validTransactions = allTransactions.filter(t => t && t.sessionId != null);
-
                     const allSessionIds = [...new Set(validTransactions.map(t => t.sessionId))];
                     const sessionSelect = document.getElementById('sessionSelect');
-                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' +
-                        allSessionIds.map(id => {
-                            const sessionTx = validTransactions.find(t => t.sessionId === id);
-                            const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
-                            return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
-                        }).join('');
-
+                    sessionSelect.innerHTML = '<option value="">Select Cashier Session</option>' + allSessionIds.map(id => {
+                        const sessionTx = validTransactions.find(t => t.sessionId === id);
+                        const cashier = sessionTx ? sessionTx.cashierName : 'Unknown';
+                        return `<option value="${id}" ${id === selectedSessionId ? 'selected' : ''}>${cashier} - ${id}</option>`;
+                    }).join('');
                     if (!selectedSessionId && allSessionIds.length > 0) selectedSessionId = allSessionIds[0];
                     console.log('Selected Session ID:', selectedSessionId);
-
                     if (!selectedSessionId) {
                         document.getElementById('sessionInfo').innerHTML = '<p>No session available</p>';
                         document.getElementById('eventDateDisplay').innerHTML = '';
                         if (chart) {
                             chart.data.datasets = [];
-                            chart.update();
+                            chart.update('none');
                         }
                         document.getElementById('summaryBody').innerHTML = '';
                         document.getElementById('totalsBody').innerHTML = '';
@@ -591,27 +385,34 @@
                         document.getElementById('totalDoorCount').textContent = '0';
                         document.getElementById('totalSales').textContent = '0.00';
                         document.getElementById('totalTransactions').textContent = '0';
+                        document.getElementById('tillTotal').textContent = '0.00';
+                        document.getElementById('tillBreakdown').innerHTML = '';
                         return;
                     }
-
                     const transactions = validTransactions.filter(t => t.sessionId.toString() === selectedSessionId.toString());
                     this.transactions = transactions;
                     sessionSelect.value = selectedSessionId;
-                    transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Latest first
                     console.log('Filtered transactions:', transactions);
-
                     const eventName = transactions.length > 0 ? transactions[0].eventName : 'No Event';
                     const eventDate = transactions.length > 0 ? transactions[0].eventDate : 'No Date';
                     const uniqueCashiers = [...new Set(transactions.map(t => t.cashierName))];
                     document.getElementById('sessionInfo').innerHTML = `<p>Event Name: ${eventName}</p><p>Cashier(s): ${uniqueCashiers.join(', ')}</p>`;
                     document.getElementById('eventDateDisplay').innerHTML = `<p>Event Date: ${eventDate}</p>`;
-
+                    const tillTransaction = transactions.find(t => t.items === 'Till Count');
+                    if (tillTransaction) {
+                        document.getElementById('tillTotal').textContent = tillTransaction.cashTotal.toFixed(2);
+                        document.getElementById('tillBreakdown').innerHTML = `<p>Till Breakdown: ${tillTransaction.note}</p>`;
+                    } else {
+                        document.getElementById('tillTotal').textContent = '0.00';
+                        document.getElementById('tillBreakdown').innerHTML = '';
+                    }
                     const itemSummary = {};
                     const cashBreakdown = {};
                     let totalDoorCount = 0;
                     let totalSales = 0;
-
                     transactions.forEach(t => {
+                        if (t.items === 'Till Count') return;
                         const items = t.items.split('; ');
                         items.forEach(item => {
                             const [key, value] = item.split(': ');
@@ -623,10 +424,10 @@
                                 if (type === 'Cash') {
                                     if (!cashBreakdown[key]) cashBreakdown[key] = { people: 0, total: 0, price };
                                     cashBreakdown[key].people += count;
-                                    cashBreakdown[key].total += count * price;
+                                    cashBreakdown[key].total += t.cashTotal; // Use cashTotal for total amount
                                     if (!itemSummary['Cash']) itemSummary['Cash'] = { people: 0, total: 0 };
                                     itemSummary['Cash'].people += count;
-                                    itemSummary['Cash'].total += count * price;
+                                    itemSummary['Cash'].total += t.cashTotal;
                                 } else {
                                     if (!itemSummary[type]) itemSummary[type] = { people: 0, total: 0 };
                                     itemSummary[type].people += count;
@@ -637,13 +438,10 @@
                         });
                         totalSales += t.cashTotal || 0;
                     });
-
                     document.getElementById('totalDoorCount').textContent = totalDoorCount;
                     document.getElementById('totalSales').textContent = totalSales.toFixed(2);
-                    document.getElementById('totalTransactions').textContent = transactions.length;
-
+                    document.getElementById('totalTransactions').textContent = transactions.filter(t => t.items !== 'Till Count').length;
                     let summaryRows = '';
-
                     // Add Cash total row
                     if (itemSummary['Cash']) {
                         const data = itemSummary['Cash'];
@@ -652,11 +450,10 @@
                             <tr>
                                 <td class="cash-header">Cash</td>
                                 <td>${data.people}</td>
-                                <td>$${data.total.toFixed(2)}</td>
-                                <td>$${averagePrice.toFixed(2)}</td>
+                                <td><span class="dollar">$${data.total.toFixed(2)}</span></td>
+                                <td><span class="dollar">$${averagePrice.toFixed(2)}</span></td>
                             </tr>
                         `;
-
                         // Add cash breakdown rows, sorted by dollar amount
                         Object.keys(cashBreakdown).sort((a, b) => {
                             const amountA = parseFloat(a.split('$')[1]);
@@ -669,13 +466,12 @@
                                 <tr class="cash-breakdown">
                                     <td> - ${subKey}</td>
                                     <td>${subData.people}</td>
-                                    <td>$${subData.total.toFixed(2)}</td>
-                                    <td>$${subAveragePrice.toFixed(2)}</td>
+                                    <td><span class="dollar">$${subData.total.toFixed(2)}</span></td>
+                                    <td><span class="dollar">$${subAveragePrice.toFixed(2)}</span></td>
                                 </tr>
                             `;
                         });
                     }
-
                     // Add other payment types
                     Object.entries(itemSummary).forEach(([type, data]) => {
                         if (type !== 'Cash') {
@@ -685,91 +481,142 @@
                                 <tr>
                                     <td class="${colorClass}">${type}</td>
                                     <td>${data.people}</td>
-                                    <td>$${data.total.toFixed(2)}</td>
-                                    <td>$${averagePrice.toFixed(2)}</td>
+                                    <td><span class="dollar">$${data.total.toFixed(2)}</span></td>
+                                    <td><span class="dollar">$${averagePrice.toFixed(2)}</span></td>
                                 </tr>
                             `;
                         }
                     });
-
                     document.getElementById('summaryBody').innerHTML = summaryRows;
-
                     const totalsRow = `
                         <tr class="total-row">
                             <td><strong>TOTALS</strong></td>
                             <td><strong>${totalDoorCount}</strong></td>
-                            <td><strong>$${totalSales.toFixed(2)}</strong></td>
+                            <td><strong><span class="dollar">$${totalSales.toFixed(2)}</span></strong></td>
                             <td>${totalDoorCount ? (totalSales / totalDoorCount).toFixed(2) : '#DIV/0!'}</td>
                         </tr>
                     `;
                     document.getElementById('totalsBody').innerHTML = totalsRow;
-
                     const transactionLogBody = document.getElementById('transactionLogBody');
-                    transactionLogBody.innerHTML = transactions.map(t => `
-                        <tr>
+                    transactionLogBody.innerHTML = transactions.filter(t => t.items !== 'Till Count').map((t, index) => `
+                        <tr ${index === 0 ? 'class="highlight"' : ''}>
                             <td>${new Date(t.timestamp).toLocaleString()}</td>
                             <td>${colorCodeItems(t.items)}</td>
-                            <td>$${t.cashTotal.toFixed(2)}</td>
+                            <td><span class="dollar">$${t.cashTotal.toFixed(2)}</span></td>
                             <td>${t.doorCount}</td>
                             <td>${t.cashierName}</td>
                             <td>${t.note || ''}</td>
                         </tr>
                     `).join('');
                     console.log('Transaction log HTML:', transactionLogBody.innerHTML);
-
                     const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
+                    const interval = 15 * 60 * 1000;
+                    let startTime = transactions.length > 0 ? new Date(transactions[transactions.length - 1].timestamp) : new Date(); // Since sorted descending, last is earliest
+                    let endTime = transactions.length > 0 ? new Date(transactions[0].timestamp) : new Date();
+                    startTime = new Date(Math.floor(startTime.getTime() / interval) * interval);
+                    const bins = [];
+                    for (let time = startTime.getTime(); time <= endTime.getTime() + interval; time += interval) {
+                        bins.push(new Date(time));
+                    }
                     const cumulative = {};
                     types.forEach(type => cumulative[type] = 0);
-                    cumulative.total = 0;
-
-                    const dataPoints = {};
-                    types.forEach(type => dataPoints[type] = []);
-                    dataPoints.total = [];
-
-                    transactions.forEach(t => {
-                        const items = t.items.split('; ');
-                        items.forEach(item => {
-                            const [key, value] = item.split(': ');
-                            if (key && value) {
-                                const type = getType(key);
-                                if (types.includes(type)) {
-                                    const [countStr] = value.split(' @ ');
-                                    const count = parseInt(countStr, 10) || 0;
-                                    cumulative[type] += count;
-                                    cumulative.total += count;
-                                }
+                    cumulative.totalDoor = 0;
+                    cumulative.totalCash = 0;
+                    const dataSetsData = types.map(() => []);
+                    dataSetsData.push([]); // totalDoor
+                    dataSetsData.push([]); // totalCash
+                    let txIndex = transactions.length - 1; // Start from earliest (last in array)
+                    for (let i = 0; i < bins.length; i++) {
+                        const bin = bins[i];
+                        const binTime = bin.getTime();
+                        while (txIndex >= 0 && new Date(transactions[txIndex].timestamp).getTime() < binTime) {
+                            const t = transactions[txIndex];
+                            if (t.items === 'Till Count') {
+                                txIndex--;
+                                continue;
                             }
-                        });
-                        const timestamp = new Date(t.timestamp);
-                        types.forEach(type => {
-                            dataPoints[type].push({ x: timestamp, y: cumulative[type] });
-                        });
-                        dataPoints.total.push({ x: timestamp, y: cumulative.total });
-                    });
-
-                    const datasets = types.map(type => ({
+                            const items = t.items.split('; ');
+                            items.forEach(item => {
+                                const [key, value] = item.split(': ');
+                                if (key && value) {
+                                    const type = getType(key);
+                                    if (types.includes(type)) {
+                                        const count = parseInt(value.split(' @ ')[0], 10) || 0;
+                                        cumulative[type] += count;
+                                        cumulative.totalDoor += count;
+                                    }
+                                }
+                            });
+                            cumulative.totalCash += t.cashTotal || 0;
+                            txIndex--;
+                        }
+                        types.forEach((type, j) => dataSetsData[j].push({x: bin, y: cumulative[type]}));
+                        dataSetsData[types.length].push({x: bin, y: cumulative.totalDoor});
+                        dataSetsData[types.length + 1].push({x: bin, y: cumulative.totalCash});
+                    }
+                    const datasets = types.map((type, i) => ({
                         label: type,
-                        data: dataPoints[type],
+                        data: dataSetsData[i],
                         borderColor: getColorForType(type),
-                        fill: false,
-                        stepped: true
+                        backgroundColor: getColorForType(type).replace(')', ', 0.5)').replace('rgb', 'rgba'),
+                        fill: true,
+                        yAxisID: 'y',
+                        tension: 0
                     }));
                     datasets.push({
-                        label: 'Total',
-                        data: dataPoints.total,
+                        label: 'Total Door',
+                        data: dataSetsData[types.length],
                         borderColor: '#808080',
                         fill: false,
-                        stepped: true
+                        yAxisID: 'y'
+                    });
+                    datasets.push({
+                        label: 'Total Cash',
+                        data: dataSetsData[types.length + 1],
+                        borderColor: '#2e7d32',
+                        fill: false,
+                        yAxisID: 'y1'
                     });
                     console.log('Chart datasets:', datasets);
-
+                    const annotation = window['chartjs-plugin-annotation'].default;
+                    Chart.register(annotation);
+                    Chart.register({
+                        id: 'alternatingBackground',
+                        beforeDraw: function(chart) {
+                            const ctx = chart.ctx;
+                            const yAxis = chart.scales.y;
+                            const xAxis = chart.scales.x;
+                            const chartArea = chart.chartArea;
+                            ctx.save();
+                            // Horizontal alternating bands
+                            const tickCount = yAxis.ticks.length;
+                            for (let i = 0; i < tickCount - 1; i++) {
+                                if (i % 2 === 0) {
+                                    ctx.fillStyle = 'rgba(0, 255, 0, 0.05)'; // light green
+                                    const yTop = yAxis.getPixelForTick(i);
+                                    const yBottom = yAxis.getPixelForTick(i + 1);
+                                    ctx.fillRect(chartArea.left, yBottom, chartArea.width, yTop - yBottom);
+                                }
+                            }
+                            // Highlight active vertical grid
+                            if (chart.hoveredIndex !== undefined) {
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                                const xLeft = chart.hoveredIndex > 0 ? xAxis.getPixelForTick(chart.hoveredIndex - 0.5) : chartArea.left;
+                                const xRight = chart.hoveredIndex < xAxis.ticks.length - 1 ? xAxis.getPixelForTick(chart.hoveredIndex + 0.5) : chartArea.right;
+                                ctx.fillRect(xLeft, chartArea.top, xRight - xLeft, chartArea.bottom - chartArea.top);
+                            }
+                            ctx.restore();
+                        }
+                    });
                     if (chart) {
                         chart.data.datasets = datasets;
-                        chart.update();
+                        chart.update('none');
                     } else {
                         chart = new Chart(document.getElementById('doorCountChart'), {
                             type: 'line',
-                            data: { datasets },
+                            data: {
+                                datasets: datasets
+                            },
                             options: {
                                 maintainAspectRatio: false,
                                 scales: {
@@ -780,13 +627,84 @@
                                         ticks: { font: { size: 14 } }
                                     },
                                     y: {
-                                        beginAtZero: true,
+                                        stacked: true,
                                         title: { display: true, text: 'Door Count', font: { size: 16 } },
-                                        ticks: { font: { size: 14 } }
+                                        ticks: { font: { size: 14 } },
+                                        position: 'left'
+                                    },
+                                    y1: {
+                                        title: { display: true, text: 'Cash Total ($)', font: { size: 16 } },
+                                        ticks: { font: { size: 14 } },
+                                        position: 'right',
+                                        grid: { drawOnChartArea: false }
                                     }
                                 },
                                 plugins: {
-                                    legend: { labels: { font: { size: 14 } } }
+                                    legend: { labels: { font: { size: 14 } } },
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false,
+                                        backgroundColor: 'white',
+                                        titleColor: 'black',
+                                        bodyColor: 'black',
+                                        borderColor: 'black',
+                                        borderWidth: 1,
+                                        padding: 16,
+                                        titleFont: { size: 16 },
+                                        bodyFont: { size: 14 },
+                                        callbacks: {
+                                            label: function(context) {
+                                                if (context.dataset.label === 'Total Door') {
+                                                    return `Door Count: ${context.parsed.y}`;
+                                                } else if (context.dataset.label === 'Total Cash') {
+                                                    return `Price: $${context.parsed.y.toFixed(2)}`;
+                                                }
+                                                return '';
+                                            }
+                                        }
+                                    },
+                                    annotation: {
+                                        annotations: {
+                                            line1: {
+                                                type: 'line',
+                                                scaleID: 'x',
+                                                value: undefined,
+                                                borderColor: 'white',
+                                                borderWidth: 2,
+                                                label: { enabled: false }
+                                            }
+                                        }
+                                    }
+                                },
+                                onHover: function(event, elements) {
+                                    const chart = this;
+                                    let index = elements.length > 0 ? elements[0].index : undefined;
+                                    if (index !== chart.hoveredIndex) {
+                                        chart.hoveredIndex = index;
+                                        if (index !== undefined) {
+                                            const label = chart.data.labels[index];
+                                            chart.options.plugins.annotation.annotations.line1.value = label;
+                                        } else {
+                                            chart.options.plugins.annotation.annotations.line1.value = undefined;
+                                        }
+                                        chart.update('none');
+                                    }
+                                },
+                                onClick: function(event, elements) {
+                                    const chart = this;
+                                    let index = elements.length > 0 ? elements[0].index : undefined;
+                                    if (index !== undefined) {
+                                        chart.persistentHoveredIndex = index;
+                                        const label = chart.data.labels[index];
+                                        chart.options.plugins.annotation.annotations.line1.value = label;
+                                        chart.tooltip.setActiveElements(elements, { x: event.x, y: event.y });
+                                        chart.update('none');
+                                    } else {
+                                        chart.persistentHoveredIndex = null;
+                                        chart.options.plugins.annotation.annotations.line1.value = undefined;
+                                        chart.tooltip.setActiveElements([]);
+                                        chart.update('none');
+                                    }
                                 }
                             }
                         });
@@ -795,7 +713,6 @@
                     console.error('Error updating log:', error);
                 }
             }
-
             async exportPDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'a4' });
@@ -804,16 +721,13 @@
                 const graphWidth = pageWidth - 2 * margin;
                 const graphHeight = graphWidth * (11.69 / 8.27) / 2;
                 const dpi = 150;
-
                 if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
                     console.error('No chart data available for export.');
                     return;
                 }
-
                 // Add title
                 doc.setFontSize(16);
                 doc.text('Sales Log Summary', pageWidth / 2, margin, { align: 'center' });
-
                 // Add session info and event date as separate lines
                 const sessionInfo = document.getElementById('sessionInfo').innerText;
                 const eventDate = document.getElementById('eventDateDisplay').innerText;
@@ -825,12 +739,13 @@
                     doc.text(line, margin, y);
                     y += lineHeight;
                 });
-
                 // Add summary table
                 const summaryData = [
                     ['Total Thru Door', document.getElementById('totalDoorCount').innerText],
                     ['Total Cash Sales', '$' + document.getElementById('totalSales').innerText],
-                    ['Total Transactions', document.getElementById('totalTransactions').innerText]
+                    ['Total Transactions', document.getElementById('totalTransactions').innerText],
+                    ['Till Total', '$' + document.getElementById('tillTotal').innerText],
+                    ['Till Breakdown', document.getElementById('tillBreakdown').innerText.replace('Till Breakdown: ', '')]
                 ];
                 doc.autoTable({
                     startY: y + 0.2, // Add a small gap after header
@@ -839,11 +754,8 @@
                     theme: 'grid',
                     styles: { fontSize: 12 }
                 });
-
                 // Add tally sheet table with color coding
-                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
+                const tallyData = Array.from(document.querySelectorAll('.tally-sheet .scrollable-body tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 0.2,
                     head: [['Payment Type', 'People', 'Total Amount', 'Price per Person']],
@@ -858,11 +770,8 @@
                         }
                     }
                 });
-
                 // Add totals table
-                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
+                const totalsData = Array.from(document.querySelector('.totals table tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 0.2,
                     head: [['', 'People', 'Total Amount', 'Price per Person']],
@@ -870,11 +779,8 @@
                     theme: 'grid',
                     styles: { fontSize: 10 }
                 });
-
                 // Add transaction log table
-                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => 
-                    Array.from(row.cells).map(cell => cell.innerText)
-                );
+                const transactionData = Array.from(document.querySelectorAll('.transaction-log .scrollable-body tr')).map(row => Array.from(row.cells).map(cell => cell.innerText));
                 doc.autoTable({
                     startY: doc.lastAutoTable.finalY + 0.2,
                     head: [['Timestamp', 'Items', 'Cash Total', 'Door Count', 'Cashier', 'Note']],
@@ -882,14 +788,10 @@
                     theme: 'grid',
                     styles: { fontSize: 8 }
                 });
-
                 doc.addPage();
-
                 const startTime = new Date(Math.min(...this.transactions.map(t => new Date(t.timestamp))));
                 const endTime = new Date(Math.max(...this.transactions.map(t => new Date(t.timestamp))));
-                const interval = 30 * 60 * 1000;
-                const types = ['Cash', 'Credit Card', 'Comp', 'Ticket'];
-
+                const interval = 15 * 60 * 1000;
                 for (let time = startTime.getTime(); time < endTime.getTime(); time += interval) {
                     const intervalStart = new Date(time);
                     const intervalEnd = new Date(time + interval);
@@ -897,12 +799,10 @@
                         const txTime = new Date(t.timestamp);
                         return txTime >= intervalStart && txTime < intervalEnd;
                     });
-
                     if (intervalTransactions.length > 0) {
                         const intervalSummary = {};
                         types.forEach(type => intervalSummary[type] = 0);
                         let intervalTotal = 0;
-
                         intervalTransactions.forEach(t => {
                             const items = t.items.split('; ');
                             items.forEach(item => {
@@ -910,15 +810,13 @@
                                 if (key && value) {
                                     const type = getType(key);
                                     if (types.includes(type)) {
-                                        const [countStr] = value.split(' @ ');
-                                        const count = parseInt(countStr, 10) || 0;
+                                        const count = parseInt(value.split(' @ ')[0], 10) || 0;
                                         intervalSummary[type] += count;
                                         intervalTotal += count;
                                     }
                                 }
                             });
                         });
-
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = graphWidth * dpi;
                         tempCanvas.height = graphHeight * dpi;
@@ -940,9 +838,7 @@
                                     y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } },
                                     x: { title: { display: true, text: 'Type', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                                 },
-                                plugins: {
-                                    legend: { labels: { font: { size: 14 } } }
-                                }
+                                plugins: { legend: { labels: { font: { size: 14 } } } }
                             }
                         });
                         barChart.update();
@@ -955,7 +851,6 @@
                         doc.addPage();
                     }
                 }
-
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = graphWidth * dpi;
                 mainCanvas.height = graphHeight * dpi;
@@ -968,12 +863,10 @@
                         animation: { duration: 0 },
                         maintainAspectRatio: false,
                         scales: {
-                            x: { type: 'time', time: { unit: 'minute', stepSize: 30 }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
+                            x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time', font: { size: 16 } }, ticks: { font: { size: 14 } } },
                             y: { beginAtZero: true, title: { display: true, text: 'Door Count', font: { size: 16 } }, ticks: { font: { size: 14 } } }
                         },
-                        plugins: {
-                            legend: { labels: { font: { size: 14 } } }
-                        }
+                        plugins: { legend: { labels: { font: { size: 14 } } } }
                     }
                 });
                 tempChart.update();
@@ -983,19 +876,59 @@
                 doc.addImage(mainCanvas, 'PNG', margin, margin + 0.2, graphWidth, graphHeight);
                 document.body.removeChild(mainCanvas);
                 tempChart.destroy();
-
                 doc.save(`sales_log_${selectedSessionId || 'latest'}.pdf`);
             }
+            exportHTML() {
+                const htmlContent = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Sales Log</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; background-color: #1e1e1e; color: #e0e0e0; }
+                            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #444; }
+                            th { background-color: #3e3e3e; }
+                            h2, h3 { color: #ffffff; }
+                            .cash-header { color: #2e7d32; }
+                            .credit-card-header { color: #d32f2f; }
+                            .comp-header { color: #ffa500; }
+                            .ticket-header { color: #1a73e8; }
+                            .total-row td { color: orange; }
+                            .cash-breakdown td:first-child { padding-left: 20px; }
+                            .transaction-log table td:nth-child(even) { background-color: #3e3e3e; }
+                            .tally-sheet .scrollable-body table td:nth-child(even) { background-color: #3e3e3e; }
+                            .totals table td:nth-child(even) { background-color: #3e3e3e; }
+                            .dollar { font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Sales Log Summary</h1>
+                        ${document.getElementById('sessionInfo').outerHTML}
+                        ${document.getElementById('eventDateDisplay').outerHTML}
+                        <h2>Summary</h2>
+                        ${document.querySelector('.summary').innerHTML.replace(/<button.*<\/button>/g, '')}
+                        <h2>Tally Sheet</h2>
+                        ${document.querySelector('.tally-sheet').innerHTML}
+                        <h2>Totals</h2>
+                        ${document.querySelector('.totals').innerHTML}
+                        <h2>Transaction Log</h2>
+                        ${document.querySelector('.transaction-log').innerHTML}
+                    </body>
+                    </html>
+                `;
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sales_log_${selectedSessionId || 'latest'}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
         }
-
-        function isLoggedIn() {
-            return localStorage.getItem('isLoggedIn') === 'true';
-        }
-
-        function setLoggedIn(value) {
-            localStorage.setItem('isLoggedIn', value ? 'true' : 'false');
-        }
-
+        function isLoggedIn() { return localStorage.getItem('isLoggedIn') === 'true'; }
+        function setLoggedIn(value) { localStorage.setItem('isLoggedIn', value ? 'true' : 'false'); }
         function logout() {
             clearTimeout(sessionTimeoutId);
             setLoggedIn(false);
@@ -1003,7 +936,6 @@
             salesLogContainer.style.display = 'none';
             loginModal.style.display = 'block';
         }
-
         const loginTime = parseInt(localStorage.getItem('loginTime'), 10);
         if (isLoggedIn() && loginTime && (Date.now() - loginTime < LOGIN_TIMEOUT)) {
             salesLogContainer.style.display = 'block';
@@ -1016,7 +948,6 @@
             salesLogContainer.style.display = 'none';
             loginModal.style.display = 'block';
         }
-
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
