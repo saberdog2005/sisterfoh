@@ -16,176 +16,46 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
-        :root {
-            --bg: #0f0f0f;
-            --card: #1a1a1a;
-            --text: #f0f0f0;
-            --green: #00ff88;
-            --red: #ff3333;
-            --orange: #ffaa00;
-            --blue: #3399ff;
-        }
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #f0f0f0; --green: #00ff88; --red: #ff3333; --orange: #ffaa00; --blue: #3399ff; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-y: auto;
-            padding: 15px;
-        }
-        .header {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            gap: 15px;
-        }
-        .header h1 {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            background: linear-gradient(90deg, #00ff88, #3399ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 420px;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        .graph-panel {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-        }
-        .timeframe-btn {
-            padding: 12px 20px;
-            background: #333;
-            color: white;
-            border: 2px solid #555;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-y: auto; padding: 15px; }
+        .header { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); gap: 15px; }
+        .header h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; background: linear-gradient(90deg, #00ff88, #3399ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr 420px; gap: 15px; margin-bottom: 30px; }
+        .graph-panel { background: var(--card); border-radius: 12px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+        .timeframe-btn { padding: 12px 20px; background: #333; color: white; border: 2px solid #555; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s; }
         .timeframe-btn:hover { background: #444; }
-        .timeframe-btn.active {
-            background: var(--green);
-            color: black;
-            border-color: var(--green);
-        }
-        .graph-wrapper {
-            height: 95vh;
-            min-height: 600px;
-            margin-top: 15px;
-        }
+        .timeframe-btn.active { background: var(--green); color: black; border-color: var(--green); }
+        .graph-wrapper { height: 95vh; min-height: 600px; margin-top: 15px; }
         #doorCountChart { width: 100% !important; height: 100% !important; }
-        .panel {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-            display: flex;
-            flex-direction: column;
-        }
-        .panel h2 {
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 20px;
-            color: var(--green);
-        }
+        .panel { background: var(--card); border-radius: 12px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; }
+        .panel h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--green); }
         table { width: 100%; border-collapse: collapse; font-size: 15px; }
-        th {
-            background: #2a2a2a;
-            padding: 16px 12px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 16px;
-            border-bottom: 3px solid var(--green);
-        }
-        td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #333;
-        }
-        .transaction-log tbody tr {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .transaction-log tbody tr:hover {
-            background: #2a2a2a !important;
-            transform: translateX(5px);
-        }
-        .transaction-log tbody tr.active {
-            background: #003311 !important;
-            font-weight: bold;
-            box-shadow: 0 0 15px rgba(0,255,136,0.4);
-        }
-        .cash-header { color: var(--green); font-weight: bold; }
-        .credit-card-header { color: var(--red); font-weight: bold; }
-        .comp-header { color: var(--orange); font-weight: bold; }
-        .ticket-header { color: var(--blue); font-weight: bold; }
-        .total-row td {
-            background: #2a2a2a !important;
-            color: var(--green);
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .cash-breakdown td:first-child {
-            padding-left: 30px;
-            font-style: italic;
-            color: #aaa;
-        }
-        .dollar { font-weight: bold; color: var(--green); }
-        #sessionSelect {
-            width: auto;
-            min-width: 300px;
-            padding: 16px;
-            font-size: 18px;
-            background: #222;
-            border: 2px solid #555;
-            border-radius: 10px;
-            color: white;
-            margin-bottom: 15px;
-        }
-        button {
-            padding: 16px 24px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            margin: 8px 0;
-            transition: all 0.2s;
-        }
+        th { background: #2a2a2a; padding: 16px 12px; text-align: left; font-weight: bold; font-size: 16px; border-bottom: 3px solid var(--green); }
+        td { padding: 14px 12px; border-bottom: 1px solid #333; }
+        .transaction-log tbody tr { cursor: pointer; transition: all 0.2s; }
+        .transaction-log tbody tr:hover { background: #2a2a2a !important; transform: translateX(5px); }
+        .transaction-log tbody tr.active { background: #003311 !important; font-weight: bold; box-shadow: 0 0 15px rgba(0,255,136,0.4); }
+        .total-row td { background: #2a2a2a !important; color: var(--green); font-weight: bold; font-size: 18px; }
+        .cash-breakdown td:first-child { padding-left: 30px; font-style: italic; color: #aaa; }
+        #sessionSelect { width: auto; min-width: 300px; padding: 16px; font-size: 18px; background: #222; border: 2px solid #555; border-radius: 10px; color: white; margin-bottom: 15px; }
+        button { padding: 16px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; margin: 8px 0; transition: all 0.2s; }
         #exportBtn { background: var(--green); color: black; }
         #exportHtmlBtn { background: var(--blue); color: white; }
         #removeSessionBtn { background: var(--red); color: white; }
         #logoutBtn { background: var(--orange); color: white; }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        .summary h3 {
-            margin: 20px 0 10px;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .summary span {
-            font-size: 28px;
-            font-weight: 900;
-            color: var(--green);
-        }
         @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr 1fr 380px; } }
         @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 380px; } .graph-panel { grid-column: 1/-1; } }
         @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } .header { flex-direction: column; } #sessionSelect { width: 100%; } }
     </style>
 </head>
 <body>
+    <!-- STORAGE WARNING -->
+    <div id="storageWarning" style="display:none;background:#ff0000;color:white;padding:10px;text-align:center;font-weight:bold;">
+        ⚠️ localStorage blocked (file:// mode). Please run via local server.
+    </div>
+
     <div id="loginModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:1000;">
         <div style="background:#1a1a1a;padding:50px;border-radius:16px;width:90%;max-width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
             <h2 style="font-size:32px;margin-bottom:30px;color:var(--green);">SISTER BAR</h2>
@@ -252,6 +122,13 @@
     </div>
 
     <script>
+        const safeStorage = {
+            getItem(key) { try { return localStorage.getItem(key); } catch(e) { return null; } },
+            setItem(key, value) { try { localStorage.setItem(key, value); } catch(e) {} },
+            removeItem(key) { try { localStorage.removeItem(key); } catch(e) {} }
+        };
+        if (!window.localStorage) document.getElementById('storageWarning').style.display = 'block';
+
         const SUPABASE_URL = 'https://nnbevkohcjnzyxgkzgna.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYmV2a29oY2puenl4Z2t6Z25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5OTU5NTksImV4cCI6MjA1NzU3MTk1OX0.azv5XuUBxoyvr19-eGxnl37X7u0GOlCRj3L0jZ_8JHY';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -262,10 +139,7 @@
 
         const typeMap = { 'CASH': 'Cash', 'CC': 'Credit Card', 'TICKET': 'Ticket', 'COMP': 'Comp' };
 
-        function getType(key) {
-            return typeMap[key?.split(' ')[0]] || key;
-        }
-
+        function getType(key) { return typeMap[key?.split(' ')[0]] || key; }
         function colorCodeItems(items) {
             if (!items) return '';
             return items.split('; ').map(item => {
@@ -287,7 +161,6 @@
                 this.totalCash = 0;
                 this.totalTransactions = 0;
                 this.till = null;
-
                 this.initEvents();
                 this.loadSessions();
             }
@@ -297,15 +170,13 @@
                 document.getElementById('exportHtmlBtn').addEventListener('click', () => this.exportHTML());
                 document.getElementById('removeSessionBtn').addEventListener('click', () => this.confirmDelete());
                 document.getElementById('logoutBtn').addEventListener('click', () => {
-                    localStorage.removeItem('loggedIn');
+                    safeStorage.removeItem('loggedIn');
                     location.reload();
                 });
-
                 document.getElementById('sessionSelect').addEventListener('change', (e) => {
                     selectedSessionId = e.target.value || null;
                     this.updateLog();
                 });
-
                 document.querySelectorAll('.timeframe-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
@@ -314,7 +185,6 @@
                         this.updateLog();
                     });
                 });
-
                 document.getElementById('transactionLogBody').addEventListener('click', (e) => {
                     const row = e.target.closest('tr');
                     if (!row || !row.dataset.ts) return;
@@ -330,13 +200,8 @@
 
             async loadSessions() {
                 try {
-                    const { data, error } = await sb
-                        .from('transactions')
-                        .select('sessionId, cashierName, eventName, eventDate')
-                        .order('timestamp', { ascending: false });
-
+                    const { data, error } = await sb.from('transactions').select('sessionId, cashierName, eventName, eventDate').order('timestamp', { ascending: false });
                     if (error) throw error;
-
                     const sessions = [...new Set(data.map(t => t.sessionId))].sort((a,b) => b.localeCompare(a));
                     const select = document.getElementById('sessionSelect');
                     select.innerHTML = '<option value="">Select Session</option>';
@@ -347,43 +212,26 @@
                         opt.textContent = `${tx?.cashierName || 'Unknown'} • ${tx?.eventName || 'No Event'} • ${tx?.eventDate || 'No Date'}`;
                         select.appendChild(opt);
                     });
-
                     if (sessions.length && !selectedSessionId) {
                         selectedSessionId = sessions[0];
                         select.value = selectedSessionId;
                     }
-
                     this.updateLog();
-
                     if (realtimeSubscription) realtimeSubscription.unsubscribe();
                     realtimeSubscription = sb.channel('sales-changes')
                         .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
                             if (selectedSessionId) this.updateLog();
                         })
                         .subscribe();
-                } catch (e) {
-                    console.error('Error loading sessions:', e);
-                }
+                } catch (e) { console.error('Error loading sessions:', e); }
             }
 
             async updateLog() {
                 if (!selectedSessionId) return;
-
-                const { data: txns } = await sb
-                    .from('transactions')
-                    .select('*')
-                    .eq('sessionId', selectedSessionId)
-                    .order('timestamp', { ascending: false });
-
+                const { data: txns } = await sb.from('transactions').select('*').eq('sessionId', selectedSessionId).order('timestamp', { ascending: false });
                 this.txns = txns || [];
-
                 const first = txns[0];
-                this.sessionData = {
-                    cashierName: first?.cashierName || 'Unknown',
-                    eventName: first?.eventName || 'No Event',
-                    eventDate: first?.eventDate || 'No Date'
-                };
-
+                this.sessionData = { cashierName: first?.cashierName || 'Unknown', eventName: first?.eventName || 'No Event', eventDate: first?.eventDate || 'No Date' };
                 document.getElementById('sessionInfo').innerHTML = `<strong>${this.sessionData.cashierName}</strong><br>${this.sessionData.eventName}`;
                 document.getElementById('eventDateDisplay').textContent = this.sessionData.eventDate;
 
@@ -396,7 +244,6 @@
                     if (t.items === 'Till Count') return;
                     this.totalDoor += t.doorCount || 0;
                     this.totalCash += t.cashTotal || 0;
-
                     t.items.split('; ').forEach(item => {
                         const match = item.match(/([A-Z]+ .*?): (\d+)/);
                         if (!match) return;
@@ -404,7 +251,6 @@
                         const count = parseInt(match[2]);
                         if (!this.itemSummary[type]) this.itemSummary[type] = {people:0, total:0};
                         this.itemSummary[type].people += count;
-
                         if (type.startsWith('CASH')) {
                             const price = parseFloat(type.match(/\$([\d.]+)/)?.[1] || 0);
                             const subKey = type.replace(/^CASH\s*/, '');
@@ -417,7 +263,6 @@
                 });
 
                 this.totalTransactions = this.txns.filter(t => t.items !== 'Till Count').length;
-
                 document.getElementById('totalDoorCount').textContent = this.totalDoor;
                 document.getElementById('totalSales').textContent = this.totalCash.toFixed(2);
                 document.getElementById('totalTransactions').textContent = this.totalTransactions;
@@ -474,82 +319,65 @@
                         data: { datasets: graphData },
                         options: {
                             maintainAspectRatio: false,
-                            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                            interaction: { mode: 'index', intersect: false },
                             plugins: {
-                                legend: {
-                                    position: 'top',
-                                    labels: {
-                                        font: { size: 18, weight: 'bold' },
-                                        color: 'white',
-                                        padding: 25,
-                                        usePointStyle: true,
-                                        pointStyle: 'rectRounded'
-                                    }
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0,0,0,0.9)',
-                                    titleColor: '#00ff88',
-                                    bodyColor: 'white',
-                                    padding: 20,
-                                    titleFont: { size: 18, weight: 'bold' },
-                                    bodyFont: { size: 16 }
-                                },
-                                annotation: {
-                                    annotations: {
-                                        line: {
-                                            type: 'line',
-                                            scaleID: 'x',
-                                            borderColor: '#ffaa00',
-                                            borderWidth: 4,
-                                            label: {
-                                                display: true,
-                                                content: 'SELECTED',
-                                                backgroundColor: '#ffaa00',
-                                                color: 'black',
-                                                font: { weight: 'bold', size: 16 }
-                                            }
+                                legend: { position: 'top', labels: { font: { size: 18, weight: 'bold' }, color: 'white', padding: 25, usePointStyle: true, pointStyle: 'rectRounded' } },
+                                tooltip: { backgroundColor: 'rgba(0,0,0,0.9)', titleColor: '#00ff88', bodyColor: 'white', padding: 20, titleFont: { size: 18, weight: 'bold' }, bodyFont: { size: 16 } },
+                                annotation: { annotations: { line: { type: 'line', scaleID: 'x', borderColor: '#ffaa00', borderWidth: 4, label: { display: true, content: 'SELECTED', backgroundColor: '#ffaa00', color: 'black', font: { weight: 'bold', size: 16 } } } } },
+                                zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
+                                verticalHoverLine: {
+                                    beforeDraw: function(chart) {
+                                        if (chart.tooltip._active && chart.tooltip._active.length) {
+                                            const ctx = chart.ctx;
+                                            const x = chart.tooltip._active[0].element.x;
+                                            const topY = chart.scales.y.top;
+                                            const bottomY = chart.scales.y.bottom;
+                                            ctx.save();
+                                            ctx.beginPath();
+                                            ctx.moveTo(x, topY);
+                                            ctx.lineTo(x, bottomY);
+                                            ctx.lineWidth = 2;
+                                            ctx.strokeStyle = '#ff0000';
+                                            ctx.setLineDash([3, 3]);
+                                            ctx.stroke();
+                                            ctx.restore();
                                         }
                                     }
-                                },
-                                zoom: {
-                                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                                    pan: { enabled: true, mode: 'x' }
                                 }
                             },
                             scales: {
-                                x: {
-                                    type: 'time',
-                                    time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
-                                    ticks: {
-                                        font: { size: 16, weight: 'bold' },
-                                        color: '#cccccc',
-                                        maxRotation: 0
-                                    },
-                                    grid: { color: 'rgba(255,255,255,0.05)' }
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: 'PEOPLE THROUGH DOOR',
-                                        font: { size: 20, weight: 'bold' },
-                                        color: '#00ff88'
-                                    },
-                                    ticks: { font: { size: 16 }, color: '#cccccc' },
-                                    grid: { color: 'rgba(255,255,255,0.1)' }
-                                },
-                                y1: {
-                                    position: 'right',
-                                    title: {
-                                        display: true,
-                                        text: 'CASH SALES ($)',
-                                        font: { size: 20, weight: 'bold' },
-                                        color: '#00ff88'
-                                    },
-                                    ticks: { font: { size: 16 }, color: '#cccccc' },
-                                    grid: { drawOnChartArea: false }
-                                }
+                                x: { type: 'time', time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } }, ticks: { font: { size: 16, weight: 'bold' }, color: '#cccccc', maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y: { title: { display: true, text: 'PEOPLE THROUGH DOOR', font: { size: 20, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 16 }, color: '#cccccc' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                                y1: { position: 'right', title: { display: true, text: 'CASH SALES ($)', font: { size: 20, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 16 }, color: '#cccccc' }, grid: { drawOnChartArea: false } }
                             }
-                        }
+                        },
+                        plugins: [{
+                            id: 'stripes30min',
+                            beforeDraw: function(chart) {
+                                const ctx = chart.ctx;
+                                const chartArea = chart.chartArea;
+                                const xAxis = chart.scales.x;
+                                if (!xAxis) return;
+                                const interval = 30 * 60 * 1000;
+                                const start = xAxis.min || xAxis.getValueForPixel(chartArea.left);
+                                const end = xAxis.max || xAxis.getValueForPixel(chartArea.right);
+                                let current = new Date(Math.floor(start / interval) * interval);
+                                ctx.save();
+                                let i = 0;
+                                while (current < end) {
+                                    const x = xAxis.getPixelForValue(current);
+                                    const next = new Date(current.getTime() + interval);
+                                    const nextX = xAxis.getPixelForValue(next);
+                                    if (i % 2 === 1) {
+                                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                                        ctx.fillRect(x, chartArea.top, nextX - x, chartArea.bottom - chartArea.top);
+                                    }
+                                    current = next;
+                                    i++;
+                                }
+                                ctx.restore();
+                            }
+                        }]
                     });
                 }
             }
@@ -649,16 +477,14 @@
                     margin: { left: 10, right: 10 }
                 });
                 doc.addPage();
-                const logBody = this.txns
-                    .filter(t => t.items !== 'Till Count')
-                    .map(t => [
-                        new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        t.items,
-                        `$${t.cashTotal?.toFixed(2) || '0.00'}`,
-                        t.doorCount || 0,
-                        t.cashierName || '',
-                        t.note || ''
-                    ]);
+                const logBody = this.txns.filter(t => t.items !== 'Till Count').map(t => [
+                    new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    t.items,
+                    `$${t.cashTotal?.toFixed(2) || '0.00'}`,
+                    t.doorCount || 0,
+                    t.cashierName || '',
+                    t.note || ''
+                ]);
                 doc.autoTable({
                     head: [['Time', 'Items', 'Cash', 'Door', 'Cashier', 'Note']],
                     body: logBody,
@@ -700,7 +526,7 @@
             }
         }
 
-        let loggedIn = localStorage.getItem('loggedIn') === 'true';
+        let loggedIn = safeStorage.getItem('loggedIn') === 'true';
         if (loggedIn) {
             document.getElementById('salesLogContainer').style.display = 'block';
             document.getElementById('loginModal').style.display = 'none';
@@ -710,7 +536,7 @@
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 if (username === 'admin' && password === 'password123') {
-                    localStorage.setItem('loggedIn', 'true');
+                    safeStorage.setItem('loggedIn', 'true');
                     document.getElementById('loginModal').style.display = 'none';
                     document.getElementById('salesLogContainer').style.display = 'block';
                     new SalesLog();
