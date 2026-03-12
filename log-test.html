@@ -16,38 +16,167 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
-        :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #f0f0f0; --green: #00ff88; --red: #ff3333; --orange: #ffaa00; --blue: #3399ff; }
+        :root {
+            --bg: #0f0f0f;
+            --card: #1a1a1a;
+            --text: #e0e0e0;
+            --green: #2e7d32;
+            --red: #d32f2f;
+            --orange: #ffa500;
+            --blue: #0288d1;
+            --pink: #ff69b4;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-y: auto; padding: 15px; }
-        .header { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); gap: 15px; }
-        .header h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; background: linear-gradient(90deg, #00ff88, #3399ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .main-grid { display: grid; grid-template-columns: 1fr 1fr 420px; gap: 15px; margin-bottom: 30px; }
-        .graph-panel { background: var(--card); border-radius: 12px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
-        .timeframe-btn { padding: 12px 20px; background: #333; color: white; border: 2px solid #555; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .header {
+            background: var(--card);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            gap: 15px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .graph-panel {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            grid-column: 1 / -1;
+        }
+        .timeframe-btn {
+            padding: 10px 18px;
+            background: #333;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
         .timeframe-btn:hover { background: #444; }
-        .timeframe-btn.active { background: var(--green); color: black; border-color: var(--green); }
-        .graph-wrapper { height: 95vh; min-height: 600px; margin-top: 15px; }
-        #doorCountChart { width: 100% !important; height: 100% !important; }
-        .panel { background: var(--card); border-radius: 12px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; }
-        .panel h2 { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--green); }
-        table { width: 100%; border-collapse: collapse; font-size: 15px; }
-        th { background: #2a2a2a; padding: 16px 12px; text-align: left; font-weight: bold; font-size: 16px; border-bottom: 3px solid var(--green); }
-        td { padding: 14px 12px; border-bottom: 1px solid #333; }
-        .transaction-log tbody tr { cursor: pointer; transition: all 0.2s; }
-        .transaction-log tbody tr:hover { background: #2a2a2a !important; transform: translateX(5px); }
-        .transaction-log tbody tr.active { background: #003311 !important; font-weight: bold; box-shadow: 0 0 15px rgba(0,255,136,0.4); }
-        .total-row td { background: #2a2a2a !important; color: var(--green); font-weight: bold; font-size: 18px; }
-        .cash-breakdown td:first-child { padding-left: 30px; font-style: italic; color: #aaa; }
-        #sessionSelect { width: auto; min-width: 300px; padding: 16px; font-size: 18px; background: #222; border: 2px solid #555; border-radius: 10px; color: white; margin-bottom: 15px; }
-        button { padding: 16px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; margin: 8px 0; transition: all 0.2s; }
+        .timeframe-btn.active {
+            background: var(--green);
+            color: black;
+            border-color: var(--green);
+        }
+        .graph-wrapper {
+            height: 420px;
+            margin-top: 15px;
+        }
+        .panel {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+        }
+        .panel h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: var(--green);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th {
+            background: #2a2a2a;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 13px;
+            border-bottom: 2px solid var(--green);
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .transaction-log tbody tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .transaction-log tbody tr:hover {
+            background: #2a2a2a !important;
+            transform: translateX(5px);
+        }
+        .transaction-log tbody tr.active {
+            background: #003311 !important;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0,255,136,0.4);
+        }
+        .total-row td {
+            background: #2a2a2a !important;
+            color: var(--green);
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .cash-breakdown td:first-child {
+            padding-left: 30px;
+            font-style: italic;
+            color: #aaa;
+        }
+        #sessionSelect {
+            padding: 12px;
+            font-size: 15px;
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: white;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin: 5px 0;
+            transition: all 0.2s;
+        }
         #exportBtn { background: var(--green); color: black; }
         #exportHtmlBtn { background: var(--blue); color: white; }
         #removeSessionBtn { background: var(--red); color: white; }
         #logoutBtn { background: var(--orange); color: white; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr 1fr 380px; } }
-        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 380px; } .graph-panel { grid-column: 1/-1; } }
-        @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } .header { flex-direction: column; } #sessionSelect { width: 100%; } }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
+        .live-badge {
+            background: var(--green);
+            color: black;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -57,11 +186,11 @@
     </div>
 
     <div id="loginModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:1000;">
-        <div style="background:#1a1a1a;padding:50px;border-radius:16px;width:90%;max-width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
-            <h2 style="font-size:32px;margin-bottom:30px;color:var(--green);">SISTER BAR</h2>
-            <input type="text" id="username" placeholder="Username" style="width:100%;padding:18px;margin:15px 0;background:#222;color:white;border:2px solid #555;border-radius:10px;font-size:18px;">
-            <input type="password" id="password" placeholder="Password" style="width:100%;padding:18px;margin:15px 0;background:#222;color:white;border:2px solid #555;border-radius:10px;font-size:18px;">
-            <button id="loginBtn" style="background:var(--green);color:black;padding:18px 40px;border-radius:12px;font-weight:bold;font-size:20px;width:100%;margin-top:20px;">ENTER</button>
+        <div style="background:#1a1a1a;padding:40px;border-radius:12px;width:90%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+            <h2 style="font-size:26px;margin-bottom:25px;color:var(--green);">SISTER BAR</h2>
+            <input type="text" id="username" placeholder="Username" style="width:100%;padding:14px;margin:12px 0;background:#222;color:white;border:2px solid #555;border-radius:8px;font-size:16px;">
+            <input type="password" id="password" placeholder="Password" style="width:100%;padding:14px;margin:12px 0;background:#222;color:white;border:2px solid #555;border-radius:8px;font-size:16px;">
+            <button id="loginBtn" style="background:var(--green);color:black;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:18px;width:100%;margin-top:15px;">ENTER</button>
             <p id="errorMsg" style="color:var(--red);margin-top:15px;font-weight:bold;"></p>
         </div>
     </div>
@@ -69,22 +198,28 @@
     <div id="salesLogContainer" style="display:none;">
         <div class="header">
             <h1>SISTER BAR • SALES LOG</h1>
-            <select id="sessionSelect"></select>
-            <button id="logoutBtn">LOGOUT</button>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <select id="sessionSelect"></select>
+                <span id="liveBadge" class="live-badge" style="display:none;">● LIVE</span>
+                <button id="logoutBtn">LOGOUT</button>
+            </div>
         </div>
+
         <div class="main-grid">
+            <!-- FULL-WIDTH GRAPH (full event span) -->
             <div class="graph-panel">
-                <div style="margin-bottom:15px;display:flex;gap:12px;flex-wrap:wrap;">
-                    <button class="timeframe-btn active" data-range="all">ALL TIME</button>
-                    <button class="timeframe-btn" data-range="1h">1 HOUR</button>
+                <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                    <button class="timeframe-btn active" data-range="all">FULL EVENT</button>
+                    <button class="timeframe-btn" data-range="1h">LAST HOUR</button>
                     <button class="timeframe-btn" data-range="30m">30 MIN</button>
                     <button class="timeframe-btn" data-range="15m">15 MIN</button>
-                    <button class="timeframe-btn" data-range="5m">5 MIN</button>
                 </div>
                 <div class="graph-wrapper">
                     <canvas id="doorCountChart"></canvas>
                 </div>
             </div>
+
+            <!-- LEFT COLUMN -->
             <div>
                 <div class="panel">
                     <h2>TALLY SHEET</h2>
@@ -94,34 +229,38 @@
                     <h2>TOTALS</h2>
                     <table><tbody id="totalsBody"></tbody></table>
                 </div>
-                <div class="panel" style="flex:1;">
-                    <h2>TRANSACTION LOG</h2>
-                    <div class="transaction-log" style="flex:1;overflow:auto;max-height:600px;">
-                        <table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"></tbody></table>
-                    </div>
-                </div>
             </div>
+
+            <!-- RIGHT COLUMN -->
             <div>
                 <div class="panel">
                     <h2>SESSION SUMMARY</h2>
-                    <div id="sessionInfo" style="margin-bottom:25px;font-size:18px;"></div>
-                    <p id="eventDateDisplay" style="font-size:18px;margin-bottom:20px;"></p>
-                    <h3>TOTAL DOOR: <span id="totalDoorCount">0</span></h3>
-                    <h3>CASH SALES: $<span id="totalSales">0.00</span></h3>
+                    <div id="sessionInfo" style="margin-bottom:20px;font-size:16px;"></div>
+                    <p id="eventDateDisplay" style="font-size:16px;margin-bottom:15px;"></p>
+                    <h3>TOTAL DOOR: <span id="totalDoorCount" style="color:var(--pink);">0</span></h3>
+                    <h3>CASH SALES: $<span id="totalSales" style="color:var(--green);">0.00</span></h3>
                     <h3>TRANSACTIONS: <span id="totalTransactions">0</span></h3>
                     <h3 style="color:var(--red);">TILL COUNT: $<span id="tillTotal">0.00</span></h3>
-                    <p id="tillBreakdown" style="margin-top:15px;"></p>
+                    <p id="tillBreakdown" style="margin-top:12px;font-size:13px;"></p>
                 </div>
-                <div class="panel">
-                    <button id="exportBtn">EXPORT PDF</button>
-                    <button id="exportHtmlBtn">EXPORT HTML</button>
-                    <button id="removeSessionBtn">DELETE SESSION</button>
+                <div class="panel" style="flex:1;">
+                    <h2>TRANSACTION LOG (Newest First)</h2>
+                    <div class="transaction-log" style="flex:1;overflow:auto;max-height:380px;">
+                        <table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"></tbody></table>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <div style="text-align:center;margin-top:20px;">
+            <button id="exportBtn">EXPORT PDF</button>
+            <button id="exportHtmlBtn">EXPORT HTML</button>
+            <button id="removeSessionBtn">DELETE SESSION</button>
         </div>
     </div>
 
     <script>
+        // ==================== SAFE LOCALSTORAGE ====================
         const safeStorage = {
             getItem(key) { try { return localStorage.getItem(key); } catch(e) { return null; } },
             setItem(key, value) { try { localStorage.setItem(key, value); } catch(e) {} },
@@ -223,6 +362,7 @@
                             if (selectedSessionId) this.updateLog();
                         })
                         .subscribe();
+                    document.getElementById('liveBadge').style.display = 'inline';
                 } catch (e) { console.error('Error loading sessions:', e); }
             }
 
@@ -305,7 +445,6 @@
                         <td>${colorCodeItems(t.items)}</td>
                         <td style="color:#00ff88">$${t.cashTotal?.toFixed(2)||'0.00'}</td>
                         <td>${t.doorCount||0}</td>
-                        <td>${t.cashierName||''}</td>
                         <td>${t.note||''}</td>
                     </tr>`).join('');
 
@@ -321,10 +460,10 @@
                             maintainAspectRatio: false,
                             interaction: { mode: 'index', intersect: false },
                             plugins: {
-                                legend: { position: 'top', labels: { font: { size: 18, weight: 'bold' }, color: 'white', padding: 25, usePointStyle: true, pointStyle: 'rectRounded' } },
-                                tooltip: { backgroundColor: 'rgba(0,0,0,0.9)', titleColor: '#00ff88', bodyColor: 'white', padding: 20, titleFont: { size: 18, weight: 'bold' }, bodyFont: { size: 16 } },
-                                annotation: { annotations: { line: { type: 'line', scaleID: 'x', borderColor: '#ffaa00', borderWidth: 4, label: { display: true, content: 'SELECTED', backgroundColor: '#ffaa00', color: 'black', font: { weight: 'bold', size: 16 } } } } },
-                                zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
+                                legend: { position: 'top', labels: { font: { size: 16, weight: 'bold' }, color: 'white', padding: 20 } },
+                                tooltip: { backgroundColor: 'rgba(0,0,0,0.9)', titleColor: '#00ff88', bodyColor: 'white', padding: 15 },
+                                annotation: { annotations: { line: { type: 'line', scaleID: 'x', borderColor: '#ffaa00', borderWidth: 3 } } },
+                                zoom: { zoom: { wheel: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
                                 verticalHoverLine: {
                                     beforeDraw: function(chart) {
                                         if (chart.tooltip._active && chart.tooltip._active.length) {
@@ -338,7 +477,7 @@
                                             ctx.lineTo(x, bottomY);
                                             ctx.lineWidth = 2;
                                             ctx.strokeStyle = '#ff0000';
-                                            ctx.setLineDash([3, 3]);
+                                            ctx.setLineDash([2, 2]);
                                             ctx.stroke();
                                             ctx.restore();
                                         }
@@ -346,38 +485,11 @@
                                 }
                             },
                             scales: {
-                                x: { type: 'time', time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } }, ticks: { font: { size: 16, weight: 'bold' }, color: '#cccccc', maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                                y: { title: { display: true, text: 'PEOPLE THROUGH DOOR', font: { size: 20, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 16 }, color: '#cccccc' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                                y1: { position: 'right', title: { display: true, text: 'CASH SALES ($)', font: { size: 20, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 16 }, color: '#cccccc' }, grid: { drawOnChartArea: false } }
+                                x: { type: 'time', time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } }, ticks: { font: { size: 13 }, color: '#ccc' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y: { title: { display: true, text: 'PEOPLE THROUGH DOOR', font: { size: 15, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 13 }, color: '#ccc' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                                y1: { position: 'right', title: { display: true, text: 'CASH SALES ($)', font: { size: 15, weight: 'bold' }, color: '#00ff88' }, ticks: { font: { size: 13 }, color: '#ccc' }, grid: { drawOnChartArea: false } }
                             }
-                        },
-                        plugins: [{
-                            id: 'stripes30min',
-                            beforeDraw: function(chart) {
-                                const ctx = chart.ctx;
-                                const chartArea = chart.chartArea;
-                                const xAxis = chart.scales.x;
-                                if (!xAxis) return;
-                                const interval = 30 * 60 * 1000;
-                                const start = xAxis.min || xAxis.getValueForPixel(chartArea.left);
-                                const end = xAxis.max || xAxis.getValueForPixel(chartArea.right);
-                                let current = new Date(Math.floor(start / interval) * interval);
-                                ctx.save();
-                                let i = 0;
-                                while (current < end) {
-                                    const x = xAxis.getPixelForValue(current);
-                                    const next = new Date(current.getTime() + interval);
-                                    const nextX = xAxis.getPixelForValue(next);
-                                    if (i % 2 === 1) {
-                                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                                        ctx.fillRect(x, chartArea.top, nextX - x, chartArea.bottom - chartArea.top);
-                                    }
-                                    current = next;
-                                    i++;
-                                }
-                                ctx.restore();
-                            }
-                        }]
+                        }
                     });
                 }
             }
@@ -427,7 +539,7 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('l', 'mm', 'a4');
                 doc.setFontSize(24);
-                doc.setTextColor(0, 255, 136);
+                doc.setTextColor(46, 125, 50);
                 doc.text('SISTER BAR SALES LOG', 148.5, 20, { align: 'center' });
                 doc.setTextColor(0, 0, 0);
                 doc.setFontSize(14);
@@ -436,25 +548,25 @@
                 doc.text(`Date: ${this.sessionData.eventDate}`, 10, 55);
                 doc.text(`Cashier: ${this.sessionData.cashierName}`, 10, 65);
                 doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 75);
-                doc.setTextColor(0, 255, 136);
+                doc.setTextColor(46, 125, 50);
                 doc.setFontSize(18);
                 doc.text(`Total Door: ${this.totalDoor}`, 200, 35);
                 doc.text(`Cash Sales: $${this.totalCash.toFixed(2)}`, 200, 45);
                 doc.text(`Transactions: ${this.totalTransactions}`, 200, 55);
                 if (this.till) {
-                    doc.setTextColor(255, 51, 51);
+                    doc.setTextColor(211, 47, 47);
                     doc.text(`Till Count: $${this.till.cashTotal.toFixed(2)}`, 200, 65);
                 }
                 const chartCanvas = document.getElementById('doorCountChart');
                 const chartImg = chartCanvas.toDataURL('image/png');
-                doc.addImage(chartImg, 'PNG', 10, 85, 277, 100);
+                doc.addImage(chartImg, 'PNG', 10, 85, 277, 110);
                 const summaryBody = [];
                 Object.entries(this.itemSummary).forEach(([type, d]) => {
                     if (d.people > 0) {
                         const avg = d.total / d.people || 0;
                         summaryBody.push([type.toUpperCase(), d.people.toString(), `$${d.total.toFixed(2)}`, `$${avg.toFixed(2)}`]);
                         if (type === 'Cash') {
-                            Object.keys(this.cashBreakdown).sort((a, b) => {
+                            Object.keys(this.cashBreakdown).sort((a,b) => {
                                 const pa = parseFloat(a.match(/\$([\d.]+)/)?.[1] || 0);
                                 const pb = parseFloat(b.match(/\$([\d.]+)/)?.[1] || 0);
                                 return pa - pb;
@@ -469,9 +581,9 @@
                 doc.autoTable({
                     head: [['Type', 'People', 'Amount', 'Per Person']],
                     body: summaryBody,
-                    startY: 190,
+                    startY: 205,
                     theme: 'grid',
-                    headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0], fontStyle: 'bold' },
+                    headStyles: { fillColor: [46, 125, 50], textColor: [0, 0, 0], fontStyle: 'bold' },
                     bodyStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
                     alternateRowStyles: { fillColor: [220, 220, 220] },
                     margin: { left: 10, right: 10 }
@@ -482,29 +594,23 @@
                     t.items,
                     `$${t.cashTotal?.toFixed(2) || '0.00'}`,
                     t.doorCount || 0,
-                    t.cashierName || '',
                     t.note || ''
                 ]);
                 doc.autoTable({
-                    head: [['Time', 'Items', 'Cash', 'Door', 'Cashier', 'Note']],
+                    head: [['Time', 'Items', 'Cash', 'Door', 'Note']],
                     body: logBody,
                     startY: 20,
                     theme: 'grid',
-                    headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0], fontStyle: 'bold' },
+                    headStyles: { fillColor: [46, 125, 50], textColor: [0, 0, 0], fontStyle: 'bold' },
                     bodyStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
                     alternateRowStyles: { fillColor: [220, 220, 220] },
-                    margin: { left: 10, right: 10 },
-                    didParseCell: (data) => {
-                        if (data.section === 'body' && data.column.index === 1) {
-                            data.cell.raw = data.cell.raw.replace(/;/g, ';\n');
-                        }
-                    }
+                    margin: { left: 10, right: 10 }
                 });
                 doc.save(`SISTERBAR_SalesLog_${selectedSessionId}.pdf`);
             }
 
             exportHTML() {
-                const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sister Bar Sales Log</title><style>body{background:#0f0f0f;color:#f0f0f0;padding:30px;font-family:Arial;}</style></head><body>${document.querySelector('#salesLogContainer').innerHTML}</body></html>`], {type:'text/html'});
+                const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sister Bar Sales Log</title><style>body{background:#0f0f0f;color:#e0e0e0;padding:30px;font-family:Arial;}</style></head><body>${document.querySelector('#salesLogContainer').innerHTML}</body></html>`], {type:'text/html'});
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = `SISTERBAR_${selectedSessionId || 'log'}.html`;
