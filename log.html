@@ -2,14 +2,26 @@
 <html lang="en">
 <head>
 <!-- SOFTWARE COPYRIGHT 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
+<!-- VERSION 2.3 — Robust drag-to-pan (mouse + iPad single-finger) • Legend series filter • Click graph → highlight matching log rows • Annotation vertical line • Zoom controls + pinch/wheel/dblclick • Optimized cumulative data -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-<title>Sister Bar • Sales Log</title>
+<title>Sister Bar Sales Log v2.3</title>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+// Robust plugin registration for Chart.js 4 + zoom + annotation
+(function() {
+  if (typeof Chart === 'undefined') return;
+  const zoomPlugin = window.ChartZoom || window['chartjs-plugin-zoom'];
+  const annotationPlugin = window.ChartAnnotation || window['chartjs-plugin-annotation'];
+  if (zoomPlugin) Chart.register(zoomPlugin);
+  if (annotationPlugin) Chart.register(annotationPlugin);
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -82,12 +94,49 @@ background: var(--green);
 color: black;
 border-color: var(--green);
 }
+.zoom-btn {
+background: #1a1a2e;
+color: #00ff88;
+border: 2px solid #00ff88;
+padding: 8px 16px;
+border-radius: 10px;
+font-size: 14px;
+font-weight: 800;
+cursor: pointer;
+letter-spacing: 0.5px;
+transition: all 0.2s ease;
+touch-action: manipulation;
+-webkit-tap-highlight-color: transparent;
+}
+.zoom-btn:hover, .zoom-btn:active {
+background: #00ff88;
+color: #000;
+box-shadow: 0 0 18px rgba(0, 255, 136, 0.5);
+transform: scale(1.04);
+}
+.zoom-btn:active { transform: scale(0.96); }
 .graph-wrapper {
 height: 95vh;
 min-height: 600px;
 margin-top: 15px;
+position: relative;
+touch-action: none;          /* critical for iPad single-finger drag-to-pan */
+cursor: grab;
+user-select: none;
+-webkit-user-select: none;
+-webkit-touch-callout: none;
 }
-#doorCountChart { width: 100% !important; height: 100% !important; }
+.graph-wrapper:active,
+.graph-wrapper.panning {
+cursor: grabbing;
+}
+#doorCountChart {
+width: 100% !important;
+height: 100% !important;
+touch-action: none;
+cursor: inherit;
+pointer-events: auto;
+}
 .panel {
 background: var(--card);
 border-radius: 12px;
@@ -130,7 +179,13 @@ transform: translateX(5px);
 .transaction-log tbody tr.active {
 background: #003311 !important;
 font-weight: bold;
-box-shadow: 0 0 15px rgba(0,255,136,0.4);
+box-shadow: 0 0 15px rgba(0,255,136,0.55);
+border-left: 4px solid #00ff88;
+}
+.transaction-log tbody tr.highlight-match {
+background: #1a2a1a !important;
+box-shadow: 0 0 12px rgba(0,255,136,0.35);
+border-left: 3px solid #00ff88;
 }
 .cash-header { color: var(--green); font-weight: bold; }
 .credit-card-header { color: var(--red); font-weight: bold; }
@@ -209,12 +264,16 @@ color: var(--green);
 
 <div class="main-grid">
 <div class="graph-panel">
-<div style="margin-bottom:15px;display:flex;gap:12px;flex-wrap:wrap;">
+<div style="margin-bottom:15px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
 <button class="timeframe-btn active" data-range="all">ALL TIME</button>
 <button class="timeframe-btn" data-range="1h">1 HOUR</button>
 <button class="timeframe-btn" data-range="30m">30 MIN</button>
 <button class="timeframe-btn" data-range="15m">15 MIN</button>
 <button class="timeframe-btn" data-range="5m">5 MIN</button>
+<span style="width:1px;height:28px;background:#444;margin:0 8px;"></span>
+<button class="zoom-btn" id="zoomInBtn" title="Zoom In">＋ ZOOM IN</button>
+<button class="zoom-btn" id="zoomOutBtn" title="Zoom Out">－ ZOOM OUT</button>
+<button class="zoom-btn" id="zoomResetBtn" title="Reset Zoom">↺ RESET</button>
 </div>
 <div class="graph-wrapper">
 <canvas id="doorCountChart"></canvas>
@@ -273,11 +332,18 @@ function getType(key) { return typeMap[key?.split(' ')[0]] || key; }
 
 function colorCodeItems(items) {
 if (!items) return '';
+const specials = ['BATCH CLEAR', 'SESSION CLOSE', 'NOTE', 'Till Count'];
+if (specials.includes(items.trim())) {
+return `<span style="color:#aaa;font-style:italic">${items}</span>`;
+}
 return items.split('; ').map(item => {
-const [key, rest] = item.split(': ');
+const parts = item.split(': ');
+const key = parts[0] || '';
+const rest = parts.slice(1).join(': ') || '';
 const type = getType(key);
-const color = type === 'Cash' ? '#00ff88' : type === 'Credit Card' ? '#ff3333' : type === 'Comp' ? '#ffaa00' : '#3399ff';
-return `<span style="color:${color};font-weight:bold">${key}</span>: ${rest}`;
+const color = type === 'Cash' ? '#00ff88' : type === 'Credit Card' ? '#ff3333' : type === 'Comp' ? '#ffaa00' : type === 'Ticket' ? '#3399ff' : '#ccc';
+const isNeg = rest.trim().startsWith('-');
+return `<span style="color:${color};font-weight:bold">${key}</span>: <span style="color:${isNeg ? '#ff6666' : '#fff'}">${rest}</span>`;
 }).join('; ');
 }
 
@@ -320,17 +386,73 @@ this.currentRange = e.target.dataset.range;
 this.updateLog();
 });
 });
-document.getElementById('transactionLogBody').addEventListener('click', (e) => {
-const row = e.target.closest('tr');
-if (!row || !row.dataset.ts) return;
-document.querySelectorAll('#transactionLogBody tr').forEach(r => r.classList.remove('active'));
-row.classList.add('active');
-const time = new Date(parseInt(row.dataset.ts));
-if (chart?.options?.plugins?.annotation) {
-chart.options.plugins.annotation.annotations.line.value = time;
-chart.update('none');
+
+// Zoom controls
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomResetBtn = document.getElementById('zoomResetBtn');
+if (zoomInBtn) {
+  zoomInBtn.addEventListener('click', () => { if (chart) chart.zoom(1.25); });
 }
+if (zoomOutBtn) {
+  zoomOutBtn.addEventListener('click', () => { if (chart) chart.zoom(0.8); });
+}
+if (zoomResetBtn) {
+  zoomResetBtn.addEventListener('click', () => { if (chart) chart.resetZoom(); });
+}
+
+// Double-click canvas → reset zoom + clear highlights
+const canvas = document.getElementById('doorCountChart');
+if (canvas) {
+  canvas.addEventListener('dblclick', () => {
+    if (chart) chart.resetZoom();
+    this.clearLogHighlights();
+  });
+}
+
+// Log row click → highlight row + draw vertical annotation line on graph
+document.getElementById('transactionLogBody').addEventListener('click', (e) => {
+  const row = e.target.closest('tr');
+  if (!row || !row.dataset.ts) return;
+  this.clearLogHighlights();
+  row.classList.add('active');
+  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const time = new Date(parseInt(row.dataset.ts));
+  this.setAnnotationLine(time);
 });
+}
+
+clearLogHighlights() {
+  document.querySelectorAll('#transactionLogBody tr').forEach(r => {
+    r.classList.remove('active', 'highlight-match');
+  });
+}
+
+setAnnotationLine(time) {
+  if (!chart || !chart.options?.plugins?.annotation?.annotations?.line) return;
+  chart.options.plugins.annotation.annotations.line.value = time;
+  chart.options.plugins.annotation.annotations.line.display = true;
+  chart.update('none');
+}
+
+// Highlight log rows near a given timestamp (used when clicking the graph)
+highlightLogAroundTime(ts, windowMs = 90 * 1000) {
+  this.clearLogHighlights();
+  const target = new Date(ts).getTime();
+  const rows = document.querySelectorAll('#transactionLogBody tr[data-ts]');
+  let firstMatch = null;
+  rows.forEach(row => {
+    const rowTs = parseInt(row.dataset.ts, 10);
+    if (Math.abs(rowTs - target) <= windowMs) {
+      row.classList.add('highlight-match');
+      if (!firstMatch) firstMatch = row;
+    }
+  });
+  if (firstMatch) {
+    firstMatch.classList.add('active');
+    firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  this.setAnnotationLine(new Date(ts));
 }
 
 async confirmDelete() {
@@ -392,10 +514,13 @@ return txns.filter(t => new Date(t.timestamp) >= start);
 }
 
 buildChartData(txns) {
+if (!txns || !txns.length) return [];
 txns.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-const interval = 15 * 60 * 1000;
-const start = new Date(Math.floor(new Date(txns[0]?.timestamp || Date.now()).getTime() / interval) * interval);
-const end = new Date(Math.ceil(new Date(txns[txns.length-1]?.timestamp || Date.now()).getTime() / interval) * interval);
+// Use tighter 5-min bins for live action accuracy, fall back to 15 if long session
+const spanMs = new Date(txns[txns.length-1].timestamp) - new Date(txns[0].timestamp);
+const interval = spanMs > 3 * 60 * 60 * 1000 ? 15 * 60 * 1000 : 5 * 60 * 1000;
+const start = new Date(Math.floor(new Date(txns[0].timestamp).getTime() / interval) * interval);
+const end = new Date(Math.ceil(new Date(txns[txns.length-1].timestamp).getTime() / interval) * interval);
 const bins = [];
 for (let t = start.getTime(); t <= end.getTime(); t += interval) bins.push(new Date(t));
 
@@ -406,10 +531,13 @@ let txIdx = 0;
 bins.forEach(bin => {
 while (txIdx < txns.length && new Date(txns[txIdx].timestamp) <= bin) {
 const t = txns[txIdx];
-if (t.items !== 'Till Count') {
-t.items.split('; ').forEach(item => {
-const [key, val] = item.split(': ');
-if (!key || !val) return;
+const items = (t.items || '').trim();
+if (items && items !== 'Till Count' && items !== 'BATCH CLEAR' && items !== 'SESSION CLOSE' && items !== 'NOTE') {
+items.split('; ').forEach(item => {
+const parts = item.split(': ');
+if (parts.length < 2) return;
+const key = parts[0];
+const val = parts.slice(1).join(': ');
 const type = getType(key);
 const count = parseInt(val.trim(), 10) || 0;
 if (['Cash','Credit Card','Comp','Ticket'].includes(type)) {
@@ -417,20 +545,20 @@ cum[type] += count;
 cum.door += count;
 }
 });
-cum.cash += t.cashTotal || 0;
 }
+cum.cash += Number(t.cashTotal) || 0;
 txIdx++;
 }
 data.push({ x: bin, ...cum });
 });
 
 return [
-{ label: 'CASH', data: data.map(d => ({x: d.x, y: d.Cash})), borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.25)', fill: true, tension: 0.4 },
-{ label: 'CARD', data: data.map(d => ({x: d.x, y: d['Credit Card']})), borderColor: '#ff3333', backgroundColor: 'rgba(255,51,51,0.25)', fill: true, tension: 0.4 },
-{ label: 'COMP', data: data.map(d => ({x: d.x, y: d.Comp})), borderColor: '#ffaa00', backgroundColor: 'rgba(255,170,0,0.25)', fill: true, tension: 0.4 },
-{ label: 'TICKET', data: data.map(d => ({x: d.x, y: d.Ticket})), borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.25)', fill: true, tension: 0.4 },
-{ label: 'TOTAL DOOR', data: data.map(d => ({x: d.x, y: d.door})), borderColor: '#ffffff', borderWidth: 5, fill: false, tension: 0.4 },
-{ label: 'CASH SALES $', data: data.map(d => ({x: d.x, y: d.cash})), borderColor: '#00ff88', borderWidth: 4, fill: false, yAxisID: 'y1', tension: 0.4 }
+{ label: 'CASH', data: data.map(d => ({x: d.x, y: d.Cash})), borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.25)', fill: true, tension: 0.35, pointRadius: 2 },
+{ label: 'CARD', data: data.map(d => ({x: d.x, y: d['Credit Card']})), borderColor: '#ff3333', backgroundColor: 'rgba(255,51,51,0.25)', fill: true, tension: 0.35, pointRadius: 2 },
+{ label: 'COMP', data: data.map(d => ({x: d.x, y: d.Comp})), borderColor: '#ffaa00', backgroundColor: 'rgba(255,170,0,0.25)', fill: true, tension: 0.35, pointRadius: 2 },
+{ label: 'TICKET', data: data.map(d => ({x: d.x, y: d.Ticket})), borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.25)', fill: true, tension: 0.35, pointRadius: 2 },
+{ label: 'TOTAL DOOR', data: data.map(d => ({x: d.x, y: d.door})), borderColor: '#ffffff', borderWidth: 4, fill: false, tension: 0.3, pointRadius: 3 },
+{ label: 'CASH SALES $', data: data.map(d => ({x: d.x, y: d.cash})), borderColor: '#00ff88', borderWidth: 3, fill: false, yAxisID: 'y1', tension: 0.3, pointRadius: 2 }
 ];
 }
 
@@ -467,12 +595,15 @@ this.itemSummary = { Cash: {people:0,total:0}, 'Credit Card': {people:0,total:0}
 this.cashBreakdown = {};
 
 txns.forEach(t => {
-if (t.items === 'Till Count') return;
-this.totalDoor += t.doorCount || 0;
-this.totalCash += t.cashTotal || 0;
-t.items.split('; ').forEach(item => {
-const [key, val] = item.split(': ');
-if (!key || !val) return;
+const items = (t.items || '').trim();
+if (items === 'Till Count' || items === 'BATCH CLEAR' || items === 'SESSION CLOSE' || items === 'NOTE') return;
+this.totalDoor += Number(t.doorCount) || 0;
+this.totalCash += Number(t.cashTotal) || 0;
+items.split('; ').forEach(item => {
+const parts = item.split(': ');
+if (parts.length < 2) return;
+const key = parts[0];
+const val = parts.slice(1).join(': ');
 const type = getType(key);
 const count = parseInt(val.trim(), 10) || 0;
 if (this.itemSummary[type]) {
@@ -489,7 +620,10 @@ this.itemSummary[type].total += count * price;
 });
 });
 
-this.totalTransactions = txns.filter(t => t.items !== 'Till Count').length;
+this.totalTransactions = txns.filter(t => {
+const i = (t.items || '').trim();
+return i && i !== 'Till Count' && i !== 'BATCH CLEAR' && i !== 'SESSION CLOSE' && i !== 'NOTE';
+}).length;
 document.getElementById('totalDoorCount').textContent = this.totalDoor;
 document.getElementById('totalSales').textContent = this.totalCash.toFixed(2);
 document.getElementById('totalTransactions').textContent = this.totalTransactions;
@@ -505,8 +639,8 @@ document.getElementById('tillBreakdown').innerHTML = '';
 
 let rows = '';
 Object.entries(this.itemSummary).forEach(([type, d]) => {
-if (d.people > 0) {
-const avg = d.total / d.people || 0;
+if (d.people !== 0) {
+const avg = d.people ? (d.total / d.people) : 0;
 const color = type === 'Cash' ? '#00ff88' : type === 'Credit Card' ? '#ff3333' : type === 'Comp' ? '#ffaa00' : '#3399ff';
 rows += `<tr><td style="color:${color};font-weight:bold">${type.toUpperCase()}</td><td>${d.people}</td><td>$${d.total.toFixed(2)}</td><td>$${avg.toFixed(2)}</td></tr>`;
 if (type === 'Cash') {
@@ -516,6 +650,7 @@ const pb = parseFloat(b.match(/\$([\d.]+)/)?.[1]||0);
 return pa - pb;
 }).forEach(k => {
 const bd = this.cashBreakdown[k];
+if (bd.people === 0) return;
 const avg = bd.total / bd.people || 0;
 rows += `<tr class="cash-breakdown"><td> ${k}</td><td>${bd.people}</td><td>$${bd.total.toFixed(2)}</td><td>$${avg.toFixed(2)}</td></tr>`;
 });
@@ -526,9 +661,12 @@ document.getElementById('summaryBody').innerHTML = rows;
 document.getElementById('totalsBody').innerHTML = `<tr class="total-row"><td>TOTAL</td><td>${this.totalDoor}</td><td>$${this.totalCash.toFixed(2)}</td><td>${this.totalDoor ? (this.totalCash/this.totalDoor).toFixed(2) : '0'}</td></tr>`;
 
 document.getElementById('transactionLogBody').innerHTML = txns
-.filter(t => t.items !== 'Till Count')
+.filter(t => {
+const i = (t.items || '').trim();
+return i !== 'Till Count';
+})
 .map(t => `<tr data-ts="${new Date(t.timestamp).getTime()}">
-<td>${new Date(t.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
+<td>${new Date(t.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
 <td>${colorCodeItems(t.items)}</td>
 <td style="color:#00ff88">$${t.cashTotal?.toFixed(2)||'0.00'}</td>
 <td>${t.doorCount||0}</td>
@@ -539,122 +677,170 @@ document.getElementById('transactionLogBody').innerHTML = txns
 const filtered = this.filterTransactions([...txns]);
 const graphData = this.buildChartData(filtered);
 const datasets = graphData;
+
 if (chart) {
-chart.data.datasets = datasets;
-chart.update('none');
+  // Preserve current zoom/pan when just refreshing data
+  chart.data.datasets = datasets;
+  chart.update('none');
 } else {
-chart = new Chart(document.getElementById('doorCountChart'), {
-type: 'line',
-data: { datasets },
-options: {
-maintainAspectRatio: false,
-interaction: { mode: 'nearest', axis: 'x', intersect: false },
-plugins: {
-legend: {
-position: 'top',
-labels: {
-font: { size: 18, weight: 'bold' },
-color: 'white',
-padding: 25,
-usePointStyle: true,
-pointStyle: 'rectRounded'
-}
-},
-tooltip: {
-backgroundColor: 'rgba(0,0,0,0.9)',
-titleColor: '#00ff88',
-bodyColor: 'white',
-padding: 20,
-titleFont: { size: 18, weight: 'bold' },
-bodyFont: { size: 16 }
-},
-annotation: {
-annotations: {
-line: {
-type: 'line',
-scaleID: 'x',
-borderColor: '#ffaa00',
-borderWidth: 4,
-label: {
-display: true,
-content: 'SELECTED',
-backgroundColor: '#ffaa00',
-color: 'black',
-font: { weight: 'bold', size: 16 }
-}
-}
-}
-},
-zoom: {
-zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-pan: { enabled: true, mode: 'x' }
-}
-},
-scales: {
-x: {
-type: 'time',
-time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
-ticks: {
-font: { size: 16, weight: 'bold' },
-color: '#cccccc',
-maxRotation: 0
-},
-grid: { color: 'rgba(255,255,255,0.05)' }
-},
-y: {
-title: {
-display: true,
-text: 'PEOPLE THROUGH DOOR',
-font: { size: 20, weight: 'bold' },
-color: '#00ff88'
-},
-ticks: { font: { size: 16 }, color: '#cccccc' },
-grid: { color: 'rgba(255,255,255,0.1)' }
-},
-y1: {
-position: 'right',
-title: {
-display: true,
-text: 'CASH SALES ($)',
-font: { size: 20, weight: 'bold' },
-color: '#00ff88'
-},
-ticks: { font: { size: 16 }, color: '#cccccc' },
-grid: { drawOnChartArea: false }
-}
-}
-},
-plugins: [{
-id: 'stripes30min',
-beforeDraw: function(chart) {
-const ctx = chart.ctx;
-const chartArea = chart.chartArea;
-const xAxis = chart.scales.x;
-if (!xAxis) return;
-
-const interval = 30 * 60 * 1000; // 30 minutes
-const start = xAxis.min || xAxis.getValueForPixel(chartArea.left);
-const end = xAxis.max || xAxis.getValueForPixel(chartArea.right);
-let current = new Date(Math.floor(start / interval) * interval);
-
-ctx.save();
-let i = 0;
-while (current < end) {
-const x = xAxis.getPixelForValue(current);
-const next = new Date(current.getTime() + interval);
-const nextX = xAxis.getPixelForValue(next);
-
-if (i % 2 === 1) {
-ctx.fillStyle = 'rgba(255,255,255,0.03)';
-ctx.fillRect(x, chartArea.top, nextX - x, chartArea.bottom - chartArea.top);
-}
-current = next;
-i++;
-}
-ctx.restore();
-}
-}]
-});
+  const self = this;
+  chart = new Chart(document.getElementById('doorCountChart'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      animation: false,                 // snappier for live feel + pan
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      },
+      onClick: (evt, elements) => {
+        if (!elements || !elements.length) return;
+        const el = elements[0];
+        const ds = chart.data.datasets[el.datasetIndex];
+        const pt = ds.data[el.index];
+        if (pt && pt.x) {
+          self.highlightLogAroundTime(pt.x);
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            font: { size: 17, weight: 'bold' },
+            color: '#ffffff',
+            padding: 22,
+            usePointStyle: true,
+            pointStyle: 'rectRounded',
+            boxWidth: 18
+          }
+          // Default Chart.js legend click already toggles series visibility = filterable data
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.92)',
+          titleColor: '#00ff88',
+          bodyColor: '#ffffff',
+          padding: 18,
+          titleFont: { size: 17, weight: 'bold' },
+          bodyFont: { size: 15 },
+          displayColors: true
+        },
+        annotation: {
+          annotations: {
+            line: {
+              type: 'line',
+              display: false,
+              scaleID: 'x',
+              value: new Date(),
+              borderColor: '#ffaa00',
+              borderWidth: 3,
+              borderDash: [6, 4],
+              label: {
+                display: true,
+                content: 'SELECTED',
+                backgroundColor: '#ffaa00',
+                color: '#000',
+                font: { weight: 'bold', size: 14 },
+                position: 'start'
+              }
+            }
+          }
+        },
+        zoom: {
+          // CRITICAL: pan must be enabled and drag-zoom disabled so drag moves the graph
+          limits: {
+            x: { min: 'original', max: 'original', minRange: 45 * 1000 },
+            y: { min: 'original', max: 'original' }
+          },
+          pan: {
+            enabled: true,
+            mode: 'xy',
+            threshold: 2,
+            modifierKey: null,
+            onPanStart: () => {
+              document.querySelector('.graph-wrapper')?.classList.add('panning');
+            },
+            onPanComplete: () => {
+              document.querySelector('.graph-wrapper')?.classList.remove('panning');
+            }
+          },
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            pinch: { enabled: true },
+            mode: 'xy',
+            drag: { enabled: false }   // must stay false — drag is for pan
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'minute',
+            displayFormats: { minute: 'HH:mm', hour: 'HH:mm' }
+          },
+          ticks: {
+            font: { size: 15, weight: 'bold' },
+            color: '#cccccc',
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 12
+          },
+          grid: { color: 'rgba(255,255,255,0.06)' }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'PEOPLE THROUGH DOOR',
+            font: { size: 18, weight: 'bold' },
+            color: '#00ff88'
+          },
+          ticks: { font: { size: 14 }, color: '#cccccc' },
+          grid: { color: 'rgba(255,255,255,0.08)' },
+          beginAtZero: true
+        },
+        y1: {
+          position: 'right',
+          title: {
+            display: true,
+            text: 'CASH SALES ($)',
+            font: { size: 18, weight: 'bold' },
+            color: '#00ff88'
+          },
+          ticks: { font: { size: 14 }, color: '#cccccc' },
+          grid: { drawOnChartArea: false },
+          beginAtZero: true
+        }
+      }
+    },
+    plugins: [{
+      id: 'stripes30min',
+      beforeDraw(chartInst) {
+        const ctx = chartInst.ctx;
+        const chartArea = chartInst.chartArea;
+        const xAxis = chartInst.scales.x;
+        if (!xAxis || !chartArea) return;
+        const interval = 30 * 60 * 1000;
+        let current = new Date(Math.floor(xAxis.min / interval) * interval);
+        ctx.save();
+        let i = 0;
+        while (current < xAxis.max) {
+          const x = xAxis.getPixelForValue(current);
+          const next = new Date(current.getTime() + interval);
+          const nextX = xAxis.getPixelForValue(next);
+          if (i % 2 === 1) {
+            ctx.fillStyle = 'rgba(255,255,255,0.025)';
+            ctx.fillRect(x, chartArea.top, nextX - x, chartArea.bottom - chartArea.top);
+          }
+          current = next;
+          i++;
+        }
+        ctx.restore();
+      }
+    }]
+  });
 }
 } catch (e) {
 console.error('Error updating log:', e);
