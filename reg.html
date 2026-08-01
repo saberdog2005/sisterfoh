@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Sister Bar Register</title>
+    <title>Sister Bar Register v2.1</title>
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
+    <!-- VERSION 2.1 — Reliable single-tap Open/Close • Loud field validation • Hardened close-out • Neon polish — Live action logging • Every +/- logged instantly • Bright neon animations • Graph-accurate components -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <style>
@@ -53,17 +54,65 @@
         }
         #cashierName { flex: 1.6; }
         #toggleSalesBtn {
-            width: 100px; height: 46px; border: none; border-radius: 23px;
-            font-size: 15px; font-weight: bold; color: white; cursor: pointer;
-            flex-shrink: 0; margin-left: 10px;
+            width: 120px; height: 52px; border: none; border-radius: 26px;
+            font-size: 17px; font-weight: 900; color: white; cursor: pointer;
+            flex-shrink: 0; margin-left: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .open { background: var(--green); }
-        .close { background: var(--red); }
+        #toggleSalesBtn:active { transform: scale(0.94); }
+        #toggleSalesBtn.busy { opacity: 0.7; pointer-events: none; }
+        .open {
+            background: linear-gradient(135deg, #2e7d32, #00c853);
+            box-shadow: 0 0 20px rgba(0, 200, 83, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .open:hover, .open:active { box-shadow: 0 0 30px rgba(0, 255, 100, 0.8); }
+        .close {
+            background: linear-gradient(135deg, #c62828, #ff1744);
+            box-shadow: 0 0 20px rgba(255, 23, 68, 0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .close:hover, .close:active { box-shadow: 0 0 30px rgba(255, 50, 80, 0.9); }
         #headerError {
-            color: var(--red);
-            font-weight: bold;
-            margin-left: 10px;
+            color: #ff1744;
+            font-weight: 900;
+            margin-left: 14px;
             display: none;
+            font-size: 15px;
+            background: rgba(255, 23, 68, 0.15);
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 2px solid #ff1744;
+            animation: errorPulse 1.2s ease-in-out infinite;
+            white-space: nowrap;
+        }
+        @keyframes errorPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.5); }
+            50% { box-shadow: 0 0 16px 4px rgba(255, 23, 68, 0.4); }
+        }
+        .field-missing {
+            outline: 3px solid #ff1744 !important;
+            box-shadow: 0 0 12px rgba(255, 23, 68, 0.6) !important;
+            animation: fieldShake 0.5s ease;
+        }
+        @keyframes fieldShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .online-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #00e676; box-shadow: 0 0 8px #00e676;
+            display: inline-block; margin-right: 6px;
+        }
+        .offline-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #ff1744; box-shadow: 0 0 8px #ff1744;
+            display: inline-block; margin-right: 6px;
         }
         main { flex: 1; overflow: hidden; }
         .content { height: 100%; overflow-y: auto; padding: 10px; }
@@ -101,6 +150,42 @@
         @keyframes flash {
             0% { background: white; }
             100% { background: inherit; }
+        }
+        /* Bright neon action animations */
+        .action-pulse {
+            animation: brightPulse 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 5;
+            position: relative;
+        }
+        @keyframes brightPulse {
+            0%   { transform: scale(1); filter: brightness(1) saturate(1); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+            35%  { transform: scale(1.18); filter: brightness(2.2) saturate(1.6); box-shadow: 0 0 28px 12px rgba(0,255,136,0.85); }
+            70%  { transform: scale(0.96); filter: brightness(1.4) saturate(1.3); box-shadow: 0 0 14px 6px rgba(255,105,180,0.6); }
+            100% { transform: scale(1); filter: brightness(1) saturate(1); box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+        }
+        .action-pulse-cash { animation-name: brightPulseCash; }
+        @keyframes brightPulseCash {
+            0%   { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+            40%  { transform: scale(1.2); filter: brightness(2.4); box-shadow: 0 0 32px 14px rgba(0,255,136,0.95); background: #a5ffc8 !important; }
+            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
+        }
+        .action-pulse-cc { animation-name: brightPulseCC; }
+        @keyframes brightPulseCC {
+            0%   { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 rgba(255,51,51,0); }
+            40%  { transform: scale(1.2); filter: brightness(2.3); box-shadow: 0 0 32px 14px rgba(255,51,51,0.95); background: #ffaaaa !important; }
+            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
+        }
+        .action-pulse-ticket { animation-name: brightPulseTicket; }
+        @keyframes brightPulseTicket {
+            0%   { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 rgba(51,153,255,0); }
+            40%  { transform: scale(1.2); filter: brightness(2.3); box-shadow: 0 0 32px 14px rgba(51,153,255,0.95); background: #aaccff !important; }
+            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
+        }
+        .action-pulse-comp { animation-name: brightPulseComp; }
+        @keyframes brightPulseComp {
+            0%   { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 rgba(255,170,0,0); }
+            40%  { transform: scale(1.2); filter: brightness(2.3); box-shadow: 0 0 32px 14px rgba(255,170,0,0.95); background: #ffe0a0 !important; }
+            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
         }
         .number { font-size: 32px; color: var(--pink); font-weight: bold; display: block; }
         .cash-buttons { grid-column: 5; grid-row: 1 / 4; display: flex; flex-direction: column; gap: 10px; }
@@ -503,21 +588,47 @@
                         this.toggleActive(item);
                     }
                 });
-                this.elements.toggleBtn.addEventListener('click', () => {
-                    this.state.clickCount++;
-                    clearTimeout(this.state.clickTimer);
-                    this.state.clickTimer = setTimeout(() => {
-                        if (this.state.clickCount === 3) {
-                            if (this.state.sessionStarted) {
-                                document.getElementById('pinModal').classList.add('active');
-                                document.getElementById('pinInput').focus();
-                            } else {
-                                this.startSession();
-                            }
-                        }
-                        this.state.clickCount = 0;
-                    }, 600);
+                // Reliable single-tap Open / Close (iPad-friendly)
+                // OPEN = single tap (validates fields loudly)
+                // CLOSE = single tap → PIN modal (PIN is the real security gate)
+                this.elements.toggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (this.elements.toggleBtn.classList.contains('busy')) return;
+
+                    if (this.state.sessionStarted) {
+                        // Closing path
+                        this.elements.toggleBtn.classList.add('busy');
+                        document.getElementById('pinModal').classList.add('active');
+                        document.getElementById('pinInput').value = '';
+                        document.getElementById('pinError').textContent = '';
+                        setTimeout(() => {
+                            document.getElementById('pinInput').focus();
+                            this.elements.toggleBtn.classList.remove('busy');
+                        }, 50);
+                        if (navigator.vibrate) navigator.vibrate(30);
+                    } else {
+                        // Opening path
+                        this.startSession();
+                    }
                 });
+                
+                // Live-clear missing-field highlights as user fills them
+                [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName].forEach(el => {
+                    el.addEventListener('input', () => {
+                        el.classList.remove('field-missing');
+                        const stillMissing = !this.elements.eventDate.value || !this.elements.eventVenue.value ||
+                                            !this.elements.eventName.value || !this.elements.cashierName.value.trim();
+                        if (!stillMissing) this.elements.headerError.style.display = 'none';
+                    });
+                    el.addEventListener('change', () => {
+                        el.classList.remove('field-missing');
+                        const stillMissing = !this.elements.eventDate.value || !this.elements.eventVenue.value ||
+                                            !this.elements.eventName.value || !this.elements.cashierName.value.trim();
+                        if (!stillMissing) this.elements.headerError.style.display = 'none';
+                    });
+                });
+
                 this.elements.logSaleBtn.addEventListener('click', () => this.logSale());
                 this.elements.editLayoutFooterBtn.addEventListener('click', () => this.toggleEditMode());
                 this.elements.removeVenueFooterBtn.addEventListener('click', () => this.openRemoveVenueModal());
@@ -558,7 +669,15 @@
                 document.getElementById('submitEditPinBtn').onclick = () => this.checkEditPin();
                 document.getElementById('cancelEditPinBtn').onclick = () => document.getElementById('editPinModal').classList.remove('active');
                 document.getElementById('submitTillBtn').onclick = () => this.closeAndOpenReport();
-                document.getElementById('cancelTillBtn').onclick = () => document.getElementById('tillCountModal').classList.remove('active');
+                document.getElementById('cancelTillBtn').onclick = () => {
+                    document.getElementById('tillCountModal').classList.remove('active');
+                    const cb = document.getElementById('verifyCheckbox');
+                    if (cb) {
+                        cb.checked = false;
+                        document.querySelectorAll('.till-plus, .till-minus').forEach(btn => btn.disabled = false);
+                        document.querySelectorAll('.till-row').forEach(row => row.style.background = '#333');
+                    }
+                };
                 document.addEventListener('keydown', e => {
                     if (e.key === 'Enter') {
                         if (document.getElementById('pinModal').classList.contains('active')) this.checkPin();
@@ -665,6 +784,9 @@
                 this.state.sessionDoorCount++;
                 this.updateDisplay();
                 this.updateFooter();
+                this.persistSessionTotals();
+                this.animateAction(item, type);
+                this.logAction(name, type, price, 1); // live log every action
             }
             decrement(item) {
                 if (!this.state.sessionStarted) return;
@@ -672,20 +794,96 @@
                 const entry = this.state.currentItems.get(name);
                 if (!entry || entry.count === 0) return;
                 const price = parseFloat(item.dataset.price) || 0;
+                const type = item.dataset.type || 'cash';
                 entry.count--;
                 if (entry.count === 0) this.state.currentItems.delete(name);
                 else this.state.currentItems.set(name, entry);
                 this.counts.get(name).textContent = entry.count;
-                if (item.dataset.type === 'cash') {
+                if (type === 'cash') {
                     this.state.cashTotal -= price;
                     this.state.sessionCashTotal -= price;
                 }
-                if (item.dataset.type === 'comp' || item.dataset.type === 'ticket') {
+                if (type === 'comp' || type === 'ticket') {
                     this.state.sessionCompTicketCount--;
                 }
                 this.state.sessionDoorCount--;
                 this.updateDisplay();
                 this.updateFooter();
+                this.persistSessionTotals();
+                this.animateAction(item, type);
+                this.logAction(name, type, price, -1); // live log every action (correction)
+            }
+            persistSessionTotals() {
+                if (!this.state.sessionId) return;
+                localStorage.setItem(`cashTotal_${this.state.sessionId}`, this.state.sessionCashTotal);
+                localStorage.setItem(`doorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
+                localStorage.setItem(`compTicketCount_${this.state.sessionId}`, this.state.sessionCompTicketCount);
+            }
+            animateAction(item, type) {
+                const btn = item.querySelector('.incrementbtn, .cash-btn') || item;
+                const pulseClass = type === 'cash' ? 'action-pulse-cash' :
+                                   type === 'cc' ? 'action-pulse-cc' :
+                                   type === 'ticket' ? 'action-pulse-ticket' :
+                                   type === 'comp' ? 'action-pulse-comp' : 'action-pulse';
+                btn.classList.remove('action-pulse', 'action-pulse-cash', 'action-pulse-cc', 'action-pulse-ticket', 'action-pulse-comp');
+                void btn.offsetWidth; // reflow
+                btn.classList.add(pulseClass);
+                setTimeout(() => btn.classList.remove(pulseClass), 600);
+                // also flash the door/cash totals
+                const doorEl = this.elements.buttonContainer.querySelector('.thru-door-count');
+                const cashEl = this.elements.buttonContainer.querySelector('.cash-total');
+                if (doorEl) {
+                    doorEl.classList.add('flash');
+                    setTimeout(() => doorEl.classList.remove('flash'), 500);
+                }
+                if (type === 'cash' && cashEl) {
+                    cashEl.classList.add('flash');
+                    setTimeout(() => cashEl.classList.remove('flash'), 500);
+                }
+            }
+            async logAction(name, type, price, delta) {
+                // Every single +/- is logged immediately to Supabase for live accuracy
+                const itemsStr = `${type.toUpperCase()} ${name}: ${delta}`;
+                const payload = {
+                    eventDate: this.elements.eventDate.value,
+                    eventVenue: this.elements.eventVenue.value,
+                    eventName: this.elements.eventName.value,
+                    cashierName: this.elements.cashierName.value,
+                    items: itemsStr,
+                    cashTotal: type === 'cash' ? (price * delta) : 0,
+                    doorCount: delta,
+                    note: '',
+                    sessionId: this.state.sessionId,
+                    timestamp: new Date().toISOString()
+                };
+                try {
+                    const res = await fetch(SERVER_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            apikey: API_KEY,
+                            Authorization: `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        this.elements.saleStatus.textContent = delta > 0 ? 'Action Logged ✓' : 'Correction Logged';
+                        this.elements.saleStatus.className = 'success';
+                        setTimeout(() => {
+                            this.elements.saleStatus.textContent = '';
+                            this.elements.saleStatus.className = '';
+                        }, 1800);
+                    } else {
+                        throw new Error('Server error');
+                    }
+                } catch (e) {
+                    this.elements.saleStatus.textContent = 'Offline / Log failed';
+                    this.elements.saleStatus.className = 'error';
+                    setTimeout(() => {
+                        this.elements.saleStatus.textContent = '';
+                        this.elements.saleStatus.className = '';
+                    }, 4000);
+                }
             }
             updateDisplay() {
                 const cashEl = this.elements.buttonContainer.querySelector('.cash-total .number');
@@ -694,26 +892,58 @@
                 if (doorEl) doorEl.textContent = this.state.sessionDoorCount;
             }
             startSession() {
-                if (!this.elements.eventDate.value || !this.elements.eventVenue.value || !this.elements.eventName.value || !this.elements.cashierName.value) {
-                    this.elements.headerError.style.display = 'inline';
-                    setTimeout(() => this.elements.headerError.style.display = 'none', 5000);
+                // Clear previous highlights
+                [this.elements.eventDate, this.elements.eventVenue, this.elements.eventName, this.elements.cashierName].forEach(el => {
+                    el.classList.remove('field-missing');
+                });
+
+                const missing = [];
+                if (!this.elements.eventDate.value) { missing.push('Date'); this.elements.eventDate.classList.add('field-missing'); }
+                if (!this.elements.eventVenue.value) { missing.push('Venue'); this.elements.eventVenue.classList.add('field-missing'); }
+                if (!this.elements.eventName.value) { missing.push('Event'); this.elements.eventName.classList.add('field-missing'); }
+                if (!this.elements.cashierName.value.trim()) { missing.push('Cashier'); this.elements.cashierName.classList.add('field-missing'); }
+
+                if (missing.length) {
+                    this.elements.headerError.textContent = 'Missing: ' + missing.join(', ');
+                    this.elements.headerError.style.display = 'inline-block';
+                    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+                    // Keep error visible until user fills the fields
                     return;
                 }
+
+                this.elements.headerError.style.display = 'none';
                 this.state.sessionStarted = true;
                 this.state.sessionId = Date.now().toString();
-                localStorage.setItem('sessionActive', 'true');
-                localStorage.setItem('activeSessionId', this.state.sessionId);
-                localStorage.setItem('eventName', this.elements.eventName.value);
-                localStorage.setItem('cashierName', this.elements.cashierName.value);
-                localStorage.setItem(`cashTotal_${this.state.sessionId}`, '0');
-                localStorage.setItem(`doorCount_${this.state.sessionId}`, '0');
-                localStorage.setItem(`compTicketCount_${this.state.sessionId}`, '0');
-                localStorage.setItem(`salesCount_${this.state.sessionId}`, '0');
+                this.state.salesLog = [];
+                try {
+                    localStorage.setItem('sessionActive', 'true');
+                    localStorage.setItem('activeSessionId', this.state.sessionId);
+                    localStorage.setItem('eventName', this.elements.eventName.value);
+                    localStorage.setItem('cashierName', this.elements.cashierName.value);
+                    localStorage.setItem(`cashTotal_${this.state.sessionId}`, '0');
+                    localStorage.setItem(`doorCount_${this.state.sessionId}`, '0');
+                    localStorage.setItem(`compTicketCount_${this.state.sessionId}`, '0');
+                    localStorage.setItem(`salesCount_${this.state.sessionId}`, '0');
+                } catch(e) {}
+
                 this.elements.toggleBtn.classList.replace('open', 'close');
                 this.elements.toggleBtn.textContent = 'CLOSE';
+                this.elements.toggleBtn.classList.add('action-pulse');
+                setTimeout(() => this.elements.toggleBtn.classList.remove('action-pulse'), 600);
+
                 this.startTimer();
                 this.updateFooter();
                 this.updateFooterButtonsVisibility();
+                if (navigator.vibrate) navigator.vibrate(50);
+                this.showStatus('REGISTER OPENED', 'success');
+            }
+            showStatus(msg, type = 'success') {
+                this.elements.saleStatus.textContent = msg;
+                this.elements.saleStatus.className = type;
+                setTimeout(() => {
+                    this.elements.saleStatus.textContent = '';
+                    this.elements.saleStatus.className = '';
+                }, 3500);
             }
             startTimer() {
                 const start = parseInt(localStorage.getItem('activeSessionId'));
@@ -761,11 +991,28 @@
                 }
             }
             checkPin() {
-                if (document.getElementById('pinInput').value === DEFAULT_PIN) {
+                const pinInput = document.getElementById('pinInput');
+                if (pinInput.value === DEFAULT_PIN) {
                     document.getElementById('pinModal').classList.remove('active');
+                    pinInput.value = '';
+                    document.getElementById('pinError').textContent = '';
+                    // Always reset till UI when opening
+                    ['hundreds','fifties','twenties','tens','fives','ones'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '0';
+                    });
+                    const cb = document.getElementById('verifyCheckbox');
+                    if (cb) {
+                        cb.checked = false;
+                        document.querySelectorAll('.till-plus, .till-minus').forEach(btn => btn.disabled = false);
+                        document.querySelectorAll('.till-row').forEach(row => row.style.background = '#333');
+                    }
                     document.getElementById('tillCountModal').classList.add('active');
+                    if (navigator.vibrate) navigator.vibrate(25);
                 } else {
                     document.getElementById('pinError').textContent = 'Wrong PIN';
+                    pinInput.select();
+                    if (navigator.vibrate) navigator.vibrate([50, 40, 50]);
                 }
             }
             checkEditPin() {
@@ -785,7 +1032,13 @@
                     alert('You must check "I verify this count is accurate" to close.');
                     return;
                 }
-                await this.logSale(true);
+
+                // Instant UI close so the register always feels closed
+                document.getElementById('tillCountModal').classList.remove('active');
+                document.getElementById('pinModal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+                this.elements.toggleBtn.classList.add('busy');
+
                 const hundreds = parseInt(document.getElementById('hundreds').value) || 0;
                 const fifties = parseInt(document.getElementById('fifties').value) || 0;
                 const twenties = parseInt(document.getElementById('twenties').value) || 0;
@@ -794,8 +1047,15 @@
                 const ones = parseInt(document.getElementById('ones').value) || 0;
                 const tillTotal = 100 * hundreds + 50 * fifties + 20 * twenties + 10 * tens + 5 * fives + ones;
                 const breakdown = `$100: ${hundreds}, $50: ${fifties}, $20: ${twenties}, $10: ${tens}, $5: ${fives}, $1: ${ones}`;
-                await this.logTillCount(tillTotal, breakdown);
-                await this.openReportInTab(tillTotal, breakdown);
+
+                // Fire network work without blocking the close experience
+                try { await this.logSale(true); } catch(e) { console.warn(e); }
+                try { await this.logTillCount(tillTotal, breakdown); } catch(e) { console.warn(e); }
+                try { await this.openReportInTab(tillTotal, breakdown); } catch(e) {
+                    console.error(e);
+                    this.showStatus('Receipt saved locally (popup blocked or offline)', 'error');
+                }
+
                 this.endSession();
             }
             async logTillCount(tillTotal, breakdown) {
@@ -908,75 +1168,66 @@ ${itemsHtml}
                 location.reload();
             }
             async logSale(final = false) {
-                if (this.state.currentItems.size === 0) return;
-                const itemsStr = Array.from(this.state.currentItems.entries())
-                    .map(([n, d]) => `${d.type.toUpperCase()} ${n}: ${d.count}`).join('; ');
-                const batchDoorCount = Array.from(this.state.currentItems.values()).reduce((acc, e) => acc + e.count, 0);
-                const payload = {
-                    eventDate: this.elements.eventDate.value,
-                    eventVenue: this.elements.eventVenue.value,
-                    eventName: this.elements.eventName.value,
-                    cashierName: this.elements.cashierName.value,
-                    items: itemsStr,
-                    cashTotal: this.state.cashTotal,
-                    doorCount: batchDoorCount,
-                    note: this.elements.noteInput.value,
-                    sessionId: this.state.sessionId,
-                    timestamp: new Date().toISOString()
-                };
-                try {
-                    const res = await fetch(SERVER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            apikey: API_KEY,
-                            Authorization: `Bearer ${API_KEY}`
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    if (res.ok) {
-                        this.elements.saleStatus.textContent = 'Sale Logged.';
-                        this.elements.saleStatus.className = 'success';
-                        setTimeout(() => {
-                            this.elements.saleStatus.textContent = '';
-                            this.elements.saleStatus.className = '';
-                        }, 10000);
-                        if (!final) {
-                            this.state.salesCount++;
-                            localStorage.setItem(`salesCount_${this.state.sessionId}`, this.state.salesCount);
-                            this.elements.salesCount.textContent = this.state.salesCount;
-                            this.state.currentItems.clear();
-                            const thruDoorCountEl = document.querySelector('.thru-door-count');
-                            thruDoorCountEl.classList.add('flash');
-                            setTimeout(() => thruDoorCountEl.classList.remove('flash'), 500);
-                            if (this.state.cashTotal > 0) {
-                                const cashTotalEl = document.querySelector('.cash-total');
-                                cashTotalEl.classList.add('flash');
-                                setTimeout(() => cashTotalEl.classList.remove('flash'), 500);
-                            }
-                            this.state.cashTotal = 0;
-                            this.counts.forEach(c => c.textContent = '0');
-                            this.elements.noteInput.value = '';
-                            this.updateDisplay();
-                        }
-                        localStorage.setItem(`cashTotal_${this.state.sessionId}`, this.state.sessionCashTotal);
-                        localStorage.setItem(`doorCount_${this.state.sessionId}`, this.state.sessionDoorCount);
-                        localStorage.setItem(`compTicketCount_${this.state.sessionId}`, this.state.sessionCompTicketCount);
-                    } else {
-                        throw new Error('Server error');
-                    }
-                } catch (e) {
-                    let message = 'Sale Not Logged.';
-                    if (navigator.onLine === false || e.message.includes('network') || e.message.includes('fetch')) {
-                        message += ' Connection Error, check Wi-Fi Signal.';
-                    }
-                    this.elements.saleStatus.textContent = message;
-                    this.elements.saleStatus.className = 'error';
-                    setTimeout(() => {
-                        this.elements.saleStatus.textContent = '';
-                        this.elements.saleStatus.className = '';
-                    }, 10000);
+                // v2: individual actions already logged live. Log Sale only clears the current batch UI + optional note.
+                // If final (close), still allow a summary note if present.
+                const hasNote = this.elements.noteInput.value.trim().length > 0;
+                const hasPending = this.state.currentItems.size > 0;
+                if (!hasPending && !hasNote && !final) return;
+
+                if (hasNote || final) {
+                    const notePayload = {
+                        eventDate: this.elements.eventDate.value,
+                        eventVenue: this.elements.eventVenue.value,
+                        eventName: this.elements.eventName.value,
+                        cashierName: this.elements.cashierName.value,
+                        items: hasPending ? 'BATCH CLEAR' : (final ? 'SESSION CLOSE' : 'NOTE'),
+                        cashTotal: 0,
+                        doorCount: 0,
+                        note: this.elements.noteInput.value || (final ? 'Register closed' : ''),
+                        sessionId: this.state.sessionId,
+                        timestamp: new Date().toISOString()
+                    };
+                    try {
+                        await fetch(SERVER_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                apikey: API_KEY,
+                                Authorization: `Bearer ${API_KEY}`
+                            },
+                            body: JSON.stringify(notePayload)
+                        });
+                    } catch (e) { console.warn('Note log failed', e); }
                 }
+
+                // Clear current pending batch (actions already in DB)
+                this.state.salesCount++;
+                localStorage.setItem(`salesCount_${this.state.sessionId}`, this.state.salesCount);
+                this.elements.salesCount.textContent = this.state.salesCount;
+                this.state.currentItems.clear();
+                this.state.cashTotal = 0;
+                this.counts.forEach(c => c.textContent = '0');
+                this.elements.noteInput.value = '';
+                this.updateDisplay();
+                this.persistSessionTotals();
+
+                // Bright clear animation
+                const thruDoorCountEl = document.querySelector('.thru-door-count');
+                if (thruDoorCountEl) {
+                    thruDoorCountEl.classList.add('flash');
+                    setTimeout(() => thruDoorCountEl.classList.remove('flash'), 500);
+                }
+                const cashTotalEl = document.querySelector('.cash-total');
+                if (cashTotalEl) {
+                    cashTotalEl.classList.add('flash');
+                    setTimeout(() => cashTotalEl.classList.remove('flash'), 500);
+                }
+                this.elements.saleStatus.textContent = 'Batch Cleared • All actions already live-logged';
+                this.elements.saleStatus.className = 'success';
+                setTimeout(() => {
+                    this.elements.saleStatus.textContent = '';
+                    this.elements.saleStatus.className = '';
+                }, 3500);
             }
             toggleEditMode() {
                 this.state.isEditing = !this.state.isEditing;
