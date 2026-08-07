@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <!-- SOFTWARE COPYRIGHT 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
 <!-- VERSION 2.5 — Finished Events + Cashier Subtotal full-width tabs • Export XLSX • Persistent till totals -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://html2canvas.hertzen.com https://cdn.sheetjs.com; connect-src 'self' https://nnbevkohcjnzyxgkzgna.supabase.co wss://nnbevkohcjnzyxgkzgna.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-<title>Sister Bar Sales Log v2.7</title>
+<title>Sister Bar Sales Log v2.9</title>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -345,7 +344,7 @@ max-width: 720px;
 </style>
 </head>
 <body>
-<div id="loginModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:1000;">
+<div id="loginModal" style="position: fixed; inset: 0px; background: rgba(0, 0, 0, 0.95); display: none; align-items: center; justify-content: center; z-index: 1000;">
 <div style="background:#1a1a1a;padding:50px;border-radius:16px;width:90%;max-width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
 <h2 style="font-size:32px;margin-bottom:30px;color:var(--green);">SISTER BAR</h2>
 <input type="text" id="username" placeholder="Username" style="width:100%;padding:18px;margin:15px 0;background:#222;color:white;border:2px solid #555;border-radius:10px;font-size:18px;">
@@ -355,10 +354,10 @@ max-width: 720px;
 </div>
 </div>
 
-<div id="salesLogContainer" style="display:none;">
+<div id="salesLogContainer" style="display: block;">
 <div class="header">
 <h1>SISTER BAR • SALES LOG</h1>
-<select id="sessionSelect"></select>
+<select id="sessionSelect"><option value="">Select Session</option><option value="1785636760475">Kenny  Mike  • No Event • 2026-08-03</option><option value="1785636099345">Kenny  Mike  • Strange  mix • 2026-08-01</option><option value="1785636004398">Kenny  Mike  • Strange  mix • 2026-08-01</option><option value="1785547570756">Kenny  Mike  • No Event • 2026-08-01</option><option value="1784421333805">Jessica  trinity • Fb 80s • 2026-07-18</option><option value="1783822849599">Jessica Trinity  • Fb 80s • 2026-07-18</option><option value="1783648253022">Kenny  Mike  • Ascen show • 2026-07-09</option><option value="1782000477967">Kenny  Mike  • Fb 80s • 2026-07-09</option><option value="1780704380048">Kenny  Mike  • Fb 80s • 2026-06-20</option><option value="1780192573811">Amy Kenny  • Decades • 2026-05-30</option></select>
 <button id="logoutBtn">LOGOUT</button>
 </div>
 
@@ -376,23 +375,1010 @@ max-width: 720px;
 <button class="zoom-btn" id="zoomResetBtn" title="Reset Zoom">↺ RESET</button>
 </div>
 <div class="graph-wrapper">
-<canvas id="doorCountChart"></canvas>
+<canvas id="doorCountChart" width="1846" height="1453" style="display: block; box-sizing: border-box; height: 726px; width: 923px;"></canvas>
 </div>
 </div>
 
 <div>
 <div class="panel">
 <h2>TALLY SHEET</h2>
-<table><thead><tr><th>TYPE</th><th>PEOPLE</th><th>AMOUNT</th><th>PER PERSON</th></tr></thead><tbody id="summaryBody"></tbody></table>
+<table><thead><tr><th>TYPE</th><th>PEOPLE</th><th>AMOUNT</th><th>PER PERSON</th></tr></thead><tbody id="summaryBody"><tr><td style="color:#00ff88;font-weight:bold">CASH</td><td>73</td><td>$730.00</td><td>$10.00</td></tr><tr class="cash-breakdown"><td> Cash $10</td><td>73</td><td>$730.00</td><td>$10.00</td></tr><tr><td style="color:#ff3333;font-weight:bold">CREDIT CARD</td><td>63</td><td>$0.00</td><td>$0.00</td></tr></tbody></table>
 </div>
 <div class="panel">
 <h2>TOTALS</h2>
-<table><tbody id="totalsBody"></tbody></table>
+<table><tbody id="totalsBody"><tr class="total-row"><td>TOTAL</td><td>136</td><td>$730.00</td><td>5.37</td></tr></tbody></table>
 </div>
 <div class="panel" style="flex:1;">
 <h2>TRANSACTION LOG</h2>
 <div class="transaction-log" style="flex:1;overflow:auto;max-height:600px;">
-<table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"></tbody></table>
+<table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"><tr data-ts="1785791813770" class="active">
+<td>03:16:53 PM</td>
+<td><span style="color:#aaa;font-style:italic">SESSION CLOSE</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>0</td>
+<td>Kenny  Mike </td>
+<td>Register closed</td>
+</tr><tr data-ts="1785651283536">
+<td>12:14:43 AM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785650870857">
+<td>12:07:50 AM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785650659679">
+<td>12:04:19 AM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785650659447">
+<td>12:04:19 AM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785650522568">
+<td>12:02:02 AM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785650498329">
+<td>12:01:38 AM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785649961086">
+<td>11:52:41 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785649312963">
+<td>11:41:52 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785649312715">
+<td>11:41:52 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785649133385">
+<td>11:38:53 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648665968">
+<td>11:31:05 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648590504">
+<td>11:29:50 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648556411">
+<td>11:29:16 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648555919">
+<td>11:29:15 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648555268">
+<td>11:29:15 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785648554921">
+<td>11:29:14 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647911475">
+<td>11:18:31 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647911280">
+<td>11:18:31 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647807645">
+<td>11:16:47 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647783236">
+<td>11:16:23 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647769788">
+<td>11:16:09 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647769625">
+<td>11:16:09 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647744513">
+<td>11:15:44 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647744318">
+<td>11:15:44 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647713023">
+<td>11:15:13 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647712761">
+<td>11:15:12 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647687141">
+<td>11:14:47 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647686602">
+<td>11:14:46 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647686160">
+<td>11:14:46 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647665415">
+<td>11:14:25 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647665008">
+<td>11:14:25 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647518593">
+<td>11:11:58 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647399778">
+<td>11:09:59 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647399611">
+<td>11:09:59 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647383234">
+<td>11:09:43 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785647383055">
+<td>11:09:43 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646921331">
+<td>11:02:01 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646902795">
+<td>11:01:42 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646835314">
+<td>11:00:35 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646258665">
+<td>10:50:58 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646206363">
+<td>10:50:06 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646206167">
+<td>10:50:06 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646129312">
+<td>10:48:49 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785646097493">
+<td>10:48:17 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645926865">
+<td>10:45:26 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645926669">
+<td>10:45:26 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645911688">
+<td>10:45:11 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645911423">
+<td>10:45:11 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645189274">
+<td>10:33:09 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645161692">
+<td>10:32:41 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645123103">
+<td>10:32:03 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645122855">
+<td>10:32:02 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645029344">
+<td>10:30:29 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785645029166">
+<td>10:30:29 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644752664">
+<td>10:25:52 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644752465">
+<td>10:25:52 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644124742">
+<td>10:15:24 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644068041">
+<td>10:14:28 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644067664">
+<td>10:14:27 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644050062">
+<td>10:14:10 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644020697">
+<td>10:13:40 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785644000264">
+<td>10:13:20 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643976477">
+<td>10:12:56 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643959906">
+<td>10:12:39 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643941944">
+<td>10:12:21 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643909946">
+<td>10:11:49 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643909552">
+<td>10:11:49 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643836213">
+<td>10:10:36 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643522818">
+<td>10:05:22 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785643325428">
+<td>10:02:05 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642524231">
+<td>09:48:44 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642233100">
+<td>09:43:53 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642232234">
+<td>09:43:52 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642191040">
+<td>09:43:11 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642173749">
+<td>09:42:53 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642152943">
+<td>09:42:32 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642152596">
+<td>09:42:32 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642136090">
+<td>09:42:16 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642135190">
+<td>09:42:15 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642107217">
+<td>09:41:47 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642106954">
+<td>09:41:46 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642092197">
+<td>09:41:32 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642091659">
+<td>09:41:31 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642091298">
+<td>09:41:31 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785642051562">
+<td>09:40:51 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641528931">
+<td>09:32:08 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641342894">
+<td>09:29:02 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641342566">
+<td>09:29:02 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641318714">
+<td>09:28:38 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641291868">
+<td>09:28:11 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641218382">
+<td>09:26:58 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641138124">
+<td>09:25:38 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785641052990">
+<td>09:24:12 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640991070">
+<td>09:23:11 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640990645">
+<td>09:23:10 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640967839">
+<td>09:22:47 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640967284">
+<td>09:22:47 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640741166">
+<td>09:19:01 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640688015">
+<td>09:18:08 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640659238">
+<td>09:17:39 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640658797">
+<td>09:17:38 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640621595">
+<td>09:17:01 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640621007">
+<td>09:17:01 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640553884">
+<td>09:15:53 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640304991">
+<td>09:11:44 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640296520">
+<td>09:11:36 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640295523">
+<td>09:11:35 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#ff6666">-1</span></td>
+<td style="color:#00ff88">$-10.00</td>
+<td>-1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640288602">
+<td>09:11:28 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640276200">
+<td>09:11:16 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640275776">
+<td>09:11:15 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640232522">
+<td>09:10:32 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640232112">
+<td>09:10:32 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640157749">
+<td>09:09:17 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785640157302">
+<td>09:09:17 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639865812">
+<td>09:04:25 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639640905">
+<td>09:00:40 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639388203">
+<td>08:56:28 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639381348">
+<td>08:56:21 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639380972">
+<td>08:56:20 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639301810">
+<td>08:55:01 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639161463">
+<td>08:52:41 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639128941">
+<td>08:52:08 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785639085769">
+<td>08:51:25 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785638872476">
+<td>08:47:52 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785638315165">
+<td>08:38:35 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#ff6666">-1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>-1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785638304089">
+<td>08:38:24 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785638265661">
+<td>08:37:45 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637794513">
+<td>08:29:54 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637789899">
+<td>08:29:49 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637783373">
+<td>08:29:43 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637730189">
+<td>08:28:50 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637497545">
+<td>08:24:57 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637282011">
+<td>08:21:22 PM</td>
+<td><span style="color:#ff3333;font-weight:bold">CC Credit Card</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$0.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637260497">
+<td>08:21:00 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637241569">
+<td>08:20:41 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785637240099">
+<td>08:20:40 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785636770471">
+<td>08:12:50 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785636769946">
+<td>08:12:49 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785636769424">
+<td>08:12:49 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr><tr data-ts="1785636768919">
+<td>08:12:48 PM</td>
+<td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
+<td style="color:#00ff88">$10.00</td>
+<td>1</td>
+<td>Kenny  Mike </td>
+<td></td>
+</tr></tbody></table>
 </div>
 </div>
 </div>
@@ -400,13 +1386,13 @@ max-width: 720px;
 <div>
 <div class="panel">
 <h2>SESSION SUMMARY</h2>
-<div id="sessionInfo" style="margin-bottom:25px;font-size:18px;"></div>
-<p id="eventDateDisplay" style="font-size:18px;margin-bottom:20px;"></p>
-<h3>TOTAL DOOR: <span id="totalDoorCount">0</span></h3>
-<h3>TRANSACTION TOTAL: $<span id="totalSales">0.00</span></h3>
-<h3>TRANSACTIONS: <span id="totalTransactions">0</span></h3>
+<div id="sessionInfo" style="margin-bottom:25px;font-size:18px;"><strong>Kenny  Mike </strong><br>S mix</div>
+<p id="eventDateDisplay" style="font-size:18px;margin-bottom:20px;">2026-08-01</p>
+<h3>TOTAL DOOR: <span id="totalDoorCount">136</span></h3>
+<h3>TRANSACTION TOTAL: $<span id="totalSales">730.00</span></h3>
+<h3>TRANSACTIONS: <span id="totalTransactions">140</span></h3>
 <h3 style="color:var(--red);">TILL COUNT: $<span id="tillTotal">0.00</span></h3>
-<p id="tillBreakdown" style="margin-top:15px;"></p>
+<p id="tillBreakdown" style="margin-top:15px;"><p style="color:#ffaa00;">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</p></p>
 </div>
 
 <div class="panel">
@@ -441,9 +1427,107 @@ max-width: 720px;
 <th>BREAKDOWN</th>
 </tr>
 </thead>
-<tbody id="finishedEventsBody">
-<tr><td colspan="9" style="color:#888;">Loading closeouts…</td></tr>
-</tbody>
+<tbody id="finishedEventsBody"><tr>
+<td>08/03/2026, 03:16:54 PM</td>
+<td>2026-08-03</td>
+<td>S mix</td>
+<td>Inside out</td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$730.00</td>
+<td>136</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>08/01/2026, 08:01:58 PM</td>
+<td>2026-08-01</td>
+<td>Strange  mix</td>
+<td>Inside out</td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$0.00</td>
+<td>0</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>08/01/2026, 08:00:19 PM</td>
+<td>2026-08-01</td>
+<td>Strange  mix</td>
+<td>Inside out</td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$0.00</td>
+<td>0</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>08/01/2026, 07:57:22 PM</td>
+<td>2026-08-01</td>
+<td></td>
+<td></td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$0.00</td>
+<td>0</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>07/18/2026, 05:38:59 PM</td>
+<td>2026-07-18</td>
+<td>Fb 80s</td>
+<td>Sister</td>
+<td>Jessica Trinity </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$290.00</td>
+<td>65</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>07/10/2026, 12:55:48 AM</td>
+<td>2026-07-09</td>
+<td>Ascen show</td>
+<td>Moonlight lounge </td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$95.00</td>
+<td>195</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>07/10/2026, 12:55:46 AM</td>
+<td>2026-07-09</td>
+<td>Ascen show</td>
+<td>Moonlight lounge </td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$95.00</td>
+<td>195</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>07/09/2026, 07:49:18 PM</td>
+<td>2026-07-09</td>
+<td>Fb 80s</td>
+<td>Sister</td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$2280.00</td>
+<td>452</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>06/20/2026, 06:06:55 PM</td>
+<td>2026-06-20</td>
+<td>Fb 80s</td>
+<td>Sister</td>
+<td>Kenny  Mike </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$625.00</td>
+<td>122</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr><tr>
+<td>06/05/2026, 06:05:43 PM</td>
+<td>2026-05-30</td>
+<td>Decades</td>
+<td>Sister Bar</td>
+<td>Amy Kenny </td>
+<td class="till-amt">$0.00</td>
+<td class="till-amt">$432.00</td>
+<td>116</td>
+<td class="breakdown">$100: 0, $50: 0, $20: 0, $10: 0, $5: 0, $1: 0</td>
+</tr></tbody>
 </table>
 </div>
 </div>
@@ -451,9 +1535,7 @@ max-width: 720px;
 <div class="cashier-subtotal-box">
 <h3>CASHIER SUBTOTAL</h3>
 <p style="color:#aaa;font-size:13px;margin-bottom:10px;">Totals from all finished closeouts</p>
-<div id="cashierSubtotalBody">
-<div class="sub-row"><span>No closeouts yet</span><span>$0.00</span></div>
-</div>
+<div id="cashierSubtotalBody"><div class="sub-row"><span><strong>Kenny  Mike </strong> · 8 events · door 1100 · txn $3825.00</span><span>$0.00</span></div><div class="sub-row"><span><strong>Jessica Trinity </strong> · 1 event · door 65 · txn $290.00</span><span>$0.00</span></div><div class="sub-row"><span><strong>Amy Kenny </strong> · 1 event · door 116 · txn $432.00</span><span>$0.00</span></div><div class="sub-row"><span>ALL CASHIERS · 10 events · door 1281 · txn $4547.00</span><span>$0.00</span></div></div>
 </div>
 </div>
 </div>
@@ -504,6 +1586,8 @@ this.till = null;
 this.closeouts = [];
 this.sessionAggregates = {};
 this.lastLatestTs = null;
+this.selectedTs = null;
+this.sessionClosed = false;
 this._userPanning = false;
 this._chartWindow = null;
 this.liveTimer = null;
@@ -538,6 +1622,9 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 document.getElementById('sessionSelect').addEventListener('change', (e) => {
 selectedSessionId = e.target.value || null;
+this.selectedTs = null;
+this.lastLatestTs = null;
+this._userPanning = false;
 this.updateLog();
 });
 document.querySelectorAll('.timeframe-btn').forEach(btn => {
@@ -589,15 +1676,16 @@ if (canvas) {
   });
 }
 
-// Log row click → highlight row + draw vertical annotation line on graph
+// Log row click → keep selection (sticky when session is closed out)
 document.getElementById('transactionLogBody').addEventListener('click', (e) => {
   const row = e.target.closest('tr');
   if (!row || !row.dataset.ts) return;
+  const ts = parseInt(row.dataset.ts, 10);
+  this.selectedTs = ts;
   this.clearLogHighlights();
   row.classList.add('active');
   row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  const time = new Date(parseInt(row.dataset.ts));
-  this.setAnnotationLine(time);
+  this.setAnnotationLine(new Date(ts));
 });
 }
 
@@ -618,6 +1706,7 @@ setAnnotationLine(time) {
 highlightLogAroundTime(ts, windowMs = 90 * 1000) {
   this.clearLogHighlights();
   const target = new Date(ts).getTime();
+  this.selectedTs = target;
   const rows = document.querySelectorAll('#transactionLogBody tr[data-ts]');
   let firstMatch = null;
   rows.forEach(row => {
@@ -630,6 +1719,7 @@ highlightLogAroundTime(ts, windowMs = 90 * 1000) {
   if (firstMatch) {
     firstMatch.classList.add('active');
     firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.selectedTs = parseInt(firstMatch.dataset.ts, 10);
   }
   this.setAnnotationLine(new Date(ts));
 }
@@ -685,31 +1775,42 @@ alert('Failed to load sessions. Check console for details.');
 }
 }
 
+isGraphActivity(t) {
+  const i = (t.items || '').trim();
+  // Real sales/door only — ignore closeout & notes (avoids multi-day empty tail)
+  return !!(i && i !== 'Till Count' && i !== 'BATCH CLEAR' && i !== 'SESSION CLOSE' && i !== 'NOTE');
+}
+
 filterTransactions(txns) {
 if (!txns || !txns.length) return [];
-// Always pin to END (latest activity) on the right
-const end = new Date(Math.max(...txns.map(t => new Date(t.timestamp).getTime())));
+// Only real activity defines the graph end (not till close hours/days later)
+const activity = txns.filter(t => this.isGraphActivity(t));
+if (!activity.length) return [];
+const endMs = Math.max(...activity.map(t => new Date(t.timestamp).getTime()));
 const mins = {
-  'all': 24 * 60,   // never more than 24 hours ending at latest
+  'all': 24 * 60,   // never more than 24h ending at last real txn
   '1h': 60,
   '30m': 30,
   '15m': 15,
   '5m': 5
 }[this.currentRange] || (24 * 60);
-const start = new Date(end.getTime() - mins * 60 * 1000);
-return txns.filter(t => {
+const startMs = endMs - mins * 60 * 1000;
+return activity.filter(t => {
   const ts = new Date(t.timestamp).getTime();
-  return ts >= start.getTime() && ts <= end.getTime();
+  return ts >= startMs && ts <= endMs;
 });
 }
 
 buildChartData(txns) {
 if (!txns || !txns.length) return [];
+// Activity-only list (closeout/notes already filtered upstream; belt & suspenders)
+txns = txns.filter(t => this.isGraphActivity(t));
+if (!txns.length) return [];
 txns.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-// End always = latest activity (stays on the right)
+
+// RIGHT edge = last REAL transaction — redact idle gap until late closeout
 const endMs = new Date(txns[txns.length - 1].timestamp).getTime();
 const firstMs = new Date(txns[0].timestamp).getTime();
-// Hard cap: never more than 24h looking back from END
 const maxSpan = 24 * 60 * 60 * 1000;
 const clippedStartMs = Math.max(firstMs, endMs - maxSpan);
 const spanMs = endMs - clippedStartMs;
@@ -718,7 +1819,6 @@ const start = new Date(Math.floor(clippedStartMs / interval) * interval);
 const end = new Date(Math.ceil(endMs / interval) * interval);
 const bins = [];
 for (let t = start.getTime(); t <= end.getTime(); t += interval) bins.push(new Date(t));
-// Store window for scale pinning
 this._chartWindow = { min: start.getTime(), max: end.getTime() };
 
 const cum = { Cash: 0, 'Credit Card': 0, Comp: 0, Ticket: 0, door: 0, cash: 0 };
@@ -729,7 +1829,6 @@ bins.forEach(bin => {
 while (txIdx < txns.length && new Date(txns[txIdx].timestamp) <= bin) {
 const t = txns[txIdx];
 const items = (t.items || '').trim();
-if (items && items !== 'Till Count' && items !== 'BATCH CLEAR' && items !== 'SESSION CLOSE' && items !== 'NOTE') {
 items.split('; ').forEach(item => {
 const parts = item.split(': ');
 if (parts.length < 2) return;
@@ -742,23 +1841,36 @@ cum[type] += count;
 cum.door += count;
 }
 });
-}
 cum.cash += Number(t.cashTotal) || 0;
 txIdx++;
 }
 data.push({ x: bin, ...cum });
 });
 
-// Clip leading empty bins (no door / cash / type activity yet)
+// Clip leading empty bins
 let firstInfo = 0;
 while (firstInfo < data.length - 1) {
   const d = data[firstInfo];
   if ((d.door || 0) > 0 || (d.cash || 0) > 0 || d.Cash || d['Credit Card'] || d.Comp || d.Ticket) break;
   firstInfo++;
 }
-// Keep one empty point before first activity when possible (context)
 if (firstInfo > 0) firstInfo -= 1;
-const clipped = data.slice(firstInfo);
+
+// Clip trailing flat tail (no new activity) — last txn sits at the right edge
+let lastInfo = data.length - 1;
+while (lastInfo > firstInfo) {
+  const d = data[lastInfo];
+  const p = data[lastInfo - 1];
+  if (
+    d.door === p.door && d.cash === p.cash &&
+    d.Cash === p.Cash && d['Credit Card'] === p['Credit Card'] &&
+    d.Comp === p.Comp && d.Ticket === p.Ticket
+  ) {
+    lastInfo--;
+  } else break;
+}
+
+const clipped = data.slice(firstInfo, lastInfo + 1);
 if (clipped.length && this._chartWindow) {
   this._chartWindow.min = new Date(clipped[0].x).getTime();
   this._chartWindow.max = new Date(clipped[clipped.length - 1].x).getTime();
@@ -890,19 +2002,39 @@ document.getElementById('transactionLogBody').innerHTML = logRows
 <td>${t.note||''}</td>
 </tr>`).join('');
 
-// Auto-select LATEST (top row) + pin graph annotation to it
+// Session closed out if it has a Till Count
+this.sessionClosed = !!txns.find(t => (t.items || '').trim() === 'Till Count');
+
 const topRow = document.querySelector('#transactionLogBody tr[data-ts]');
-if (topRow) {
-  const ts = parseInt(topRow.dataset.ts, 10);
-  const isNew = this.lastLatestTs !== ts;
-  this.clearLogHighlights();
-  topRow.classList.add('active');
-  if (isNew) {
-    this.lastLatestTs = ts;
-    topRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+const topTs = topRow ? parseInt(topRow.dataset.ts, 10) : null;
+
+this.clearLogHighlights();
+
+if (!this.sessionClosed) {
+  // ACTIVE session → always keep LATEST selected
+  if (topRow) {
+    const isNew = this.lastLatestTs !== topTs;
+    topRow.classList.add('active');
+    this.selectedTs = topTs;
+    this.lastLatestTs = topTs;
+    this._pendingAnnotationTs = topTs;
+    if (isNew) topRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
-  // Annotation applied after chart exists (set below once chart updated)
-  this._pendingAnnotationTs = ts;
+} else {
+  // CLOSED session → keep user-selected point across refreshes
+  let targetRow = null;
+  if (this.selectedTs != null) {
+    targetRow = document.querySelector(`#transactionLogBody tr[data-ts="${this.selectedTs}"]`);
+  }
+  if (!targetRow && topRow) {
+    targetRow = topRow;
+    this.selectedTs = topTs;
+  }
+  if (targetRow) {
+    targetRow.classList.add('active');
+    const ts = parseInt(targetRow.dataset.ts, 10);
+    this._pendingAnnotationTs = ts;
+  }
 }
 
 const filtered = this.filterTransactions([...txns]);
@@ -1458,5 +2590,7 @@ if (loggedIn) {
   });
 }
 </script>
+
+
 </body>
 </html>
