@@ -375,7 +375,7 @@ max-width: 720px;
 <button class="zoom-btn" id="zoomResetBtn" title="Reset Zoom">↺ RESET</button>
 </div>
 <div class="graph-wrapper">
-<canvas id="doorCountChart" width="1846" height="1453" style="display: block; box-sizing: border-box; height: 726px; width: 923px;"></canvas>
+<canvas id="doorCountChart" style="box-sizing: border-box; display: block; height: 726px; width: 923px;" width="1846" height="1453"></canvas>
 </div>
 </div>
 
@@ -391,7 +391,7 @@ max-width: 720px;
 <div class="panel" style="flex:1;">
 <h2>TRANSACTION LOG</h2>
 <div class="transaction-log" style="flex:1;overflow:auto;max-height:600px;">
-<table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"><tr data-ts="1785791813770" class="active">
+<table><thead><tr><th>TIME</th><th>ITEMS</th><th>CASH</th><th>DOOR</th><th>CASHIER</th><th>NOTE</th></tr></thead><tbody id="transactionLogBody"><tr data-ts="1785791813770">
 <td>03:16:53 PM</td>
 <td><span style="color:#aaa;font-style:italic">SESSION CLOSE</span></td>
 <td style="color:#00ff88">$0.00</td>
@@ -895,7 +895,7 @@ max-width: 720px;
 <td>1</td>
 <td>Kenny  Mike </td>
 <td></td>
-</tr><tr data-ts="1785642233100">
+</tr><tr data-ts="1785642233100" class="active">
 <td>09:43:53 PM</td>
 <td><span style="color:#00ff88;font-weight:bold">CASH Cash $10</span>: <span style="color:#fff">1</span></td>
 <td style="color:#00ff88">$10.00</td>
@@ -1613,12 +1613,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  try {
-    localStorage.removeItem('loggedIn');
-  } catch(e) {
-    console.error('Could not remove localStorage:', e);
-  }
-  location.reload();
+  this.logout();
 });
 document.getElementById('sessionSelect').addEventListener('change', (e) => {
 selectedSessionId = e.target.value || null;
@@ -2229,6 +2224,44 @@ console.warn('Live update failed', e);
 }
 }
 
+logout() {
+  try { localStorage.removeItem('loggedIn'); } catch (e) {}
+  // Stop live work
+  if (this.liveTimer) {
+    clearInterval(this.liveTimer);
+    this.liveTimer = null;
+  }
+  try {
+    if (this.realtimeChannel) {
+      sb.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+  } catch (e) {}
+  // Tear down chart
+  try {
+    if (typeof chart !== 'undefined' && chart) {
+      chart.destroy();
+      chart = null;
+    }
+  } catch (e) {}
+  selectedSessionId = null;
+  this.txns = [];
+  this.closeouts = [];
+  this.selectedTs = null;
+  // Show login screen, hide app
+  const app = document.getElementById('salesLogContainer');
+  const login = document.getElementById('loginModal');
+  if (app) app.style.display = 'none';
+  if (login) login.style.display = 'flex';
+  const user = document.getElementById('username');
+  const pass = document.getElementById('password');
+  const err = document.getElementById('errorMsg');
+  if (user) user.value = '';
+  if (pass) pass.value = '';
+  if (err) err.textContent = '';
+  if (pass) pass.focus();
+}
+
 startLiveUpdates() {
   // Poll every 3s so log + graph stay live with the register
   if (this.liveTimer) clearInterval(this.liveTimer);
@@ -2550,7 +2583,8 @@ a.click();
 }
 }
 
-// Login handling
+// Login handling — always wire login controls so LOGOUT → login works
+let salesLogApp = null;
 let loggedIn = false;
 try {
   if (localStorage.getItem('loggedIn') === 'true') {
@@ -2560,37 +2594,41 @@ try {
   console.error('localStorage not available:', e);
 }
 
+function doLogin() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  if (username === 'admin' && password === 'password123') {
+    try { localStorage.setItem('loggedIn', 'true'); } catch(e) {}
+    document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('salesLogContainer').style.display = 'block';
+    document.getElementById('errorMsg').textContent = '';
+    // Fresh app instance after each login
+    try {
+      if (salesLogApp && salesLogApp.liveTimer) clearInterval(salesLogApp.liveTimer);
+    } catch(e) {}
+    salesLogApp = new SalesLog();
+  } else {
+    document.getElementById('errorMsg').textContent = 'ACCESS DENIED';
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('username').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('password').focus();
+});
+
 if (loggedIn) {
   document.getElementById('salesLogContainer').style.display = 'block';
   document.getElementById('loginModal').style.display = 'none';
-  new SalesLog();
+  salesLogApp = new SalesLog();
 } else {
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    if (username === 'admin' && password === 'password123') {
-      try {
-        localStorage.setItem('loggedIn', 'true');
-      } catch(e) {
-        console.error('Could not set localStorage:', e);
-      }
-      document.getElementById('loginModal').style.display = 'none';
-      document.getElementById('salesLogContainer').style.display = 'block';
-      new SalesLog();
-    } else {
-      document.getElementById('errorMsg').textContent = 'ACCESS DENIED';
-    }
-  });
-
-  // Allow enter key to login
-  document.getElementById('password').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      document.getElementById('loginBtn').click();
-    }
-  });
+  document.getElementById('salesLogContainer').style.display = 'none';
+  document.getElementById('loginModal').style.display = 'flex';
 }
 </script>
 
 
-</body>
-</html>
+</body></html>
