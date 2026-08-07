@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Sister Bar Register v2.1</title>
+    <title>Sister Bar Register v2.10</title>
     <!-- SOFTWARE COPYRIGHT © 2025-2035 SABERDOG LLC, ALL RIGHTS RESERVED -->
-    <!-- VERSION 2.1 — Reliable single-tap Open/Close • Loud field validation • Hardened close-out • Neon polish — Live action logging • Every +/- logged instantly • Bright neon animations • Graph-accurate components -->
+    <!-- VERSION 2.9 — Bill count -90° • Receipt closeout fixed • Log Sale right • Green till subtotal -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <style>
@@ -36,7 +36,7 @@
         }
         header {
             background: var(--card);
-            padding: 8px 10px;
+            padding: 6px 10px;
             border-bottom: 1px solid #444;
             display: flex;
             align-items: center;
@@ -45,6 +45,7 @@
             overflow-x: auto;
             white-space: nowrap;
             scrollbar-width: none;
+            flex-shrink: 0;
         }
         header::-webkit-scrollbar { display: none; }
         header label { font-weight: bold; flex-shrink: 0; }
@@ -114,17 +115,51 @@
             background: #ff1744; box-shadow: 0 0 8px #ff1744;
             display: inline-block; margin-right: 6px;
         }
-        main { flex: 1; overflow: hidden; }
-        .content { height: 100%; overflow-y: auto; padding: 10px; }
-        .button-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px; }
-        .product-item, .cash-item {
-            background: var(--card); border-radius: 14px; height: 100px; width: 100%;
-            display: flex; flex-direction: column; cursor: move; overflow: hidden;
+        main { flex: 1; overflow: hidden; min-height: 0; }
+        .content {
+            height: 100%;
+            overflow: hidden;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
-        .cash-item { height: 90px; }
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 6px;
+            justify-items: center;
+            align-content: start;
+            flex: 1;
+            min-height: 0;
+        }
+        .product-item, .cash-item {
+            background: var(--card);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 120px;
+            aspect-ratio: 1 / 1;
+            height: auto;
+            max-height: 120px;
+            min-height: 72px;
+            display: flex;
+            flex-direction: column;
+            cursor: move;
+            overflow: hidden;
+        }
+        .cash-item {
+            aspect-ratio: 1 / 1;
+            height: auto;
+            max-width: 120px;
+            max-height: 120px;
+            min-height: 72px;
+        }
         .incrementbtn, .cash-btn {
-            flex: 1; border: none; color: white; font-weight: bold; font-size: 15px;
+            flex: 1; border: none; color: white; font-weight: bold; font-size: 14px;
             cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center;
+            padding: 4px;
+            line-height: 1.15;
         }
         .cash, .cash-btn { background: var(--green); }
         .cc { background: var(--red); }
@@ -132,18 +167,26 @@
         .comp { background: var(--orange); color: black; }
         .control-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 6px 8px; background: rgba(0,0,0,0.3);
+            padding: 4px 6px; background: rgba(0,0,0,0.3);
         }
-        .count { font-size: 20px; font-weight: bold; min-width: 40px; text-align: center; }
+        .count { font-size: 16px; font-weight: bold; min-width: 28px; text-align: center; }
         .minus {
-            background: #555; color: white; border: none; width: 38px; height: 38px;
-            border-radius: 8px; font-size: 20px; cursor: pointer;
+            background: #555; color: white; border: none; width: 32px; height: 32px;
+            border-radius: 8px; font-size: 18px; cursor: pointer;
         }
         .thru-door {
-            grid-column: 1 / 6; display: flex; gap: 10px; margin: 8px 0;
-            border-radius: 14px; overflow: hidden;
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 8px;
+            margin: 4px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+            width: 100%;
+            max-width: none;
+            justify-self: stretch;
         }
-        .cash-total, .thru-door-count { flex: 1; padding: 14px; text-align: center; font-size: 15px; }
+        .cash-total, .thru-door-count { flex: 1; padding: 8px 10px; text-align: center; font-size: 14px; }
         .cash-total { background: rgba(46, 125, 50, 0.2); }
         .thru-door-count { background: rgba(33, 150, 243, 0.2); }
         .flash { animation: flash 0.5s; }
@@ -187,20 +230,68 @@
             40%  { transform: scale(1.2); filter: brightness(2.3); box-shadow: 0 0 32px 14px rgba(255,170,0,0.95); background: #ffe0a0 !important; }
             100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
         }
-        .number { font-size: 32px; color: var(--pink); font-weight: bold; display: block; }
+        .number { font-size: 26px; color: var(--pink); font-weight: bold; display: block; }
         .cash-buttons { grid-column: 5; grid-row: 1 / 4; display: flex; flex-direction: column; gap: 10px; }
-        .note-section { display: flex; gap: 10px; margin: 10px 0; }
+        .note-section {
+            display: flex; gap: 10px; margin: 4px 0 0; align-items: stretch;
+            flex-shrink: 0;
+        }
         #noteInput {
             flex: 1; background: #333; border: 1px solid #555; color: white;
-            padding: 12px; border-radius: 6px; resize: none; font-size: 16px;
+            padding: 8px 12px; border-radius: 8px; resize: none; font-size: 15px;
+            min-height: 40px; max-height: 44px;
         }
         #logSaleBtn {
-            background: white; color: var(--green); border: none; padding: 0 28px;
-            border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+            background: linear-gradient(135deg, #00c853, #00e676);
+            color: #000;
+            border: none;
+            padding: 0 24px;
+            min-width: 130px;
+            height: 44px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 16px rgba(0, 230, 118, 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
         }
+        #logSaleBtn:hover, #logSaleBtn:active {
+            transform: scale(1.04);
+            box-shadow: 0 0 28px rgba(0, 255, 136, 0.85);
+        }
+        #logSaleBtn:active { transform: scale(0.96); }
         footer {
-            background: var(--card); padding: 10px 15px; border-top: 1px solid #444;
-            display: flex; justify-content: space-between; align-items: center; font-size: 15px;
+            background: var(--card); padding: 6px 12px; border-top: 1px solid #444;
+            display: flex; justify-content: space-between; align-items: center; font-size: 14px;
+            gap: 10px; flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        .footer-left {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            flex: 1;
+        }
+        .footer-center {
+            display: flex; align-items: center; justify-content: center;
+            flex: 0 0 auto;
+        }
+        .footer-right {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        .footer-right #logSaleBtn {
+            order: 0;
+            margin-right: 4px;
+        }
+        /* Keep toggle button strong in footer */
+        footer #toggleSalesBtn {
+            margin-left: 0;
+            width: 100px; height: 44px; font-size: 15px;
         }
         #timer {
             color: black;
@@ -248,16 +339,25 @@
         .till-row {
             display: flex; align-items: center; justify-content: space-between;
             margin: 12px 0; background: #333; border-radius: 10px; padding: 8px;
+            gap: 8px;
         }
         .till-row button {
-            width: 44px; height: 44px; border: none; border-radius: 10px;
+            width: 48px; height: 48px; border: none; border-radius: 10px;
             font-size: 24px; font-weight: bold; cursor: pointer;
+            flex-shrink: 0;
+            touch-action: manipulation;
         }
         .till-plus { background: var(--green); color: white; }
         .till-minus { background: #666; color: white; }
         .till-value {
-            width: 80px; text-align: center; font-size: 20px; font-weight: bold;
-            background: transparent; border: none; color: white;
+            width: 90px; text-align: center; font-size: 22px; font-weight: bold;
+            background: #1a1a1a; border: 2px solid #555; border-radius: 8px;
+            color: #00ff88; padding: 8px 4px;
+            -webkit-appearance: none; appearance: none;
+        }
+        .till-value:focus {
+            outline: none; border-color: #00ff88;
+            box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
         }
         .modal button.main {
             padding: 14px 28px; margin: 15px 10px 0; border: none;
@@ -267,8 +367,9 @@
         .red { background: var(--red); color: white; }
         .hidden { display: none !important; }
         #editInstructions {
-            text-align: center; color: #aaa; font-size: 12px; margin: 10px 0;
+            text-align: center; color: #aaa; font-size: 11px; margin: 2px 0;
             font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;
+            flex-shrink: 0;
         }
         .remove-list { max-height: 300px; overflow-y: auto; margin: 15px 0; }
         .remove-item {
@@ -284,6 +385,377 @@
             margin: 15px 0;
         }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+        /* Drag / Edit mode */
+        .product-item {
+            position: relative;
+        }
+        .drag-handle {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            font-size: 18px;
+            color: #00ff88;
+            cursor: grab;
+            padding: 4px 6px;
+            z-index: 5;
+            background: rgba(0,0,0,0.45);
+            border-radius: 6px;
+            line-height: 1;
+            touch-action: none;
+            user-select: none;
+        }
+        body.editing .drag-handle {
+            display: block;
+        }
+        body.editing .product-item {
+            cursor: grab;
+            outline: 2px dashed transparent;
+            transition: outline 0.15s, transform 0.15s, opacity 0.15s;
+        }
+        body.editing .product-item:hover {
+            outline-color: #00ff88;
+        }
+        .product-item.dragging {
+            opacity: 0.45;
+            transform: scale(0.96);
+            cursor: grabbing !important;
+        }
+        .product-item.drag-over {
+            outline: 3px solid #00ff88 !important;
+            background: rgba(0, 255, 136, 0.12);
+        }
+        body.editing .incrementbtn,
+        body.editing .minus {
+            pointer-events: none; /* prevent accidental +/− while editing */
+        }
+
+
+        /* ===== Tablet landscape ~1024x550: everything on screen, pressable squares ===== */
+        @media (orientation: landscape) and (max-height: 620px) {
+            body { height: 100dvh; height: 100vh; overflow: hidden; }
+            header {
+                padding: 4px 8px;
+                gap: 6px;
+                font-size: 12px;
+            }
+            header input, header select {
+                padding: 4px 8px;
+                font-size: 13px;
+                min-height: 34px;
+                min-width: 70px;
+            }
+            #cashierName { flex: 1.2; }
+            #headerError {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+            .content {
+                padding: 6px 8px;
+                overflow: hidden;
+            }
+            .button-grid {
+                gap: 6px;
+                margin-bottom: 4px;
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .product-item, .cash-item {
+                max-width: 108px;
+                max-height: 108px;
+                min-height: 80px;
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                border-radius: 10px;
+            }
+            .incrementbtn, .cash-btn {
+                font-size: 13px;
+            }
+            .count { font-size: 15px; min-width: 26px; }
+            .minus { width: 30px; height: 30px; font-size: 16px; }
+            .thru-door {
+                margin: 2px 0;
+            }
+            .cash-total, .thru-door-count {
+                padding: 6px 8px;
+                font-size: 13px;
+            }
+            .number { font-size: 22px; }
+            .note-section { margin: 2px 0 0; }
+            #noteInput {
+                min-height: 36px;
+                max-height: 38px;
+                padding: 6px 10px;
+                font-size: 14px;
+            }
+            footer {
+                padding: 4px 10px;
+                gap: 8px;
+                flex-wrap: nowrap;
+            }
+            footer #toggleSalesBtn {
+                width: 96px;
+                height: 40px;
+                font-size: 14px;
+            }
+            #logSaleBtn {
+                height: 40px;
+                min-width: 120px;
+                font-size: 15px;
+                padding: 0 20px;
+            }
+            #footerCashier, #salesCount, #compTicketCount {
+                font-size: 14px;
+            }
+            #timer {
+                font-size: 14px;
+                padding: 0 8px;
+            }
+            #editLayoutFooterBtn, #removeVenueFooterBtn, #removeEventFooterBtn,
+            #editOptionsBtn, #doneEditBtn, #addNewButtonBtn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .cash-buttons {
+                gap: 6px;
+            }
+        }
+
+        /* Slightly taller short screens still get no-scroll treatment */
+        @media (orientation: landscape) and (min-height: 621px) and (max-height: 800px) {
+            .product-item, .cash-item {
+                max-width: 120px;
+                max-height: 120px;
+                min-height: 88px;
+            }
+            .content { overflow: hidden; }
+        }
+
+        /* ========== PORTRAIT / FULL-SCREEN MODE ========== */
+        @media (orientation: portrait) {
+            body {
+                height: 100dvh;
+                height: 100vh;
+            }
+            header {
+                flex-wrap: wrap;
+                padding: 10px 12px;
+                gap: 10px;
+                font-size: 14px;
+            }
+            header input, header select {
+                min-width: 0;
+                flex: 1 1 40%;
+                font-size: 15px;
+                padding: 10px 12px;
+                min-height: 44px;
+            }
+            #cashierName { flex: 1 1 100%; }
+            #headerError {
+                width: 100%;
+                text-align: center;
+                margin-left: 0;
+                margin-top: 4px;
+            }
+            main { flex: 1; overflow: hidden; }
+            .content {
+                height: 100%;
+                overflow-y: auto;
+                padding: 8px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .button-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+            .product-item, .cash-item {
+                aspect-ratio: 1 / 1;
+                height: auto;
+            }
+            .cash-buttons {
+                grid-column: 1 / -1;
+                grid-row: auto;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .cash-buttons .cash-item {
+                flex: 1 1 30%;
+                min-width: 90px;
+            }
+            .note-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+            #noteInput {
+                min-height: 48px;
+                font-size: 16px;
+            }
+            footer {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 10px 12px;
+                gap: 10px;
+            }
+            .footer-left, .footer-right {
+                justify-content: center;
+                width: 100%;
+            }
+            #logSaleBtn {
+                width: auto;
+                min-width: 130px;
+                height: 48px;
+                font-size: 16px;
+            }
+            footer #toggleSalesBtn {
+                width: 100%;
+                height: 52px;
+                font-size: 18px;
+            }
+            .product-item, .cash-item {
+                max-width: 110px;
+                max-height: 110px;
+                min-height: 80px;
+            }
+            .modal-content {
+                width: 95%;
+                max-width: none;
+                max-height: 90dvh;
+                overflow-y: auto;
+                padding: 24px 18px;
+            }
+            .till-row {
+                padding: 10px;
+            }
+            .till-row button {
+                width: 52px; height: 52px;
+            }
+            .till-value {
+                width: 100px;
+                font-size: 24px;
+                padding: 10px 4px;
+            }
+        }
+
+        @media (orientation: portrait) and (max-width: 500px) {
+            .button-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+
+        /* ===== BILL COUNT ONLY: rotate -90° sideways (text + UI) ===== */
+        #tillCountModal.modal.active {
+            align-items: center;
+            justify-content: center;
+        }
+        #tillCountModal .till-bill-count {
+            transform: rotate(-90deg);
+            transform-origin: center center;
+            /* After 90° rotate, width maps to vertical space on screen */
+            width: min(88vh, 520px);
+            max-width: min(88vh, 520px);
+            max-height: min(90vw, 820px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 22px 18px;
+            background: rgba(30, 30, 30, 0.92);
+        }
+        #tillCountModal .till-bill-count h3 {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        #tillCountModal .till-bill-count .till-row {
+            margin: 8px 0;
+            padding: 10px;
+        }
+        #tillCountModal .till-bill-count .till-row button {
+            width: 52px;
+            height: 52px;
+            font-size: 26px;
+        }
+        #tillCountModal .till-bill-count .till-value {
+            width: 96px;
+            font-size: 24px;
+            padding: 10px 4px;
+        }
+        #tillCountModal .till-bill-count label {
+            display: block;
+            text-align: center;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+        #tillCountModal .till-bill-count .modal button.main,
+        #tillCountModal .till-bill-count button.main {
+            margin: 10px 6px 0;
+            padding: 12px 22px;
+            font-size: 15px;
+        }
+        /* Short landscape tablets: keep rotated panel usable */
+        @media (orientation: landscape) and (max-height: 620px) {
+            #tillCountModal .till-bill-count {
+                width: min(90vh, 480px);
+                max-width: min(90vh, 480px);
+                max-height: min(94vw, 980px);
+                padding: 16px 14px;
+            }
+            #tillCountModal .till-bill-count .till-row {
+                margin: 6px 0;
+                padding: 8px;
+            }
+            #tillCountModal .till-bill-count .till-row button {
+                width: 48px;
+                height: 48px;
+            }
+        }
+
+
+        .till-verify-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .till-verify-row label {
+            flex: 1;
+            min-width: 160px;
+            text-align: left !important;
+            font-size: 15px;
+        }
+        .till-subtotal {
+            background: rgba(0, 200, 83, 0.12);
+            border: 2px solid #00c853;
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-width: 140px;
+            text-align: right;
+            color: #00e676;
+            font-weight: 700;
+        }
+        .till-subtotal-lines {
+            font-size: 13px;
+            line-height: 1.45;
+            opacity: 0.95;
+            margin-bottom: 6px;
+            white-space: pre-line;
+        }
+        .till-subtotal-total {
+            font-size: 22px;
+            font-weight: 900;
+            color: #00ff88;
+            border-top: 1px solid rgba(0, 255, 136, 0.35);
+            padding-top: 6px;
+            margin-top: 2px;
+        }
+        #tillCountModal .till-bill-count .till-verify-row label {
+            text-align: left !important;
+            display: block;
+        }
+
     </style>
 </head>
 <body>
@@ -295,27 +767,27 @@
         <label>Event:</label>
         <select id="eventName" required></select>
         <input type="text" id="cashierName" placeholder="Cashier Name" required />
-        <button id="toggleSalesBtn" class="open">OPEN</button>
         <span id="headerError">Enter all fields</span>
     </header>
     <main>
         <div class="content">
-            <div id="editInstructions" class="hidden">TAP TO TOGGLE • DRAG TO REORDER • SAVE WHEN DONE</div>
+            <div id="editInstructions" class="hidden">TAP CARD = ON/OFF  •  DRAG ☰ OR HOLD TO MOVE  •  SAVE WHEN DONE</div>
             <div class="button-grid" id="buttonContainer"></div>
             <div class="note-section">
                 <textarea id="noteInput" placeholder="Add note..."></textarea>
-                <button id="logSaleBtn">Log Sale</button>
             </div>
         </div>
     </main>
     <footer>
-        <div>
+        <div class="footer-left">
+            <button id="toggleSalesBtn" class="open">OPEN</button>
             <span>Time in: <strong id="timer">00:00:00</strong></span>
-            <span style="margin-left:20px;">Cashier: <strong id="footerCashier">—</strong></span>
-            <span style="margin-left:20px;">Sales: <strong id="salesCount">0</strong></span>
-            <span style="margin-left:20px;">Comp/Ticket: <strong id="compTicketCount">0</strong></span>
+            <span style="margin-left:12px;">Cashier: <strong id="footerCashier">—</strong></span>
+            <span style="margin-left:12px;">Sales: <strong id="salesCount">0</strong></span>
+            <span style="margin-left:12px;">Comp/Ticket: <strong id="compTicketCount">0</strong></span>
         </div>
-        <div>
+        <div class="footer-right">
+            <button id="logSaleBtn">Log Sale</button>
             <span id="saleStatus"></span>
             <button id="editOptionsBtn">Edit Options</button>
             <button id="editLayoutFooterBtn" style="display: none;">Edit Layout</button>
@@ -347,17 +819,22 @@
     </div>
     <!-- Till Count Modal -->
     <div id="tillCountModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content till-bill-count">
             <h3>Final Till Count</h3>
-            <div class="till-row"><button class="till-minus" data-denom="hundreds">-</button><span>$100</span><input class="till-value" id="hundreds" value="0" readonly><button class="till-plus" data-denom="hundreds">+</button></div>
-            <div class="till-row"><button class="till-minus" data-denom="fifties">-</button><span>$50</span><input class="till-value" id="fifties" value="0" readonly><button class="till-plus" data-denom="fifties">+</button></div>
-            <div class="till-row"><button class="till-minus" data-denom="twenties">-</button><span>$20</span><input class="till-value" id="twenties" value="0" readonly><button class="till-plus" data-denom="twenties">+</button></div>
-            <div class="till-row"><button class="till-minus" data-denom="tens">-</button><span>$10</span><input class="till-value" id="tens" value="0" readonly><button class="till-plus" data-denom="tens">+</button></div>
-            <div class="till-row"><button class="till-minus" data-denom="fives">-</button><span>$5</span><input class="till-value" id="fives" value="0" readonly><button class="till-plus" data-denom="fives">+</button></div>
-            <div class="till-row"><button class="till-minus" data-denom="ones">-</button><span>$1</span><input class="till-value" id="ones" value="0" readonly><button class="till-plus" data-denom="ones">+</button></div>
-            <br>
-            <label><input type="checkbox" id="verifyCheckbox"> I verify this count is accurate</label>
-            <div style="margin-top:20px;">
+            <div class="till-row"><button class="till-minus" data-denom="hundreds">-</button><span>$100</span><input class="till-value" id="hundreds" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="hundreds">+</button></div>
+            <div class="till-row"><button class="till-minus" data-denom="fifties">-</button><span>$50</span><input class="till-value" id="fifties" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="fifties">+</button></div>
+            <div class="till-row"><button class="till-minus" data-denom="twenties">-</button><span>$20</span><input class="till-value" id="twenties" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="twenties">+</button></div>
+            <div class="till-row"><button class="till-minus" data-denom="tens">-</button><span>$10</span><input class="till-value" id="tens" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="tens">+</button></div>
+            <div class="till-row"><button class="till-minus" data-denom="fives">-</button><span>$5</span><input class="till-value" id="fives" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="fives">+</button></div>
+            <div class="till-row"><button class="till-minus" data-denom="ones">-</button><span>$1</span><input class="till-value" id="ones" value="0" type="number" min="0" inputmode="numeric"><button class="till-plus" data-denom="ones">+</button></div>
+            <div class="till-verify-row">
+                <label><input type="checkbox" id="verifyCheckbox"> I verify this count is accurate</label>
+                <div id="tillSubtotal" class="till-subtotal">
+                    <div id="tillSubtotalLines" class="till-subtotal-lines"></div>
+                    <div id="tillSubtotalTotal" class="till-subtotal-total">$0</div>
+                </div>
+            </div>
+            <div style="margin-top:16px; text-align:center;">
                 <button class="green main" id="submitTillBtn">Close Register</button>
                 <button class="red main" id="cancelTillBtn">Cancel</button>
             </div>
@@ -423,6 +900,7 @@
                     sessionId: null,
                     cashTotal: 0,
                     sessionCashTotal: 0,
+                    lastPrice: 0,
                     sessionDoorCount: 0,
                     sessionCompTicketCount: 0,
                     salesCount: 0,
@@ -520,7 +998,7 @@
                 const thruContainer = document.createElement('div');
                 thruContainer.className = 'thru-door';
                 thruContainer.innerHTML = `
-                    <div class="cash-total"><span class="number">$${this.state.sessionCashTotal.toFixed(2)}</span><br>Cash Total</div>
+                    <div class="cash-total"><span class="number">$${this.state.cashTotal.toFixed(2)}</span><br>Transaction Total</div>
                     <div class="thru-door-count"><span class="number">${this.state.sessionDoorCount}</span><br>Thru Door</div>
                 `;
                 this.elements.buttonContainer.appendChild(thruContainer);
@@ -552,13 +1030,14 @@
                 div.dataset.price = d.price;
                 div.dataset.type = d.type;
                 div.dataset.active = d.active;
-                div.draggable = true;
+                div.draggable = false; // enabled only in edit mode
                 div.innerHTML = `
                     <button class="incrementbtn ${d.type}">${d.name}</button>
                     <div class="control-row">
                         <span class="count">0</span>
                         <button class="minus">-</button>
                     </div>
+                    <div class="drag-handle" title="Drag to reorder">☰</div>
                 `;
                 return div;
             }
@@ -675,6 +1154,10 @@
                     if (cb) {
                         cb.checked = false;
                         document.querySelectorAll('.till-plus, .till-minus').forEach(btn => btn.disabled = false);
+                        document.querySelectorAll('.till-value').forEach(inp => {
+                            inp.readOnly = false;
+                            inp.style.opacity = '1';
+                        });
                         document.querySelectorAll('.till-row').forEach(row => row.style.background = '#333');
                     }
                 };
@@ -695,14 +1178,35 @@
                         val += btn.classList.contains('till-plus') ? 1 : -1;
                         if (val < 0) val = 0;
                         input.value = val;
+                        this.updateTillSubtotal();
+                    });
+                });
+                // Manual entry: clamp to non-negative integers
+                document.querySelectorAll('.till-value').forEach(input => {
+                    input.addEventListener('input', () => {
+                        let v = parseInt(input.value, 10);
+                        if (isNaN(v) || v < 0) v = 0;
+                        input.value = v;
+                        this.updateTillSubtotal();
+                    });
+                    input.addEventListener('blur', () => {
+                        if (input.value === '' || isNaN(parseInt(input.value, 10))) {
+                            input.value = '0';
+                        }
+                        this.updateTillSubtotal();
                     });
                 });
                 const verifyCheckbox = document.getElementById('verifyCheckbox');
                 verifyCheckbox.addEventListener('change', () => {
+                    const locked = verifyCheckbox.checked;
                     document.querySelectorAll('.till-plus, .till-minus').forEach(btn => {
-                        btn.disabled = verifyCheckbox.checked;
+                        btn.disabled = locked;
                     });
-                    if (verifyCheckbox.checked) {
+                    document.querySelectorAll('.till-value').forEach(inp => {
+                        inp.readOnly = locked;
+                        inp.style.opacity = locked ? '0.7' : '1';
+                    });
+                    if (locked) {
                         document.querySelectorAll('.till-row').forEach(row => {
                             row.style.background = 'transparent';
                         });
@@ -768,13 +1272,21 @@
             increment(item) {
                 if (!this.state.sessionStarted) return;
                 const name = item.dataset.name;
-                const price = parseFloat(item.dataset.price) || 0;
+                let price = parseFloat(item.dataset.price) || 0;
                 const type = item.dataset.type || 'cash';
+                // Remember last non-zero price so CC (price 0) uses the same $ as the active cash/ticket button
+                if (price > 0) this.state.lastPrice = price;
+                // Credit card with $0 button → use last active button price
+                if (type === 'cc' && price === 0 && this.state.lastPrice > 0) {
+                    price = this.state.lastPrice;
+                }
                 let entry = this.state.currentItems.get(name) || { count: 0, price, type };
                 entry.count++;
+                entry.price = price; // keep effective price on the entry
                 this.state.currentItems.set(name, entry);
                 this.counts.get(name).textContent = entry.count;
-                if (type === 'cash') {
+                // Transaction total = cash + credit card + ticket
+                if (type === 'cash' || type === 'cc' || type === 'ticket') {
                     this.state.cashTotal += price;
                     this.state.sessionCashTotal += price;
                 }
@@ -786,20 +1298,21 @@
                 this.updateFooter();
                 this.persistSessionTotals();
                 this.animateAction(item, type);
-                this.logAction(name, type, price, 1); // live log every action
+                this.logAction(name, type, price, 1); // live log with effective price
             }
             decrement(item) {
                 if (!this.state.sessionStarted) return;
                 const name = item.dataset.name;
                 const entry = this.state.currentItems.get(name);
                 if (!entry || entry.count === 0) return;
-                const price = parseFloat(item.dataset.price) || 0;
-                const type = item.dataset.type || 'cash';
+                // Use the same effective price that was applied when incrementing
+                const price = (entry.price != null) ? entry.price : (parseFloat(item.dataset.price) || 0);
+                const type = entry.type || item.dataset.type || 'cash';
                 entry.count--;
                 if (entry.count === 0) this.state.currentItems.delete(name);
                 else this.state.currentItems.set(name, entry);
                 this.counts.get(name).textContent = entry.count;
-                if (type === 'cash') {
+                if (type === 'cash' || type === 'cc' || type === 'ticket') {
                     this.state.cashTotal -= price;
                     this.state.sessionCashTotal -= price;
                 }
@@ -811,7 +1324,7 @@
                 this.updateFooter();
                 this.persistSessionTotals();
                 this.animateAction(item, type);
-                this.logAction(name, type, price, -1); // live log every action (correction)
+                this.logAction(name, type, price, -1); // correction with same effective price
             }
             persistSessionTotals() {
                 if (!this.state.sessionId) return;
@@ -836,23 +1349,24 @@
                     doorEl.classList.add('flash');
                     setTimeout(() => doorEl.classList.remove('flash'), 500);
                 }
-                if (type === 'cash' && cashEl) {
+                if ((type === 'cash' || type === 'cc' || type === 'ticket') && cashEl) {
                     cashEl.classList.add('flash');
                     setTimeout(() => cashEl.classList.remove('flash'), 500);
                 }
             }
             async logAction(name, type, price, delta) {
-                // Every single +/- is logged immediately to Supabase for live accuracy
-                const itemsStr = `${type.toUpperCase()} ${name}: ${delta}`;
+                // Every single +/- is logged immediately — CC uses effective price (same as active button)
+                const priceTag = price > 0 ? ` $${Number(price).toFixed(price % 1 ? 2 : 0)}` : '';
+                const itemsStr = `${type.toUpperCase()} ${name}${priceTag}: ${delta}`;
                 const payload = {
                     eventDate: this.elements.eventDate.value,
                     eventVenue: this.elements.eventVenue.value,
                     eventName: this.elements.eventName.value,
                     cashierName: this.elements.cashierName.value,
                     items: itemsStr,
-                    cashTotal: type === 'cash' ? (price * delta) : 0,
+                    cashTotal: (type === 'cash' || type === 'cc' || type === 'ticket') ? (price * delta) : 0,
                     doorCount: delta,
-                    note: '',
+                    note: type === 'cc' ? `CC @ $${Number(price).toFixed(2)}` : '',
                     sessionId: this.state.sessionId,
                     timestamp: new Date().toISOString()
                 };
@@ -888,8 +1402,34 @@
             updateDisplay() {
                 const cashEl = this.elements.buttonContainer.querySelector('.cash-total .number');
                 const doorEl = this.elements.buttonContainer.querySelector('.thru-door-count .number');
-                if (cashEl) cashEl.textContent = `$${this.state.sessionCashTotal.toFixed(2)}`;
+                // Transaction Total = current batch only — resets on Log Sale
+                if (cashEl) cashEl.textContent = `$${this.state.cashTotal.toFixed(2)}`;
                 if (doorEl) doorEl.textContent = this.state.sessionDoorCount;
+            }
+            updateTillSubtotal() {
+                const denoms = [
+                    { id: 'hundreds', label: '$100', value: 100 },
+                    { id: 'fifties', label: '$50', value: 50 },
+                    { id: 'twenties', label: '$20', value: 20 },
+                    { id: 'tens', label: '$10', value: 10 },
+                    { id: 'fives', label: '$5', value: 5 },
+                    { id: 'ones', label: '$1', value: 1 }
+                ];
+                const lines = [];
+                let total = 0;
+                denoms.forEach(d => {
+                    const el = document.getElementById(d.id);
+                    const count = parseInt(el && el.value, 10) || 0;
+                    if (count > 0) {
+                        const sub = count * d.value;
+                        total += sub;
+                        lines.push(`${d.label} × ${count} = $${sub}`);
+                    }
+                });
+                const linesEl = document.getElementById('tillSubtotalLines');
+                const totalEl = document.getElementById('tillSubtotalTotal');
+                if (linesEl) linesEl.textContent = lines.length ? lines.join('\n') : 'No bills counted';
+                if (totalEl) totalEl.textContent = `$${total}`;
             }
             startSession() {
                 // Clear previous highlights
@@ -999,7 +1539,11 @@
                     // Always reset till UI when opening
                     ['hundreds','fifties','twenties','tens','fives','ones'].forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) el.value = '0';
+                        if (el) {
+                            el.value = '0';
+                            el.readOnly = false;
+                            el.style.opacity = '1';
+                        }
                     });
                     const cb = document.getElementById('verifyCheckbox');
                     if (cb) {
@@ -1008,6 +1552,7 @@
                         document.querySelectorAll('.till-row').forEach(row => row.style.background = '#333');
                     }
                     document.getElementById('tillCountModal').classList.add('active');
+                    this.updateTillSubtotal();
                     if (navigator.vibrate) navigator.vibrate(25);
                 } else {
                     document.getElementById('pinError').textContent = 'Wrong PIN';
@@ -1086,67 +1631,106 @@
                 }
             }
             async openReportInTab(tillTotal, breakdown) {
+                // Always build a local receipt first so closeout never fails hard
+                let totalCash = this.state.sessionCashTotal || 0;
+                let totalDoor = this.state.sessionDoorCount || 0;
+                let itemsHtml = '<p>Session totals (local)</p>';
+
+                // Best-effort server enrich (short timeout) — optional
                 try {
-                    const res = await fetch(`${SERVER_URL}?sessionId=eq.${this.state.sessionId}&order=timestamp.asc`, {
-                        headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` }
-                    });
-                    if (!res.ok) throw new Error('Failed to fetch session data');
-                    const data = await res.json();
-                    let totalCash = 0;
-                    let totalDoor = 0;
-                    let itemMap = new Map();
-                    data.forEach(tx => {
-                        if (tx.items === 'Till Count') return;
-                        totalCash += tx.cashTotal;
-                        totalDoor += tx.doorCount;
-                        const itemParts = tx.items.split('; ');
-                        itemParts.forEach(part => {
-                            const match = part.match(/([A-Z]+) (.+?): (\d+)/);
-                            if (match) {
-                                const type = match[1];
-                                const name = match[2];
-                                const count = parseInt(match[3]);
-                                let entry = itemMap.get(name) || {count: 0, type};
-                                entry.count += count;
-                                itemMap.set(name, entry);
-                            }
+                    const controller = new AbortController();
+                    const t = setTimeout(() => controller.abort(), 5000);
+                    const res = await fetch(
+                        `${SERVER_URL}?sessionId=eq.${this.state.sessionId}&order=timestamp.asc`,
+                        {
+                            headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` },
+                            signal: controller.signal
+                        }
+                    );
+                    clearTimeout(t);
+                    if (res.ok) {
+                        const data = await res.json();
+                        totalCash = 0;
+                        totalDoor = 0;
+                        const itemMap = new Map();
+                        data.forEach(tx => {
+                            if (!tx || tx.items === 'Till Count') return;
+                            totalCash += Number(tx.cashTotal) || 0;
+                            totalDoor += Number(tx.doorCount) || 0;
+                            const itemParts = String(tx.items || '').split('; ');
+                            itemParts.forEach(part => {
+                                // Matches: "CASH Cash $10: 1" or "CC Credit Card $10: 1"
+                                const match = part.match(/^([A-Z]+)\s+(.+?):\s*(-?\d+)\s*$/);
+                                if (match) {
+                                    const type = match[1];
+                                    const name = match[2].trim();
+                                    const count = parseInt(match[3], 10) || 0;
+                                    const entry = itemMap.get(name) || { count: 0, type };
+                                    entry.count += count;
+                                    itemMap.set(name, entry);
+                                }
+                            });
                         });
-                    });
-                    const priceMap = new Map();
-                    [...this.elements.buttonContainer.querySelectorAll('.product-item, .cash-item')].forEach(el => {
-                        priceMap.set(el.dataset.name, parseFloat(el.dataset.price) || 0);
-                    });
-                    const itemsHtml = Array.from(itemMap.entries())
-                        .map(([name, d]) => `${name}: ${d.count} × $${priceMap.get(name).toFixed(2)}`)
-                        .join('<br>') || '<p>None</p>';
-                    const reportHTML = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Sister Bar Receipt</title>
+                        const priceMap = new Map();
+                        [...this.elements.buttonContainer.querySelectorAll('.product-item, .cash-item')].forEach(el => {
+                            priceMap.set(el.dataset.name, parseFloat(el.dataset.price) || 0);
+                        });
+                        itemsHtml = Array.from(itemMap.entries())
+                            .map(([name, d]) => {
+                                const p = priceMap.get(name);
+                                // Name may already include $ amount (e.g. Credit Card $10)
+                                const priceStr = (p != null && !isNaN(p) && p > 0)
+                                    ? ` × $${Number(p).toFixed(2)}`
+                                    : '';
+                                return `${name}: ${d.count}${priceStr}`;
+                            })
+                            .join('<br>') || '<p>None</p>';
+                    }
+                } catch (e) {
+                    console.warn('Receipt server enrich skipped:', e);
+                    itemsHtml = `<p>Door: ${totalDoor} · Session $: ${Number(totalCash).toFixed(2)}</p><p style="opacity:.7">(offline / server unavailable — local totals)</p>`;
+                }
+
+                const reportHTML = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sister Bar Receipt</title>
 <style>
-body{font-family:Arial;background:#1e1e1e;color:#e0e0e0;padding:40px;line-height:1.6;}
-@media print { body { background:white; color:black; } }
-.print-btn { position:fixed; top:20px; right:20px; padding:12px 24px; background:#0288d1; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; z-index:1000; }
-</style>
-</head><body>
+body{font-family:Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;padding:32px;line-height:1.6;}
+@media print{body{background:#fff;color:#000;} .print-btn{display:none;}}
+.print-btn{position:fixed;top:16px;right:16px;padding:12px 20px;background:#0288d1;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;z-index:10;}
+h1{margin-top:8px;}
+</style></head><body>
 <button class="print-btn" onclick="window.print()">Print Receipt</button>
 <h1>Sister Bar Receipt</h1>
 <p><strong>Date:</strong> ${this.elements.eventDate.value}</p>
 <p><strong>Venue:</strong> ${this.elements.eventVenue.value}</p>
 <p><strong>Event:</strong> ${this.elements.eventName.value}</p>
 <p><strong>Cashier:</strong> ${this.elements.cashierName.value}</p>
-<p><strong>Cash Total:</strong> $${totalCash.toFixed(2)}</p>
+<p><strong>Transaction Total:</strong> $${Number(totalCash).toFixed(2)}</p>
 <p><strong>Thru Door:</strong> ${totalDoor}</p>
-<p><strong>Till Total:</strong> $${tillTotal.toFixed(2)}</p>
-<p><strong>Till Breakdown:</strong> ${breakdown}</p>
+<p><strong>Till Total:</strong> $${Number(tillTotal).toFixed(2)}</p>
+<p><strong>Till Breakdown:</strong><br>${String(breakdown).split(',').map(s => s.trim()).filter(Boolean).join('<br>')}</p>
 <hr><h2>Items Sold</h2>
 ${itemsHtml}
 </body></html>`;
-                    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(reportHTML);
-                    window.open(dataUrl, '_blank');
-                } catch (e) {
-                    console.error(e);
-                    alert('Failed to generate receipt');
+
+                // Blob URL avoids data: length limits and works better after async
+                const blob = new Blob([reportHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (!win) {
+                    // Popup blocked — force download instead of failing
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `sisterbar-receipt-${this.state.sessionId || Date.now()}.html`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    this.showStatus('Receipt downloaded (popup blocked)', 'success');
                 }
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
             }
+
             endSession() {
                 localStorage.clear();
                 clearInterval(this.state.timerInterval);
@@ -1155,6 +1739,7 @@ ${itemsHtml}
                     sessionId: null,
                     cashTotal: 0,
                     sessionCashTotal: 0,
+                    lastPrice: 0,
                     sessionDoorCount: 0,
                     sessionCompTicketCount: 0,
                     salesCount: 0,
@@ -1222,7 +1807,7 @@ ${itemsHtml}
                     cashTotalEl.classList.add('flash');
                     setTimeout(() => cashTotalEl.classList.remove('flash'), 500);
                 }
-                this.elements.saleStatus.textContent = 'Batch Cleared • All actions already live-logged';
+                this.elements.saleStatus.textContent = 'Transaction logged • Total reset to $0';
                 this.elements.saleStatus.className = 'success';
                 setTimeout(() => {
                     this.elements.saleStatus.textContent = '';
@@ -1234,13 +1819,19 @@ ${itemsHtml}
                 this.elements.editLayoutFooterBtn.textContent = this.state.isEditing ? 'Save Layout' : 'Edit Layout';
                 this.elements.editInstructions.classList.toggle('hidden', !this.state.isEditing);
                 this.elements.addNewButtonBtn.classList.toggle('hidden', !this.state.isEditing);
+                document.body.classList.toggle('editing', this.state.isEditing);
+
+                const products = this.elements.buttonContainer.querySelectorAll('.product-item');
                 if (this.state.isEditing) {
-                    this.elements.buttonContainer.querySelectorAll('.product-item').forEach(el => {
+                    products.forEach(el => {
                         el.style.display = 'flex';
+                        el.draggable = true;
                     });
+                    this.enableDragReorder();
                 } else {
                     this.saveLayout();
-                    this.elements.buttonContainer.querySelectorAll('.product-item').forEach(el => {
+                    products.forEach(el => {
+                        el.draggable = false;
                         if (el.dataset.active === 'false') {
                             el.style.display = 'none';
                         } else {
@@ -1248,11 +1839,13 @@ ${itemsHtml}
                             el.style.opacity = '1';
                         }
                     });
+                    this.disableDragReorder();
+                    this.showStatus('LAYOUT SAVED', 'success');
                 }
             }
             toggleActive(item) {
                 const active = item.dataset.active === 'true';
-                item.dataset.active = !active;
+                item.dataset.active = (!active).toString();
                 item.style.opacity = active ? '0.5' : '1';
             }
             saveLayout() {
@@ -1260,10 +1853,158 @@ ${itemsHtml}
                     .map(el => ({
                         name: el.dataset.name,
                         type: el.dataset.type,
-                        price: parseFloat(el.dataset.price),
+                        price: parseFloat(el.dataset.price) || 0,
                         active: el.dataset.active === 'true'
                     }));
-                localStorage.setItem('sisterbar_layout', JSON.stringify(items));
+                try {
+                    localStorage.setItem('sisterbar_layout', JSON.stringify(items));
+                } catch (e) {}
+            }
+            // ---------- Drag-to-reorder (desktop HTML5 + iPad touch) ----------
+            enableDragReorder() {
+                this.disableDragReorder(); // clear any prior listeners
+                const container = this.elements.buttonContainer;
+                this._dragState = { el: null, touchId: null };
+
+                // HTML5 drag (desktop / mouse)
+                this._onDragStart = (e) => {
+                    if (!this.state.isEditing) return;
+                    const item = e.target.closest('.product-item');
+                    if (!item) return;
+                    this._dragState.el = item;
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', item.dataset.name);
+                };
+                this._onDragOver = (e) => {
+                    if (!this.state.isEditing || !this._dragState.el) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const over = e.target.closest('.product-item');
+                    if (over && over !== this._dragState.el) {
+                        container.querySelectorAll('.product-item').forEach(p => p.classList.remove('drag-over'));
+                        over.classList.add('drag-over');
+                    }
+                };
+                this._onDrop = (e) => {
+                    e.preventDefault();
+                    const over = e.target.closest('.product-item');
+                    if (over && this._dragState.el && over !== this._dragState.el) {
+                        this._reorder(this._dragState.el, over);
+                    }
+                    container.querySelectorAll('.product-item').forEach(p => {
+                        p.classList.remove('dragging', 'drag-over');
+                    });
+                    this._dragState.el = null;
+                };
+                this._onDragEnd = () => {
+                    container.querySelectorAll('.product-item').forEach(p => {
+                        p.classList.remove('dragging', 'drag-over');
+                    });
+                    this._dragState.el = null;
+                };
+
+                container.addEventListener('dragstart', this._onDragStart);
+                container.addEventListener('dragover', this._onDragOver);
+                container.addEventListener('drop', this._onDrop);
+                container.addEventListener('dragend', this._onDragEnd);
+
+                // Touch / iPad reorder (pointer events on handle or whole card)
+                this._onPointerDown = (e) => {
+                    if (!this.state.isEditing) return;
+                    const handle = e.target.closest('.drag-handle');
+                    const item = e.target.closest('.product-item');
+                    if (!item) return;
+                    // Prefer handle, but allow long-press on card too
+                    if (!handle && e.pointerType === 'touch') {
+                        // start long-press timer for touch
+                        this._longPressTimer = setTimeout(() => {
+                            this._startTouchDrag(item, e);
+                        }, 280);
+                        this._onPointerUpCancel = () => {
+                            clearTimeout(this._longPressTimer);
+                        };
+                        item.addEventListener('pointerup', this._onPointerUpCancel, { once: true });
+                        item.addEventListener('pointercancel', this._onPointerUpCancel, { once: true });
+                        return;
+                    }
+                    if (handle || e.pointerType === 'mouse') {
+                        e.preventDefault();
+                        this._startTouchDrag(item, e);
+                    }
+                };
+                this._startTouchDrag = (item, e) => {
+                    this._dragState.el = item;
+                    this._dragState.touchId = e.pointerId;
+                    item.classList.add('dragging');
+                    item.setPointerCapture?.(e.pointerId);
+                    if (navigator.vibrate) navigator.vibrate(25);
+                };
+                this._onPointerMove = (e) => {
+                    if (!this._dragState.el || this._dragState.touchId !== e.pointerId) return;
+                    e.preventDefault();
+                    const el = document.elementFromPoint(e.clientX, e.clientY);
+                    const over = el?.closest?.('.product-item');
+                    container.querySelectorAll('.product-item').forEach(p => p.classList.remove('drag-over'));
+                    if (over && over !== this._dragState.el) {
+                        over.classList.add('drag-over');
+                    }
+                };
+                this._onPointerUp = (e) => {
+                    if (!this._dragState.el || this._dragState.touchId !== e.pointerId) return;
+                    const el = document.elementFromPoint(e.clientX, e.clientY);
+                    const over = el?.closest?.('.product-item');
+                    if (over && over !== this._dragState.el) {
+                        this._reorder(this._dragState.el, over);
+                    }
+                    container.querySelectorAll('.product-item').forEach(p => {
+                        p.classList.remove('dragging', 'drag-over');
+                    });
+                    this._dragState.el = null;
+                    this._dragState.touchId = null;
+                };
+
+                container.addEventListener('pointerdown', this._onPointerDown);
+                window.addEventListener('pointermove', this._onPointerMove, { passive: false });
+                window.addEventListener('pointerup', this._onPointerUp);
+                window.addEventListener('pointercancel', this._onPointerUp);
+            }
+            disableDragReorder() {
+                const container = this.elements.buttonContainer;
+                if (this._onDragStart) {
+                    container.removeEventListener('dragstart', this._onDragStart);
+                    container.removeEventListener('dragover', this._onDragOver);
+                    container.removeEventListener('drop', this._onDrop);
+                    container.removeEventListener('dragend', this._onDragEnd);
+                }
+                if (this._onPointerDown) {
+                    container.removeEventListener('pointerdown', this._onPointerDown);
+                    window.removeEventListener('pointermove', this._onPointerMove);
+                    window.removeEventListener('pointerup', this._onPointerUp);
+                    window.removeEventListener('pointercancel', this._onPointerUp);
+                }
+                container.querySelectorAll('.product-item').forEach(p => {
+                    p.classList.remove('dragging', 'drag-over');
+                    p.draggable = false;
+                });
+                this._dragState = { el: null, touchId: null };
+            }
+            _reorder(dragged, target) {
+                const container = this.elements.buttonContainer;
+                const all = Array.from(container.querySelectorAll('.product-item'));
+                const from = all.indexOf(dragged);
+                const to = all.indexOf(target);
+                if (from < 0 || to < 0 || from === to) return;
+                if (from < to) {
+                    target.after(dragged);
+                } else {
+                    target.before(dragged);
+                }
+                // Keep thru-door and cash-buttons at the end
+                const thru = container.querySelector('.thru-door');
+                const cash = container.querySelector('.cash-buttons');
+                if (thru) container.appendChild(thru);
+                if (cash) container.appendChild(cash);
             }
             addCustomButton() {
                 const name = document.getElementById('newButtonName').value.trim();
@@ -1271,10 +2012,16 @@ ${itemsHtml}
                 const type = document.getElementById('newButtonType').value;
                 if (!name) return;
                 const el = this.createButton({ name, type, price, active: true });
+                if (this.state.isEditing) {
+                    el.draggable = true;
+                    el.style.display = 'flex';
+                }
                 this.elements.buttonContainer.insertBefore(el, this.elements.buttonContainer.querySelector('.thru-door'));
                 this.counts.set(name, el.querySelector('.count'));
                 this.saveLayout();
                 document.getElementById('addButtonModal').classList.remove('active');
+                document.getElementById('newButtonName').value = '';
+                this.showStatus('BUTTON ADDED', 'success');
             }
             saveNewItem() {
                 const val = document.getElementById('newItemInput').value.trim();
